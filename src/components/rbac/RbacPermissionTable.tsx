@@ -1,0 +1,353 @@
+"use client";
+
+import { Fragment, useMemo, useState } from "react";
+import type { Menu, Role, RoleMenu } from "@prisma/client";
+import { Save } from "lucide-react";
+
+type RoleWithMenus = Role & {
+  roleMenus: Array<
+    RoleMenu & {
+      menu: Menu;
+    }
+  >;
+};
+
+type PermissionKey =
+  | "canView"
+  | "canCreate"
+  | "canUpdate"
+  | "canDelete"
+  | "canApprove"
+  | "canValidate"
+  | "canExport";
+
+type PermissionItem = {
+  menuId: string;
+  canView: boolean;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canApprove: boolean;
+  canValidate: boolean;
+  canExport: boolean;
+};
+
+type PermissionState = Record<string, Record<string, PermissionItem>>;
+
+type Props = {
+  roles: RoleWithMenus[];
+  menus: Menu[];
+};
+
+const permissions: Array<{
+  key: PermissionKey;
+  label: string;
+}> = [
+  { key: "canView", label: "View" },
+  { key: "canCreate", label: "Create" },
+  { key: "canUpdate", label: "Update" },
+  { key: "canDelete", label: "Delete" },
+  { key: "canApprove", label: "Approve" },
+  { key: "canValidate", label: "Validate" },
+  { key: "canExport", label: "Export" },
+];
+
+function createInitialPermissions(roles: RoleWithMenus[], menus: Menu[]) {
+  const state: PermissionState = {};
+
+  for (const role of roles) {
+    state[role.id] = {};
+
+    for (const menu of menus) {
+      const current = role.roleMenus.find((item) => item.menuId === menu.id);
+
+      state[role.id][menu.id] = {
+        menuId: menu.id,
+        canView: current?.canView ?? false,
+        canCreate: current?.canCreate ?? false,
+        canUpdate: current?.canUpdate ?? false,
+        canDelete: current?.canDelete ?? false,
+        canApprove: current?.canApprove ?? false,
+        canValidate: current?.canValidate ?? false,
+        canExport: current?.canExport ?? false,
+      };
+    }
+  }
+
+  return state;
+}
+
+function getMenuGroup(menuKey: string) {
+  const prefix = menuKey.split(".")[0];
+
+  const labels: Record<string, string> = {
+    dashboard: "Dashboard",
+    admin: "Administration",
+    master: "Master Data",
+    quotation: "Quotation",
+    sales: "Sales",
+    technical: "Technical",
+    lab: "Laboratory",
+    coa: "COA",
+    finance: "Finance",
+  };
+
+  return labels[prefix] || "Other";
+}
+
+export default function RbacPermissionTable({ roles, menus }: Props) {
+  const [selectedRoleId, setSelectedRoleId] = useState(roles[0]?.id || "");
+  const [permissionState, setPermissionState] = useState<PermissionState>(() =>
+    createInitialPermissions(roles, menus)
+  );
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const selectedRole = roles.find((role) => role.id === selectedRoleId);
+
+  const groupedMenus = useMemo(() => {
+    return menus.reduce<Record<string, Menu[]>>((acc, menu) => {
+      const group = getMenuGroup(menu.key);
+
+      if (!acc[group]) {
+        acc[group] = [];
+      }
+
+      acc[group].push(menu);
+
+      return acc;
+    }, {});
+  }, [menus]);
+
+  function togglePermission(menuId: string, key: PermissionKey) {
+    if (!selectedRoleId) return;
+
+    setPermissionState((prev) => {
+      const current = prev[selectedRoleId]?.[menuId];
+
+      if (!current) return prev;
+
+      return {
+        ...prev,
+        [selectedRoleId]: {
+          ...prev[selectedRoleId],
+          [menuId]: {
+            ...current,
+            [key]: !current[key],
+          },
+        },
+      };
+    });
+  }
+
+  function checkAllMenu(menuId: string) {
+    if (!selectedRoleId) return;
+
+    setPermissionState((prev) => {
+      const current = prev[selectedRoleId]?.[menuId];
+
+      if (!current) return prev;
+
+      const shouldCheck = !(
+        current.canView &&
+        current.canCreate &&
+        current.canUpdate &&
+        current.canDelete &&
+        current.canApprove &&
+        current.canValidate &&
+        current.canExport
+      );
+
+      return {
+        ...prev,
+        [selectedRoleId]: {
+          ...prev[selectedRoleId],
+          [menuId]: {
+            ...current,
+            canView: shouldCheck,
+            canCreate: shouldCheck,
+            canUpdate: shouldCheck,
+            canDelete: shouldCheck,
+            canApprove: shouldCheck,
+            canValidate: shouldCheck,
+            canExport: shouldCheck,
+          },
+        },
+      };
+    });
+  }
+
+  async function savePermissions() {
+    if (!selectedRoleId) {
+      setMessage("Pilih role dulu.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    const permissionsPayload = Object.values(
+      permissionState[selectedRoleId] || {}
+    );
+
+    const response = await fetch(`/api/admin/roles/${selectedRoleId}/menus`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        permissions: permissionsPayload,
+      }),
+    });
+
+    const data = await response.json();
+
+    setLoading(false);
+
+    if (!response.ok) {
+      setMessage(data.message || "Gagal update permission");
+      return;
+    }
+
+    setMessage("Permission berhasil disimpan.");
+  }
+
+  if (!selectedRole) {
+    return (
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-slate-300">
+        Role belum tersedia.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+        <label className="mb-2 block text-sm font-medium text-slate-300">
+          Pilih Role
+        </label>
+
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <select
+            value={selectedRoleId}
+            onChange={(event) => {
+              setSelectedRoleId(event.target.value);
+              setMessage("");
+            }}
+            className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400 md:max-w-md"
+          >
+            {roles.map((role) => (
+              <option key={role.id} value={role.id}>
+                {role.name} - {role.code}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={savePermissions}
+            disabled={loading}
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Save size={18} />
+            {loading ? "Menyimpan..." : "Simpan Permission"}
+          </button>
+        </div>
+
+        {message && (
+          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+            {message}
+          </p>
+        )}
+      </div>
+
+      <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+        <div className="max-h-[calc(100vh-260px)] overflow-auto">
+          <table className="w-full min-w-[1100px] border-collapse text-sm">
+            <thead className="sticky top-0 z-10 bg-slate-900">
+              <tr className="border-b border-white/10 text-left text-slate-300">
+                <th className="w-[280px] px-5 py-4">Menu</th>
+
+                {permissions.map((permission) => (
+                  <th key={permission.key} className="px-4 py-4 text-center">
+                    {permission.label}
+                  </th>
+                ))}
+
+                <th className="px-4 py-4 text-center">All</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {Object.entries(groupedMenus).map(([groupName, items]) => (
+                <Fragment key={groupName}>
+                  <tr className="border-b border-white/10 bg-slate-950/70">
+                    <td
+                      colSpan={permissions.length + 2}
+                      className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-emerald-300"
+                    >
+                      {groupName}
+                    </td>
+                  </tr>
+
+                  {items.map((menu) => {
+                    const current = permissionState[selectedRoleId]?.[menu.id];
+
+                    if (!current) return null;
+
+                    const allChecked =
+                      current.canView &&
+                      current.canCreate &&
+                      current.canUpdate &&
+                      current.canDelete &&
+                      current.canApprove &&
+                      current.canValidate &&
+                      current.canExport;
+
+                    return (
+                      <tr
+                        key={menu.id}
+                        className="border-b border-white/10 hover:bg-white/5"
+                      >
+                        <td className="px-5 py-4">
+                          <p className="font-medium text-white">{menu.name}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {menu.key} · {menu.href}
+                          </p>
+                        </td>
+
+                        {permissions.map((permission) => (
+                          <td
+                            key={`${menu.id}-${permission.key}`}
+                            className="px-4 py-4 text-center"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={current[permission.key]}
+                              onChange={() =>
+                                togglePermission(menu.id, permission.key)
+                              }
+                              className="h-4 w-4 accent-emerald-400"
+                            />
+                          </td>
+                        ))}
+
+                        <td className="px-4 py-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={allChecked}
+                            onChange={() => checkAllMenu(menu.id)}
+                            className="h-4 w-4 accent-emerald-400"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
