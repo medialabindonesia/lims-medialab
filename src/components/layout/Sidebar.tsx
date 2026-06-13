@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { motion, useReducedMotion } from "framer-motion";
+import { staggerContainer, fadeUpItem, SPRING_SOFT } from "@/lib/motion";
 import {
   Award,
   BadgeCheck,
@@ -101,6 +103,7 @@ function getMenuGroup(menuKey: string) {
 export default function Sidebar({ user, menus }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const reduce = useReducedMotion();
 
   const groupedMenus = menus.reduce<Record<string, MenuItem[]>>((acc, menu) => {
     const group = getMenuGroup(menu.key);
@@ -124,10 +127,15 @@ export default function Sidebar({ user, menus }: SidebarProps) {
   }
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-72 flex-col border-r border-white/10 bg-slate-900/95 backdrop-blur-xl">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-72 flex-col border-r border-slate-200 bg-white/95 backdrop-blur-xl">
       <div className="shrink-0 px-5 py-6">
-        <div className="mb-6 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400 text-slate-950">
+        <motion.div
+          className="mb-6 flex items-center gap-3"
+          initial={reduce ? false : { opacity: 0, x: -12 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-white">
             <FlaskConical size={22} />
           </div>
 
@@ -135,17 +143,27 @@ export default function Sidebar({ user, menus }: SidebarProps) {
             <h1 className="font-bold">LIMS-Medialab</h1>
             <p className="text-xs text-slate-400">Medialab Workflow</p>
           </div>
-        </div>
+        </motion.div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <motion.div
+          className="rounded-2xl border border-slate-200 bg-white p-4"
+          initial={reduce ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+        >
           <p className="truncate text-sm font-semibold">{user.name}</p>
           <p className="mt-1 truncate text-xs text-slate-400">{user.roleName}</p>
           <p className="mt-1 truncate text-xs text-slate-500">{user.email}</p>
-        </div>
+        </motion.div>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pr-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
-        <div className="space-y-6">
+      <nav className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pr-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300">
+        <motion.div
+          className="space-y-6"
+          variants={staggerContainer(0.04, 0.12)}
+          initial={reduce ? false : "hidden"}
+          animate="visible"
+        >
           {Object.entries(groupedMenus).map(([groupName, items]) => (
             <div key={groupName}>
               <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -159,35 +177,51 @@ export default function Sidebar({ user, menus }: SidebarProps) {
                     pathname === menu.href || pathname.startsWith(`${menu.href}/`);
 
                   return (
-                    <Link
-                      key={menu.id}
-                      href={menu.href}
-                      className={[
-                        "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition",
-                        active
-                          ? "bg-emerald-400 text-slate-950 shadow-lg shadow-emerald-400/20"
-                          : "text-slate-300 hover:bg-white/10 hover:text-white",
-                      ].join(" ")}
-                    >
-                      <Icon size={18} />
-                      <span className="truncate">{menu.name}</span>
-                    </Link>
+                    <motion.div key={menu.id} variants={fadeUpItem}>
+                      <Link
+                        href={menu.href}
+                        className={[
+                          "group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-colors",
+                          active
+                            ? "text-white"
+                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                        ].join(" ")}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="sidebar-active-pill"
+                            className="absolute inset-0 -z-10 rounded-2xl bg-emerald-500 shadow-lg shadow-emerald-500/20"
+                            transition={
+                              reduce
+                                ? { duration: 0 }
+                                : SPRING_SOFT
+                            }
+                          />
+                        )}
+                        <Icon
+                          size={18}
+                          className="shrink-0 transition-transform duration-200 group-hover:scale-110"
+                        />
+                        <span className="truncate">{menu.name}</span>
+                      </Link>
+                    </motion.div>
                   );
                 })}
               </div>
             </div>
           ))}
-        </div>
+        </motion.div>
       </nav>
 
-      <div className="shrink-0 border-t border-white/10 p-5">
-        <button
+      <div className="shrink-0 border-t border-slate-200 p-5">
+        <motion.button
           onClick={handleLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white"
+          whileTap={reduce ? undefined : { scale: 0.97 }}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
         >
           <LogOut size={18} />
           Logout
-        </button>
+        </motion.button>
       </div>
     </aside>
   );

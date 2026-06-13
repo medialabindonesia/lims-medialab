@@ -127,16 +127,16 @@ const modeConfig: Record<
 
 function getStatusStyle(status: string) {
   const styles: Record<string, string> = {
-    WAITING: "bg-slate-400/15 text-slate-300",
-    IN_PROGRESS: "bg-blue-400/15 text-blue-300",
-    ENTERED: "bg-cyan-400/15 text-cyan-300",
-    REVIEWED: "bg-yellow-400/15 text-yellow-300",
+    WAITING: "bg-slate-100 text-slate-600",
+    IN_PROGRESS: "bg-sky-100 text-sky-600",
+    ENTERED: "bg-sky-100 text-sky-600",
+    REVIEWED: "bg-amber-100 text-amber-600",
     VERIFIED: "bg-purple-400/15 text-purple-300",
-    VALIDATED: "bg-emerald-400/15 text-emerald-300",
-    RETEST: "bg-red-400/15 text-red-300",
+    VALIDATED: "bg-emerald-100 text-emerald-600",
+    RETEST: "bg-red-100 text-red-600",
   };
 
-  return styles[status] || "bg-slate-400/15 text-slate-300";
+  return styles[status] || "bg-slate-100 text-slate-600";
 }
 
 function getDisplayName(item: SampleParameter) {
@@ -343,7 +343,7 @@ export default function LabAnalysisClient({
           onClick={() =>
             runAction(`/api/lab/samples/${group.sample.id}/start`)
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
         >
           <FlaskConical size={16} />
           Start All
@@ -356,7 +356,7 @@ export default function LabAnalysisClient({
         <button
           disabled={loading}
           onClick={() => submitResults(group, visible)}
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
         >
           <Save size={16} />
           Simpan Semua Result
@@ -371,7 +371,7 @@ export default function LabAnalysisClient({
           onClick={() =>
             runAction(`/api/lab/samples/${group.sample.id}/review`)
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
         >
           <SearchCheck size={16} />
           Review All
@@ -386,7 +386,7 @@ export default function LabAnalysisClient({
           onClick={() =>
             runAction(`/api/lab/samples/${group.sample.id}/verify`)
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
         >
           <CheckCheck size={16} />
           Verify All
@@ -401,7 +401,7 @@ export default function LabAnalysisClient({
           onClick={() =>
             runAction(`/api/lab/samples/${group.sample.id}/validate`)
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
         >
           <ShieldCheck size={16} />
           Validate All
@@ -414,7 +414,7 @@ export default function LabAnalysisClient({
         <button
           disabled={loading}
           onClick={() => askRetest(group)}
-          className="inline-flex items-center gap-2 rounded-xl border border-red-400/30 px-4 py-3 text-sm font-semibold text-red-300 hover:bg-red-400/10 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl border border-red-300 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-400/10 disabled:opacity-60"
         >
           <RotateCcw size={16} />
           Ask Retest
@@ -427,7 +427,7 @@ export default function LabAnalysisClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">{config.title}</h2>
@@ -438,7 +438,7 @@ export default function LabAnalysisClient({
 
           <button
             onClick={refreshData}
-            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
             <RefreshCcw size={17} />
             Refresh
@@ -446,7 +446,7 @@ export default function LabAnalysisClient({
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {message}
           </p>
         )}
@@ -456,21 +456,21 @@ export default function LabAnalysisClient({
         {visibleGroups.map((group) => (
           <div
             key={group.sample.id}
-            className="rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10"
+            className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:bg-slate-100"
           >
             <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <h3 className="text-xl font-bold text-white">
+                  <h3 className="text-xl font-bold text-slate-900">
                     {group.sample.sampleNo}
                   </h3>
 
-                  <span className="rounded-full bg-slate-400/15 px-3 py-1 text-xs font-medium text-slate-300">
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                     {group.sample.status}
                   </span>
                 </div>
 
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-slate-600">
                   Customer: {group.sample.customer.name}
                 </p>
 
@@ -492,10 +492,10 @@ export default function LabAnalysisClient({
               </div>
             </div>
 
-            <div className="overflow-hidden rounded-2xl border border-white/10">
+            <div className="overflow-hidden rounded-2xl border border-slate-200">
               <div className="overflow-auto">
                 <table className="w-full min-w-[1000px] text-sm">
-                  <thead className="bg-slate-900 text-left text-slate-300">
+                  <thead className="bg-white text-left text-slate-600">
                     <tr>
                       <th className="px-4 py-3">Parameter</th>
                       <th className="px-4 py-3">Method</th>
@@ -526,10 +526,10 @@ export default function LabAnalysisClient({
                       return (
                         <tr
                           key={item.id}
-                          className="border-t border-white/10 hover:bg-white/5"
+                          className="border-t border-slate-200 hover:bg-slate-50"
                         >
                           <td className="px-4 py-3">
-                            <p className="font-medium text-white">
+                            <p className="font-medium text-slate-900">
                               {getDisplayName(item)}
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
@@ -537,18 +537,18 @@ export default function LabAnalysisClient({
                             </p>
                           </td>
 
-                          <td className="px-4 py-3 text-slate-300">
+                          <td className="px-4 py-3 text-slate-600">
                             {getMethod(item)}
                           </td>
 
-                          <td className="px-4 py-3 text-slate-300">
+                          <td className="px-4 py-3 text-slate-600">
                             <p>{item.templateParameter?.standard || "-"}</p>
                             <p className="mt-1 text-xs text-slate-500">
                               {item.templateParameter?.limitValue || "-"}
                             </p>
                           </td>
 
-                          <td className="px-4 py-3 text-slate-300">
+                          <td className="px-4 py-3 text-slate-600">
                             {analyst?.name || "-"}
                           </td>
 
@@ -574,11 +574,11 @@ export default function LabAnalysisClient({
                                     event.target.value
                                   )
                                 }
-                                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                                 placeholder="Input hasil"
                               />
                             ) : (
-                              <span className="font-medium text-white">
+                              <span className="font-medium text-slate-900">
                                 {item.resultValue || "-"}{" "}
                                 {item.resultValue ? getUnit(item) : ""}
                               </span>
@@ -596,7 +596,7 @@ export default function LabAnalysisClient({
                                     event.target.value
                                   )
                                 }
-                                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                                 placeholder="Catatan"
                               />
                             </td>
@@ -610,7 +610,7 @@ export default function LabAnalysisClient({
             </div>
 
             {mode === "retest" && (
-              <p className="mt-4 text-sm text-red-300">
+              <p className="mt-4 text-sm text-red-600">
                 Retest akan diterapkan ke semua parameter yang tampil pada sample
                 ini.
               </p>
@@ -619,7 +619,7 @@ export default function LabAnalysisClient({
         ))}
 
         {visibleGroups.length === 0 && (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-slate-400">
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-400">
             {config.empty}
           </div>
         )}

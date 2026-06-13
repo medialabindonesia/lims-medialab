@@ -22,7 +22,7 @@ export default async function CreateCocPage() {
   return (
     <section>
       <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">Technical Flow</p>
+        <p className="text-sm font-medium text-emerald-600">Technical Flow</p>
         <h1 className="mt-2 text-4xl font-bold">Create COC</h1>
         <p className="mt-3 max-w-3xl text-slate-400">
           Technical membuat COC setelah LTR selesai dibuat.

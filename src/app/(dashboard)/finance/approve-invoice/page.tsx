@@ -18,7 +18,7 @@ export default async function ApproveInvoicePage() {
   return (
     <section>
       <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">Finance Flow</p>
+        <p className="text-sm font-medium text-emerald-600">Finance Flow</p>
         <h1 className="mt-2 text-4xl font-bold">Approve Invoice</h1>
         <p className="mt-3 max-w-3xl text-slate-400">
           Approve invoice, kirim invoice ke customer, dan tandai pembayaran.

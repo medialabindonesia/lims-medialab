@@ -29,7 +29,7 @@ export default async function RbacPage() {
   return (
     <section>
       <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">
+        <p className="text-sm font-medium text-emerald-600">
           Administration
         </p>
         <h1 className="mt-2 text-4xl font-bold">RBAC Role & Menu</h1>

@@ -47,7 +47,7 @@ export default async function MasterCoaTemplatePage() {
   return (
     <section>
       <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">Master Data</p>
+        <p className="text-sm font-medium text-emerald-600">Master Data</p>
         <h1 className="mt-2 text-4xl font-bold">Master COA Template</h1>
         <p className="mt-3 max-w-3xl text-slate-400">
           Kelola jenis template COA seperti Air Ambient, ISPU, Air Limbah,

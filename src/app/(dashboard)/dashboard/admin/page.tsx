@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import StatCard from "@/components/dashboard/StatCard";
+import MotionHeader from "@/components/layout/MotionHeader";
 import { KeyRound, ListChecks, Shield, Users } from "lucide-react";
 
 export default async function AdminDashboardPage() {
@@ -12,19 +13,17 @@ export default async function AdminDashboardPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">Admin Dashboard</p>
-        <h1 className="mt-2 text-4xl font-bold">LIMS-Medialab Control Center</h1>
-        <p className="mt-3 max-w-2xl text-slate-400">
-          Kelola user, role, akses menu, dan master data sistem LIMS secara fleksibel.
-        </p>
-      </div>
+      <MotionHeader
+        eyebrow="Admin Dashboard"
+        title="LIMS-Medialab Control Center"
+        subtitle="Kelola user, role, akses menu, dan master data sistem LIMS secara fleksibel."
+      />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Total User" value={users} icon={Users} description="Semua user sistem" />
-        <StatCard title="Total Role" value={roles} icon={Shield} description="Role RBAC fleksibel" />
-        <StatCard title="Total Menu" value={menus} icon={KeyRound} description="Menu bisa dicentang per role" />
-        <StatCard title="Parameter Lab" value={parameters} icon={ListChecks} description="Master parameter analisis" />
+        <StatCard index={0} title="Total User" value={users} icon={Users} description="Semua user sistem" />
+        <StatCard index={1} title="Total Role" value={roles} icon={Shield} description="Role RBAC fleksibel" />
+        <StatCard index={2} title="Total Menu" value={menus} icon={KeyRound} description="Menu bisa dicentang per role" />
+        <StatCard index={3} title="Parameter Lab" value={parameters} icon={ListChecks} description="Master parameter analisis" />
       </div>
     </section>
   );

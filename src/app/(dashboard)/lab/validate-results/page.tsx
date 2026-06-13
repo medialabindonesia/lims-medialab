@@ -18,7 +18,7 @@ export default async function ValidateResultsPage() {
   return (
     <section>
       <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">Lab Analysis</p>
+        <p className="text-sm font-medium text-emerald-600">Lab Analysis</p>
         <h1 className="mt-2 text-4xl font-bold">Validate Results</h1>
         <p className="mt-3 max-w-3xl text-slate-400">
           Manager melakukan validasi final terhadap hasil pengujian.

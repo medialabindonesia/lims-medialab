@@ -1,10 +1,13 @@
 import { LucideIcon } from "lucide-react";
+import StatCardShell from "./StatCardShell";
 
 type StatCardProps = {
   title: string;
   value: string | number;
   description?: string;
   icon: LucideIcon;
+  /** Urutan kartu untuk efek stagger (opsional). */
+  index?: number;
 };
 
 export default function StatCard({
@@ -12,11 +15,14 @@ export default function StatCard({
   value,
   description,
   icon: Icon,
+  index = 0,
 }: StatCardProps) {
+  // Tetap Server Component: ikon (function) dirender di sini, tidak dilewatkan
+  // sebagai prop ke client. Animasi ditangani oleh StatCardShell (client).
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-xl shadow-black/10 transition hover:-translate-y-1 hover:bg-white/10">
+    <StatCardShell index={index}>
       <div className="mb-5 flex items-center justify-between">
-        <div className="rounded-2xl bg-emerald-400/15 p-3 text-emerald-300">
+        <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-600 transition-transform duration-300 group-hover:scale-110">
           <Icon size={22} />
         </div>
       </div>
@@ -27,6 +33,6 @@ export default function StatCard({
       {description && (
         <p className="mt-3 text-sm text-slate-400">{description}</p>
       )}
-    </div>
+    </StatCardShell>
   );
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import StatCard from "@/components/dashboard/StatCard";
+import MotionHeader from "@/components/layout/MotionHeader";
 import { BadgeCheck, ClipboardPen, FileCheck, RefreshCcw } from "lucide-react";
 
 export default async function WorkerDashboardPage() {
@@ -13,19 +14,17 @@ export default async function WorkerDashboardPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">Worker Dashboard</p>
-        <h1 className="mt-2 text-4xl font-bold">Operational Queue</h1>
-        <p className="mt-3 max-w-2xl text-slate-400">
-          Dashboard pekerjaan untuk sales, supervisor, analyst, technical, dan manager.
-        </p>
-      </div>
+      <MotionHeader
+        eyebrow="Worker Dashboard"
+        title="Operational Queue"
+        subtitle="Dashboard pekerjaan untuk sales, supervisor, analyst, technical, dan manager."
+      />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Request Quotation" value={requestedQuotation} icon={FileCheck} />
-        <StatCard title="Verified Quotation" value={verifiedQuotation} icon={BadgeCheck} />
-        <StatCard title="Entered Results" value={enteredResults} icon={ClipboardPen} />
-        <StatCard title="Retest Sample" value={retest} icon={RefreshCcw} />
+        <StatCard index={0} title="Request Quotation" value={requestedQuotation} icon={FileCheck} />
+        <StatCard index={1} title="Verified Quotation" value={verifiedQuotation} icon={BadgeCheck} />
+        <StatCard index={2} title="Entered Results" value={enteredResults} icon={ClipboardPen} />
+        <StatCard index={3} title="Retest Sample" value={retest} icon={RefreshCcw} />
       </div>
     </section>
   );

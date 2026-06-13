@@ -170,18 +170,18 @@ function formatRupiah(value: number) {
 
 function getStatusStyle(status: string) {
   const styles: Record<string, string> = {
-    REQUESTED: "bg-blue-400/15 text-blue-300",
-    REVISION: "bg-yellow-400/15 text-yellow-300",
-    NEGOTIATION: "bg-orange-400/15 text-orange-300",
-    CONFIRMED: "bg-green-400/15 text-green-300",
-    VERIFIED: "bg-cyan-400/15 text-cyan-300",
-    APPROVED: "bg-emerald-400/15 text-emerald-300",
+    REQUESTED: "bg-sky-100 text-sky-600",
+    REVISION: "bg-amber-100 text-amber-600",
+    NEGOTIATION: "bg-orange-100 text-orange-600",
+    CONFIRMED: "bg-green-100 text-green-600",
+    VERIFIED: "bg-sky-100 text-sky-600",
+    APPROVED: "bg-emerald-100 text-emerald-600",
     PO_UPLOADED: "bg-purple-400/15 text-purple-300",
-    LTR_CREATED: "bg-indigo-400/15 text-indigo-300",
+    LTR_CREATED: "bg-sky-100 text-sky-600",
     COC_CREATED: "bg-pink-400/15 text-pink-300",
   };
 
-  return styles[status] || "bg-slate-400/15 text-slate-300";
+  return styles[status] || "bg-slate-100 text-slate-600";
 }
 
 function getStepIndex(status: string) {
@@ -525,7 +525,7 @@ export default function QuotationFlowClient({
             <>
               <button
                 onClick={() => requestRevision(quotation)}
-                className="rounded-xl border border-yellow-400/30 px-3 py-2 text-xs text-yellow-300 hover:bg-yellow-400/10"
+                className="rounded-xl border border-amber-300 px-3 py-2 text-xs text-amber-600 hover:bg-yellow-400/10"
               >
                 Minta Revisi
               </button>
@@ -534,7 +534,7 @@ export default function QuotationFlowClient({
                 onClick={() =>
                   runAction(`/api/quotations/${quotation.id}/confirm`, "PATCH")
                 }
-                className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-300"
+                className="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600"
               >
                 ACC Quotation
               </button>
@@ -544,7 +544,7 @@ export default function QuotationFlowClient({
           {quotation.status === "APPROVED" && (
             <button
               onClick={() => uploadPo(quotation)}
-              className="inline-flex items-center gap-1 rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-300"
+              className="inline-flex items-center gap-1 rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600"
             >
               <Upload size={13} />
               Upload PO
@@ -558,7 +558,7 @@ export default function QuotationFlowClient({
       return (
         <button
           onClick={() => handleEdit(quotation)}
-          className="inline-flex items-center gap-1 rounded-xl border border-yellow-400/30 px-3 py-2 text-xs text-yellow-300 hover:bg-yellow-400/10"
+          className="inline-flex items-center gap-1 rounded-xl border border-amber-300 px-3 py-2 text-xs text-amber-600 hover:bg-yellow-400/10"
         >
           <Edit3 size={13} />
           Revisi Harga & Kirim
@@ -572,7 +572,7 @@ export default function QuotationFlowClient({
           onClick={() =>
             runAction(`/api/quotations/${quotation.id}/verify`, "PATCH")
           }
-          className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-300"
+          className="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600"
         >
           Verify
         </button>
@@ -585,7 +585,7 @@ export default function QuotationFlowClient({
           onClick={() =>
             runAction(`/api/quotations/${quotation.id}/approve`, "PATCH")
           }
-          className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-300"
+          className="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600"
         >
           Approve
         </button>
@@ -598,7 +598,7 @@ export default function QuotationFlowClient({
           onClick={() =>
             runAction(`/api/quotations/${quotation.id}/ltr`, "POST")
           }
-          className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-300"
+          className="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600"
         >
           Create LTR
         </button>
@@ -611,7 +611,7 @@ export default function QuotationFlowClient({
           onClick={() =>
             runAction(`/api/quotations/${quotation.id}/coc`, "POST")
           }
-          className="rounded-xl bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-300"
+          className="rounded-xl bg-emerald-500 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-600"
         >
           Create COC
         </button>
@@ -622,14 +622,14 @@ export default function QuotationFlowClient({
   }
 
   const modal = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-md">
       <form
         onSubmit={submitQuotation}
-        className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-white/10 bg-slate-900 shadow-2xl"
+        className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
       >
-        <div className="flex shrink-0 items-start justify-between border-b border-white/10 bg-slate-900 px-6 py-5">
+        <div className="flex shrink-0 items-start justify-between border-b border-slate-200 bg-white px-6 py-5">
           <div>
-            <h2 className="text-2xl font-bold text-white">
+            <h2 className="text-2xl font-bold text-slate-900">
               {form.id ? "Revisi Quotation" : "Buat Quotation"}
             </h2>
             <p className="mt-1 text-sm text-slate-400">
@@ -642,7 +642,7 @@ export default function QuotationFlowClient({
           <button
             type="button"
             onClick={() => setOpenForm(false)}
-            className="rounded-xl p-2 text-slate-400 hover:bg-white/10 hover:text-white"
+            className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
           >
             <X size={20} />
           </button>
@@ -650,15 +650,15 @@ export default function QuotationFlowClient({
 
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {message && (
-            <p className="mb-5 rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+            <p className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {message}
             </p>
           )}
 
-          <div className="rounded-3xl border border-white/10 bg-slate-950 p-5">
+          <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
             <div className="grid gap-4 lg:grid-cols-3">
               <div>
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-slate-600">
                   Customer
                 </label>
 
@@ -667,7 +667,7 @@ export default function QuotationFlowClient({
                   onChange={(event) =>
                     setForm({ ...form, customerId: event.target.value })
                   }
-                  className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                 >
                   {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>
@@ -679,14 +679,14 @@ export default function QuotationFlowClient({
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-slate-600">
                   Template COA
                 </label>
 
                 <select
                   value={form.coaTemplateId}
                   onChange={(event) => changeTemplate(event.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                 >
                   {coaTemplates.map((template) => (
                     <option key={template.id} value={template.id}>
@@ -697,7 +697,7 @@ export default function QuotationFlowClient({
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-slate-600">
                   Catatan
                 </label>
 
@@ -707,16 +707,16 @@ export default function QuotationFlowClient({
                     setForm({ ...form, note: event.target.value })
                   }
                   placeholder="Catatan quotation"
-                  className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                 />
               </div>
             </div>
           </div>
 
-          <div className="mt-5 overflow-hidden rounded-3xl border border-white/10 bg-slate-950">
+          <div className="mt-5 overflow-hidden rounded-3xl border border-slate-200 bg-slate-50">
             <div className="max-h-[48vh] overflow-auto">
               <table className="w-full min-w-[860px] text-sm">
-                <thead className="sticky top-0 z-10 bg-slate-900 text-left text-slate-300">
+                <thead className="sticky top-0 z-10 bg-white text-left text-slate-600">
                   <tr>
                     <th className="px-4 py-3">Parameter</th>
                     <th className="w-[95px] px-4 py-3">Qty</th>
@@ -737,7 +737,7 @@ export default function QuotationFlowClient({
                     return (
                       <tr
                         key={`${item.parameterId}-${index}`}
-                        className="border-t border-white/10"
+                        className="border-t border-slate-200"
                       >
                         <td className="px-4 py-3">
                           <select
@@ -745,7 +745,7 @@ export default function QuotationFlowClient({
                             onChange={(event) =>
                               changeParameter(index, event.target.value)
                             }
-                            className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                           >
                             {selectedTemplateParameters.map(
                               (templateParameter) => (
@@ -773,7 +773,7 @@ export default function QuotationFlowClient({
                                 Number(event.target.value || 1)
                               )
                             }
-                            className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                           />
                         </td>
 
@@ -790,12 +790,12 @@ export default function QuotationFlowClient({
                                 Number(event.target.value || 0)
                               )
                             }
-                            className="w-full rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
                           />
                         </td>
 
                         <td className="px-4 py-3">
-                          <div className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 font-semibold text-slate-200">
+                          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700">
                             {formatRupiah(activePrice * item.qty)}
                           </div>
                         </td>
@@ -805,7 +805,7 @@ export default function QuotationFlowClient({
                             type="button"
                             onClick={() => removeItem(index)}
                             disabled={form.items.length === 1}
-                            className="rounded-2xl border border-red-400/20 px-4 py-3 text-sm text-red-300 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+                            className="rounded-2xl border border-red-200 px-4 py-3 text-sm text-red-600 hover:bg-red-400/10 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             Hapus
                           </button>
@@ -819,11 +819,11 @@ export default function QuotationFlowClient({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col gap-4 border-t border-white/10 bg-slate-900 px-6 py-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex shrink-0 flex-col gap-4 border-t border-slate-200 bg-white px-6 py-5 md:flex-row md:items-center md:justify-between">
           <button
             type="button"
             onClick={addItem}
-            className="rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
             Tambah Parameter
           </button>
@@ -831,7 +831,7 @@ export default function QuotationFlowClient({
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <p className="text-sm text-slate-400">
               Total:{" "}
-              <span className="text-lg font-bold text-white">
+              <span className="text-lg font-bold text-slate-900">
                 {formatRupiah(totalFormAmount)}
               </span>
             </p>
@@ -844,7 +844,7 @@ export default function QuotationFlowClient({
                 coaTemplates.length === 0 ||
                 form.items.length === 0
               }
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Save size={17} />
               {loading
@@ -861,7 +861,7 @@ export default function QuotationFlowClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">{config.title}</h2>
@@ -879,7 +879,7 @@ export default function QuotationFlowClient({
                   parameters.length === 0 ||
                   coaTemplates.length === 0
                 }
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <FilePlus size={17} />
                 Buat Quotation
@@ -888,7 +888,7 @@ export default function QuotationFlowClient({
 
             <button
               onClick={refreshData}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
             >
               <RefreshCcw size={17} />
               Refresh
@@ -897,7 +897,7 @@ export default function QuotationFlowClient({
         </div>
 
         {message && !openForm && (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {message}
           </p>
         )}
@@ -910,12 +910,12 @@ export default function QuotationFlowClient({
           return (
             <div
               key={quotation.id}
-              className="rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10"
+              className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:bg-slate-100"
             >
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-white">
+                    <span className="font-bold text-slate-900">
                       {quotation.quotationNo}
                     </span>
 
@@ -929,9 +929,9 @@ export default function QuotationFlowClient({
                     </span>
                   </div>
 
-                  <p className="text-sm text-slate-300">
+                  <p className="text-sm text-slate-600">
                     Customer:{" "}
-                    <span className="font-medium text-white">
+                    <span className="font-medium text-slate-900">
                       {quotation.customer?.name}
                     </span>
                   </p>
@@ -954,7 +954,7 @@ export default function QuotationFlowClient({
                     {quotation.items.map((item) => (
                       <span
                         key={item.id}
-                        className="rounded-full border border-white/10 bg-slate-950 px-3 py-1 text-xs text-slate-300"
+                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600"
                       >
                         {item.parameter.name} x {item.qty} ·{" "}
                         {formatRupiah(item.price)}
@@ -972,8 +972,8 @@ export default function QuotationFlowClient({
                           className={[
                             "rounded-2xl border px-3 py-2 text-xs",
                             done
-                              ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                              : "border-white/10 bg-slate-950 text-slate-500",
+                              ? "border-emerald-300 bg-emerald-50 text-emerald-600"
+                              : "border-slate-200 bg-slate-50 text-slate-500",
                           ].join(" ")}
                         >
                           <div className="flex items-center gap-1">
@@ -1001,7 +1001,7 @@ export default function QuotationFlowClient({
         })}
 
         {visibleQuotations.length === 0 && (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-slate-400">
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-400">
             {config.empty}
           </div>
         )}

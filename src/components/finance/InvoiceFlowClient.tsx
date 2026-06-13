@@ -72,14 +72,14 @@ function formatRupiah(value: number) {
 
 function getStatusStyle(status: string) {
   const styles: Record<string, string> = {
-    DRAFT: "bg-slate-400/15 text-slate-300",
-    WAITING_APPROVAL: "bg-yellow-400/15 text-yellow-300",
-    APPROVED: "bg-emerald-400/15 text-emerald-300",
-    SENT: "bg-blue-400/15 text-blue-300",
+    DRAFT: "bg-slate-100 text-slate-600",
+    WAITING_APPROVAL: "bg-amber-100 text-amber-600",
+    APPROVED: "bg-emerald-100 text-emerald-600",
+    SENT: "bg-sky-100 text-sky-600",
     PAID: "bg-purple-400/15 text-purple-300",
   };
 
-  return styles[status] || "bg-slate-400/15 text-slate-300";
+  return styles[status] || "bg-slate-100 text-slate-600";
 }
 
 export default function InvoiceFlowClient({
@@ -174,7 +174,7 @@ export default function InvoiceFlowClient({
           onClick={() =>
             runAction(`/api/finance/invoices/${invoice.id}/approve`, "PATCH")
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
         >
           <CheckCircle2 size={16} />
           Approve
@@ -189,7 +189,7 @@ export default function InvoiceFlowClient({
           onClick={() =>
             runAction(`/api/finance/invoices/${invoice.id}/send`, "PATCH")
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-blue-300 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-semibold text-white hover:bg-sky-600 disabled:opacity-60"
         >
           <Send size={16} />
           Send Invoice
@@ -204,7 +204,7 @@ export default function InvoiceFlowClient({
           onClick={() =>
             runAction(`/api/finance/invoices/${invoice.id}/paid`, "PATCH")
           }
-          className="inline-flex items-center gap-2 rounded-xl bg-purple-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-purple-300 disabled:opacity-60"
+          className="inline-flex items-center gap-2 rounded-xl bg-purple-400 px-4 py-3 text-sm font-semibold text-slate-900 hover:bg-purple-300 disabled:opacity-60"
         >
           <CreditCard size={16} />
           Mark Paid
@@ -217,7 +217,7 @@ export default function InvoiceFlowClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">
@@ -232,7 +232,7 @@ export default function InvoiceFlowClient({
 
           <button
             onClick={refreshData}
-            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
             <RefreshCcw size={17} />
             Refresh
@@ -240,16 +240,16 @@ export default function InvoiceFlowClient({
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {message}
           </p>
         )}
       </div>
 
       {mode === "create" && (
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6">
           <div className="mb-5 flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-400/15 p-3 text-emerald-300">
+            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-600">
               <BadgeDollarSign size={22} />
             </div>
 
@@ -271,10 +271,10 @@ export default function InvoiceFlowClient({
               return (
                 <div
                   key={quotation.id}
-                  className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-950 p-4 lg:flex-row lg:items-center lg:justify-between"
+                  className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:flex-row lg:items-center lg:justify-between"
                 >
                   <div>
-                    <p className="font-semibold text-white">
+                    <p className="font-semibold text-slate-900">
                       {quotation.quotationNo}
                     </p>
                     <p className="mt-1 text-sm text-slate-400">
@@ -286,7 +286,7 @@ export default function InvoiceFlowClient({
                     <p className="mt-1 text-sm text-slate-400">
                       Final COA: {finalCoa?.coaNo || "-"}
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-white">
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
                       Amount: {formatRupiah(quotation.totalAmount)}
                     </p>
                   </div>
@@ -294,7 +294,7 @@ export default function InvoiceFlowClient({
                   <button
                     disabled={loading}
                     onClick={() => createInvoice(quotation)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
                   >
                     <BadgeDollarSign size={16} />
                     Create Invoice
@@ -304,7 +304,7 @@ export default function InvoiceFlowClient({
             })}
 
             {readyQuotations.length === 0 && (
-              <div className="rounded-2xl border border-white/10 bg-slate-950 p-8 text-center text-sm text-slate-400">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-400">
                 Belum ada quotation yang siap dibuat invoice.
               </div>
             )}
@@ -322,12 +322,12 @@ export default function InvoiceFlowClient({
           return (
             <div
               key={invoice.id}
-              className="rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10"
+              className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:bg-slate-100"
             >
               <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
                   <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-white">
+                    <span className="font-bold text-slate-900">
                       {invoice.invoiceNo}
                     </span>
 
@@ -341,9 +341,9 @@ export default function InvoiceFlowClient({
                     </span>
                   </div>
 
-                  <p className="text-sm text-slate-300">
+                  <p className="text-sm text-slate-600">
                     Quotation:{" "}
-                    <span className="font-medium text-white">
+                    <span className="font-medium text-slate-900">
                       {invoice.quotation.quotationNo}
                     </span>
                   </p>
@@ -360,7 +360,7 @@ export default function InvoiceFlowClient({
                     Final COA: {finalCoa?.coaNo || "-"}
                   </p>
 
-                  <p className="mt-2 text-lg font-bold text-white">
+                  <p className="mt-2 text-lg font-bold text-slate-900">
                     {formatRupiah(invoice.amount)}
                   </p>
                 </div>
@@ -374,7 +374,7 @@ export default function InvoiceFlowClient({
         })}
 
         {visibleInvoices.length === 0 && (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-slate-400">
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-400">
             Data invoice belum tersedia.
           </div>
         )}

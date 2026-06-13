@@ -62,13 +62,13 @@ type Props = {
 
 function getStatusStyle(status: string) {
   const styles: Record<string, string> = {
-    VALIDATED: "bg-emerald-400/15 text-emerald-300",
-    PRELIMINARY_COA: "bg-blue-400/15 text-blue-300",
+    VALIDATED: "bg-emerald-100 text-emerald-600",
+    PRELIMINARY_COA: "bg-sky-100 text-sky-600",
     FINAL_COA: "bg-purple-400/15 text-purple-300",
-    COMPLETED: "bg-green-400/15 text-green-300",
+    COMPLETED: "bg-green-100 text-green-600",
   };
 
-  return styles[status] || "bg-slate-400/15 text-slate-300";
+  return styles[status] || "bg-slate-100 text-slate-600";
 }
 
 export default function CoaFlowClient({ mode, initialSamples }: Props) {
@@ -130,7 +130,7 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
             onClick={() =>
               runAction(`/api/coa/${sample.id}/preliminary`, "POST")
             }
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
           >
             <FileBadge size={16} />
             Generate Preliminary
@@ -145,7 +145,7 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
             onClick={() =>
               runAction(`/api/coa/${sample.id}/customer-confirm`, "PATCH")
             }
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
           >
             <CheckCircle2 size={16} />
             Confirm Preliminary
@@ -166,7 +166,7 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
           <button
             disabled={loading}
             onClick={() => runAction(`/api/coa/${sample.id}/final`, "POST")}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
           >
             <Award size={16} />
             Generate Final COA
@@ -182,7 +182,7 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">
@@ -197,7 +197,7 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
 
           <button
             onClick={refreshData}
-            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
             <RefreshCcw size={17} />
             Refresh
@@ -205,7 +205,7 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {message}
           </p>
         )}
@@ -221,12 +221,12 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
           return (
             <div
               key={sample.id}
-              className="rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10"
+              className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:bg-slate-100"
             >
               <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <h3 className="text-xl font-bold text-white">
+                    <h3 className="text-xl font-bold text-slate-900">
                       {sample.sampleNo}
                     </h3>
 
@@ -240,7 +240,7 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
                     </span>
                   </div>
 
-                  <p className="text-sm text-slate-300">
+                  <p className="text-sm text-slate-600">
                     Customer: {sample.customer.name}
                   </p>
 
@@ -267,10 +267,10 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
                 <div className="flex justify-end">{renderAction(sample)}</div>
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-white/10">
+              <div className="overflow-hidden rounded-2xl border border-slate-200">
                 <div className="overflow-auto">
                   <table className="w-full min-w-[900px] text-sm">
-                    <thead className="bg-slate-900 text-left text-slate-300">
+                    <thead className="bg-white text-left text-slate-600">
                       <tr>
                         <th className="px-4 py-3">Parameter</th>
                         <th className="px-4 py-3">Method</th>
@@ -299,27 +299,27 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
                         return (
                           <tr
                             key={item.id}
-                            className="border-t border-white/10 hover:bg-white/5"
+                            className="border-t border-slate-200 hover:bg-slate-50"
                           >
-                            <td className="px-4 py-3 text-white">
+                            <td className="px-4 py-3 text-slate-900">
                               {displayName}
                             </td>
-                            <td className="px-4 py-3 text-slate-300">
+                            <td className="px-4 py-3 text-slate-600">
                               {method}
                             </td>
-                            <td className="px-4 py-3 font-medium text-white">
+                            <td className="px-4 py-3 font-medium text-slate-900">
                               {item.resultValue || "-"}
                             </td>
-                            <td className="px-4 py-3 text-slate-300">
+                            <td className="px-4 py-3 text-slate-600">
                               {unit}
                             </td>
-                            <td className="px-4 py-3 text-slate-300">
+                            <td className="px-4 py-3 text-slate-600">
                               {item.templateParameter?.standard || "-"}
                             </td>
-                            <td className="px-4 py-3 text-slate-300">
+                            <td className="px-4 py-3 text-slate-600">
                               {item.templateParameter?.limitValue || "-"}
                             </td>
-                            <td className="px-4 py-3 text-slate-300">
+                            <td className="px-4 py-3 text-slate-600">
                               {item.status}
                             </td>
                           </tr>
@@ -334,7 +334,7 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
         })}
 
         {visibleSamples.length === 0 && (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-slate-400">
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-400">
             Data COA belum tersedia.
           </div>
         )}

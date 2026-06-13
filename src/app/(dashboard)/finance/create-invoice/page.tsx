@@ -18,7 +18,7 @@ export default async function CreateInvoicePage() {
   return (
     <section>
       <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">Finance Flow</p>
+        <p className="text-sm font-medium text-emerald-600">Finance Flow</p>
         <h1 className="mt-2 text-4xl font-bold">Create Invoice</h1>
         <p className="mt-3 max-w-3xl text-slate-400">
           Buat invoice berdasarkan quotation yang sudah selesai Final COA.

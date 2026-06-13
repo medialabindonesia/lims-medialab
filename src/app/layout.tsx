@@ -13,7 +13,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      {/* suppressHydrationWarning: ekstensi browser (Grammarly/ColorZilla)
+          menyuntik atribut ke <body> sebelum React hydrate, memicu mismatch
+          yang tidak berbahaya. Ini hanya menekan warning di level <body>. */}
+      <body suppressHydrationWarning className="antialiased">
+        {children}
+      </body>
     </html>
   );
 }

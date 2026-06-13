@@ -23,7 +23,7 @@ type AppShellProps = {
 
 export default function AppShell({ user, menus, children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <Sidebar user={user} menus={menus} />
 
       <main className="min-h-screen pl-72">

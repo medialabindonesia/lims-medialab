@@ -260,7 +260,7 @@ export default function MasterCoaTemplateClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="relative w-full md:max-w-md">
             <Search
@@ -272,14 +272,14 @@ export default function MasterCoaTemplateClient({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Cari template COA..."
-              className="w-full rounded-2xl border border-white/10 bg-slate-950 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-emerald-400"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none focus:border-emerald-500"
             />
           </div>
 
           <div className="flex gap-3">
             <button
               onClick={refreshData}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
             >
               <RefreshCcw size={17} />
               Refresh
@@ -287,7 +287,7 @@ export default function MasterCoaTemplateClient({
 
             <button
               onClick={handleCreate}
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
             >
               <Plus size={17} />
               Tambah Template
@@ -296,7 +296,7 @@ export default function MasterCoaTemplateClient({
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {message}
           </p>
         )}
@@ -306,17 +306,17 @@ export default function MasterCoaTemplateClient({
         {filteredTemplates.map((template) => (
           <div
             key={template.id}
-            className="rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10"
+            className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:bg-slate-100"
           >
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <div className="rounded-2xl bg-emerald-400/15 p-3 text-emerald-300">
+                  <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-600">
                     <FileBadge size={20} />
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-bold text-white">
+                    <h3 className="text-xl font-bold text-slate-900">
                       {template.name}
                     </h3>
                     <p className="mt-1 text-sm text-slate-400">
@@ -328,8 +328,8 @@ export default function MasterCoaTemplateClient({
                     className={[
                       "rounded-full px-3 py-1 text-xs font-medium",
                       template.isActive
-                        ? "bg-emerald-400/15 text-emerald-300"
-                        : "bg-red-400/15 text-red-300",
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-red-100 text-red-600",
                     ].join(" ")}
                   >
                     {template.isActive ? "Active" : "Inactive"}
@@ -346,7 +346,7 @@ export default function MasterCoaTemplateClient({
                   {template.parameters.map((item) => (
                     <span
                       key={item.id}
-                      className="rounded-full border border-white/10 bg-slate-950 px-3 py-1 text-xs text-slate-300"
+                      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600"
                     >
                       {item.sort}. {item.displayName || item.parameter.name}
                       {item.limitValue ? ` · Limit: ${item.limitValue}` : ""}
@@ -358,14 +358,14 @@ export default function MasterCoaTemplateClient({
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => handleEdit(template)}
-                  className="rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-300 transition hover:bg-white/10 hover:text-white"
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
                 >
                   Edit
                 </button>
 
                 <button
                   onClick={() => handleDeactivate(template)}
-                  className="rounded-xl border border-red-400/20 px-3 py-2 text-xs text-red-300 transition hover:bg-red-400/10"
+                  className="rounded-xl border border-red-200 px-3 py-2 text-xs text-red-600 transition hover:bg-red-400/10"
                 >
                   Nonaktifkan
                 </button>
@@ -375,17 +375,17 @@ export default function MasterCoaTemplateClient({
         ))}
 
         {filteredTemplates.length === 0 && (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-slate-400">
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-400">
             Template COA belum ada.
           </div>
         )}
       </div>
 
       {openForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
-            className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-3xl border border-white/10 bg-slate-900 p-6 shadow-2xl"
+            className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
           >
             <div className="mb-6 flex items-center justify-between">
               <div>
@@ -400,7 +400,7 @@ export default function MasterCoaTemplateClient({
               <button
                 type="button"
                 onClick={() => setOpenForm(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-white/10 hover:text-white"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
               >
                 <X size={20} />
               </button>
@@ -408,7 +408,7 @@ export default function MasterCoaTemplateClient({
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-slate-600">
                   Nama Template
                 </label>
                 <input
@@ -421,13 +421,13 @@ export default function MasterCoaTemplateClient({
                       code: form.id ? form.code : normalizeCode(name),
                     });
                   }}
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                   placeholder="Contoh: Air Ambient"
                 />
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-slate-600">
                   Kode Template
                 </label>
                 <input
@@ -438,14 +438,14 @@ export default function MasterCoaTemplateClient({
                       code: normalizeCode(event.target.value),
                     })
                   }
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                   placeholder="AIR_AMBIENT"
                 />
               </div>
             </div>
 
             <div className="mt-4">
-              <label className="mb-2 block text-sm text-slate-300">
+              <label className="mb-2 block text-sm text-slate-600">
                 Deskripsi
               </label>
               <input
@@ -453,19 +453,19 @@ export default function MasterCoaTemplateClient({
                 onChange={(event) =>
                   setForm({ ...form, description: event.target.value })
                 }
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                 placeholder="Deskripsi template"
               />
             </div>
 
-            <label className="mt-4 flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+            <label className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
               <input
                 type="checkbox"
                 checked={form.isActive}
                 onChange={(event) =>
                   setForm({ ...form, isActive: event.target.checked })
                 }
-                className="h-4 w-4 accent-emerald-400"
+                className="h-4 w-4 accent-emerald-500"
               />
               Template aktif
             </label>
@@ -483,7 +483,7 @@ export default function MasterCoaTemplateClient({
                 <button
                   type="button"
                   onClick={addParameter}
-                  className="rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
+                  className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                 >
                   Tambah Parameter
                 </button>
@@ -493,14 +493,14 @@ export default function MasterCoaTemplateClient({
                 {form.parameters.map((item, index) => (
                   <div
                     key={`${item.parameterId}-${index}`}
-                    className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950 p-4 xl:grid-cols-[1.3fr_1fr_0.7fr_1fr_1fr_1fr_80px_90px]"
+                    className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:grid-cols-[1.3fr_1fr_0.7fr_1fr_1fr_1fr_80px_90px]"
                   >
                     <select
                       value={item.parameterId}
                       onChange={(event) =>
                         changeParameter(index, event.target.value)
                       }
-                      className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                     >
                       {parameters.map((parameter) => (
                         <option key={parameter.id} value={parameter.id}>
@@ -514,7 +514,7 @@ export default function MasterCoaTemplateClient({
                       onChange={(event) =>
                         updateParameter(index, "displayName", event.target.value)
                       }
-                      className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                       placeholder="Nama tampil"
                     />
 
@@ -523,7 +523,7 @@ export default function MasterCoaTemplateClient({
                       onChange={(event) =>
                         updateParameter(index, "unit", event.target.value)
                       }
-                      className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                       placeholder="Unit"
                     />
 
@@ -532,7 +532,7 @@ export default function MasterCoaTemplateClient({
                       onChange={(event) =>
                         updateParameter(index, "method", event.target.value)
                       }
-                      className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                       placeholder="Method"
                     />
 
@@ -541,7 +541,7 @@ export default function MasterCoaTemplateClient({
                       onChange={(event) =>
                         updateParameter(index, "standard", event.target.value)
                       }
-                      className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                       placeholder="Standard"
                     />
 
@@ -550,7 +550,7 @@ export default function MasterCoaTemplateClient({
                       onChange={(event) =>
                         updateParameter(index, "limitValue", event.target.value)
                       }
-                      className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                       placeholder="Baku mutu"
                     />
 
@@ -560,14 +560,14 @@ export default function MasterCoaTemplateClient({
                       onChange={(event) =>
                         updateParameter(index, "sort", Number(event.target.value || 0))
                       }
-                      className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                       placeholder="Sort"
                     />
 
                     <button
                       type="button"
                       onClick={() => removeParameter(index)}
-                      className="rounded-2xl border border-red-400/20 px-3 py-3 text-sm text-red-300 hover:bg-red-400/10"
+                      className="rounded-2xl border border-red-200 px-3 py-3 text-sm text-red-600 hover:bg-red-400/10"
                     >
                       Hapus
                     </button>
@@ -575,7 +575,7 @@ export default function MasterCoaTemplateClient({
                 ))}
 
                 {form.parameters.length === 0 && (
-                  <div className="rounded-2xl border border-white/10 bg-slate-950 p-6 text-center text-sm text-slate-400">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-400">
                     Belum ada parameter di template ini.
                   </div>
                 )}
@@ -586,14 +586,14 @@ export default function MasterCoaTemplateClient({
               <button
                 type="button"
                 onClick={() => setOpenForm(false)}
-                className="rounded-2xl border border-white/10 px-5 py-3 text-sm text-slate-300 hover:bg-white/10"
+                className="rounded-2xl border border-slate-200 px-5 py-3 text-sm text-slate-600 hover:bg-slate-100"
               >
                 Batal
               </button>
 
               <button
                 disabled={loading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
               >
                 <Save size={17} />
                 {loading ? "Menyimpan..." : "Simpan Template"}

@@ -214,7 +214,7 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
 
   if (!selectedRole) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-slate-300">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-600">
         Role belum tersedia.
       </div>
     );
@@ -222,8 +222,8 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-        <label className="mb-2 block text-sm font-medium text-slate-300">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5">
+        <label className="mb-2 block text-sm font-medium text-slate-600">
           Pilih Role
         </label>
 
@@ -234,7 +234,7 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
               setSelectedRoleId(event.target.value);
               setMessage("");
             }}
-            className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400 md:max-w-md"
+            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500 md:max-w-md"
           >
             {roles.map((role) => (
               <option key={role.id} value={role.id}>
@@ -246,7 +246,7 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
           <button
             onClick={savePermissions}
             disabled={loading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Save size={18} />
             {loading ? "Menyimpan..." : "Simpan Permission"}
@@ -254,17 +254,17 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {message}
           </p>
         )}
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
         <div className="max-h-[calc(100vh-260px)] overflow-auto">
           <table className="w-full min-w-[1100px] border-collapse text-sm">
-            <thead className="sticky top-0 z-10 bg-slate-900">
-              <tr className="border-b border-white/10 text-left text-slate-300">
+            <thead className="sticky top-0 z-10 bg-white">
+              <tr className="border-b border-slate-200 text-left text-slate-600">
                 <th className="w-[280px] px-5 py-4">Menu</th>
 
                 {permissions.map((permission) => (
@@ -280,10 +280,10 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
             <tbody>
               {Object.entries(groupedMenus).map(([groupName, items]) => (
                 <Fragment key={groupName}>
-                  <tr className="border-b border-white/10 bg-slate-950/70">
+                  <tr className="border-b border-slate-200 bg-white">
                     <td
                       colSpan={permissions.length + 2}
-                      className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-emerald-300"
+                      className="px-5 py-3 text-xs font-bold uppercase tracking-wider text-emerald-600"
                     >
                       {groupName}
                     </td>
@@ -306,10 +306,10 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
                     return (
                       <tr
                         key={menu.id}
-                        className="border-b border-white/10 hover:bg-white/5"
+                        className="border-b border-slate-200 hover:bg-slate-50"
                       >
                         <td className="px-5 py-4">
-                          <p className="font-medium text-white">{menu.name}</p>
+                          <p className="font-medium text-slate-900">{menu.name}</p>
                           <p className="mt-1 text-xs text-slate-500">
                             {menu.key} · {menu.href}
                           </p>
@@ -326,7 +326,7 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
                               onChange={() =>
                                 togglePermission(menu.id, permission.key)
                               }
-                              className="h-4 w-4 accent-emerald-400"
+                              className="h-4 w-4 accent-emerald-500"
                             />
                           </td>
                         ))}
@@ -336,7 +336,7 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
                             type="checkbox"
                             checked={allChecked}
                             onChange={() => checkAllMenu(menu.id)}
-                            className="h-4 w-4 accent-emerald-400"
+                            className="h-4 w-4 accent-emerald-500"
                           />
                         </td>
                       </tr>

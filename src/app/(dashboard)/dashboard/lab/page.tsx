@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import StatCard from "@/components/dashboard/StatCard";
+import MotionHeader from "@/components/layout/MotionHeader";
 import {
   ClipboardPen,
   FlaskConical,
@@ -17,19 +18,17 @@ export default async function LabDashboardPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-300">Lab Dashboard</p>
-        <h1 className="mt-2 text-4xl font-bold">Laboratory Workflow</h1>
-        <p className="mt-3 max-w-2xl text-slate-400">
-          Alur lab dari receive sample, distribute parameter, analyst input result, supervisor review, sampai manager validate.
-        </p>
-      </div>
+      <MotionHeader
+        eyebrow="Lab Dashboard"
+        title="Laboratory Workflow"
+        subtitle="Alur lab dari receive sample, distribute parameter, analyst input result, supervisor review, sampai manager validate."
+      />
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard title="Received Sample" value={received} icon={PackageCheck} />
-        <StatCard title="In Analysis" value={inAnalysis} icon={FlaskConical} />
-        <StatCard title="Entered Result" value={entered} icon={ClipboardPen} />
-        <StatCard title="Validated Sample" value={validated} icon={ShieldCheck} />
+        <StatCard index={0} title="Received Sample" value={received} icon={PackageCheck} />
+        <StatCard index={1} title="In Analysis" value={inAnalysis} icon={FlaskConical} />
+        <StatCard index={2} title="Entered Result" value={entered} icon={ClipboardPen} />
+        <StatCard index={3} title="Validated Sample" value={validated} icon={ShieldCheck} />
       </div>
     </section>
   );

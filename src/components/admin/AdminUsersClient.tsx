@@ -163,7 +163,7 @@ export default function AdminUsersClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+      <div className="rounded-3xl border border-slate-200 bg-white p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="relative w-full md:max-w-md">
             <Search
@@ -175,14 +175,14 @@ export default function AdminUsersClient({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder="Cari user..."
-              className="w-full rounded-2xl border border-white/10 bg-slate-950 py-3 pl-11 pr-4 text-sm text-white outline-none focus:border-emerald-400"
+              className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm text-slate-900 outline-none focus:border-emerald-500"
             />
           </div>
 
           <div className="flex gap-3">
             <button
               onClick={refreshData}
-              className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white"
+              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
             >
               <RefreshCcw size={17} />
               Refresh
@@ -190,7 +190,7 @@ export default function AdminUsersClient({
 
             <button
               onClick={handleCreate}
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-emerald-300"
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-600"
             >
               <Plus size={17} />
               Tambah User
@@ -199,16 +199,16 @@ export default function AdminUsersClient({
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {message}
           </p>
         )}
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
         <div className="overflow-auto">
           <table className="w-full min-w-[1000px] text-sm">
-            <thead className="bg-slate-900 text-left text-slate-300">
+            <thead className="bg-white text-left text-slate-600">
               <tr>
                 <th className="px-5 py-4">User</th>
                 <th className="px-5 py-4">Role</th>
@@ -222,21 +222,21 @@ export default function AdminUsersClient({
               {filteredUsers.map((user) => (
                 <tr
                   key={user.id}
-                  className="border-t border-white/10 hover:bg-white/5"
+                  className="border-t border-slate-200 hover:bg-slate-50"
                 >
                   <td className="px-5 py-4">
-                    <p className="font-medium text-white">{user.name}</p>
+                    <p className="font-medium text-slate-900">{user.name}</p>
                     <p className="mt-1 text-xs text-slate-500">{user.email}</p>
                   </td>
 
-                  <td className="px-5 py-4 text-slate-300">
+                  <td className="px-5 py-4 text-slate-600">
                     <p>{user.role.name}</p>
                     <p className="mt-1 text-xs text-slate-500">
                       {user.role.code}
                     </p>
                   </td>
 
-                  <td className="px-5 py-4 text-slate-300">
+                  <td className="px-5 py-4 text-slate-600">
                     {user.customer?.name || "-"}
                   </td>
 
@@ -245,8 +245,8 @@ export default function AdminUsersClient({
                       className={[
                         "rounded-full px-3 py-1 text-xs font-medium",
                         user.isActive
-                          ? "bg-emerald-400/15 text-emerald-300"
-                          : "bg-red-400/15 text-red-300",
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "bg-red-100 text-red-600",
                       ].join(" ")}
                     >
                       {user.isActive ? "Active" : "Inactive"}
@@ -256,7 +256,7 @@ export default function AdminUsersClient({
                   <td className="px-5 py-4 text-right">
                     <button
                       onClick={() => handleResetPassword(user)}
-                      className="mr-2 inline-flex items-center gap-1 rounded-xl border border-emerald-400/20 px-3 py-2 text-xs text-emerald-300 transition hover:bg-emerald-400/10"
+                      className="mr-2 inline-flex items-center gap-1 rounded-xl border border-emerald-200 px-3 py-2 text-xs text-emerald-600 transition hover:bg-emerald-50"
                     >
                       <KeyRound size={13} />
                       Reset Password
@@ -264,14 +264,14 @@ export default function AdminUsersClient({
 
                     <button
                       onClick={() => handleEdit(user)}
-                      className="mr-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-300 transition hover:bg-white/10 hover:text-white"
+                      className="mr-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
                     >
                       Edit
                     </button>
 
                     <button
                       onClick={() => handleDeactivate(user)}
-                      className="rounded-xl border border-red-400/20 px-3 py-2 text-xs text-red-300 transition hover:bg-red-400/10"
+                      className="rounded-xl border border-red-200 px-3 py-2 text-xs text-red-600 transition hover:bg-red-400/10"
                     >
                       Nonaktifkan
                     </button>
@@ -295,10 +295,10 @@ export default function AdminUsersClient({
       </div>
 
       {openForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
-            className="w-full max-w-2xl rounded-3xl border border-white/10 bg-slate-900 p-6 shadow-2xl"
+            className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl"
           >
             <div className="mb-6 flex items-center justify-between">
               <div>
@@ -315,7 +315,7 @@ export default function AdminUsersClient({
               <button
                 type="button"
                 onClick={() => setOpenForm(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-white/10 hover:text-white"
+                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
               >
                 <X size={20} />
               </button>
@@ -324,7 +324,7 @@ export default function AdminUsersClient({
             <div className="grid gap-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm text-slate-300">
+                  <label className="mb-2 block text-sm text-slate-600">
                     Nama
                   </label>
                   <input
@@ -332,13 +332,13 @@ export default function AdminUsersClient({
                     onChange={(event) =>
                       setForm({ ...form, name: event.target.value })
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                     placeholder="Nama user"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm text-slate-300">
+                  <label className="mb-2 block text-sm text-slate-600">
                     Email
                   </label>
                   <input
@@ -346,7 +346,7 @@ export default function AdminUsersClient({
                     onChange={(event) =>
                       setForm({ ...form, email: event.target.value })
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                     placeholder="user@email.com"
                   />
                 </div>
@@ -354,7 +354,7 @@ export default function AdminUsersClient({
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-sm text-slate-300">
+                  <label className="mb-2 block text-sm text-slate-600">
                     Password
                   </label>
                   <input
@@ -363,7 +363,7 @@ export default function AdminUsersClient({
                     onChange={(event) =>
                       setForm({ ...form, password: event.target.value })
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                     placeholder={
                       form.id
                         ? "Kosongkan jika tidak diganti"
@@ -373,7 +373,7 @@ export default function AdminUsersClient({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-sm text-slate-300">
+                  <label className="mb-2 block text-sm text-slate-600">
                     Role
                   </label>
                   <select
@@ -381,7 +381,7 @@ export default function AdminUsersClient({
                     onChange={(event) =>
                       setForm({ ...form, roleId: event.target.value })
                     }
-                    className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                   >
                     {roles.map((role) => (
                       <option key={role.id} value={role.id}>
@@ -393,7 +393,7 @@ export default function AdminUsersClient({
               </div>
 
               <div>
-                <label className="mb-2 block text-sm text-slate-300">
+                <label className="mb-2 block text-sm text-slate-600">
                   Hubungkan ke Customer
                 </label>
                 <select
@@ -401,7 +401,7 @@ export default function AdminUsersClient({
                   onChange={(event) =>
                     setForm({ ...form, customerId: event.target.value })
                   }
-                  className="w-full rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                 >
                   <option value="">Tidak terhubung ke customer</option>
                   {customers.map((customer) => (
@@ -413,14 +413,14 @@ export default function AdminUsersClient({
                 </select>
               </div>
 
-              <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 <input
                   type="checkbox"
                   checked={form.isActive}
                   onChange={(event) =>
                     setForm({ ...form, isActive: event.target.checked })
                   }
-                  className="h-4 w-4 accent-emerald-400"
+                  className="h-4 w-4 accent-emerald-500"
                 />
                 User aktif
               </label>
@@ -430,14 +430,14 @@ export default function AdminUsersClient({
               <button
                 type="button"
                 onClick={() => setOpenForm(false)}
-                className="rounded-2xl border border-white/10 px-5 py-3 text-sm text-slate-300 hover:bg-white/10"
+                className="rounded-2xl border border-slate-200 px-5 py-3 text-sm text-slate-600 hover:bg-slate-100"
               >
                 Batal
               </button>
 
               <button
                 disabled={loading}
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
               >
                 <Save size={17} />
                 {loading ? "Menyimpan..." : "Simpan"}

@@ -66,14 +66,14 @@ type Props = {
 
 function getStatusStyle(status: string) {
   const styles: Record<string, string> = {
-    SAMPLE_SENT: "bg-blue-400/15 text-blue-300",
-    RECEIVED: "bg-emerald-400/15 text-emerald-300",
+    SAMPLE_SENT: "bg-sky-100 text-sky-600",
+    RECEIVED: "bg-emerald-100 text-emerald-600",
     DISTRIBUTED: "bg-purple-400/15 text-purple-300",
-    IN_ANALYSIS: "bg-orange-400/15 text-orange-300",
-    COMPLETED: "bg-green-400/15 text-green-300",
+    IN_ANALYSIS: "bg-orange-100 text-orange-600",
+    COMPLETED: "bg-green-100 text-green-600",
   };
 
-  return styles[status] || "bg-slate-400/15 text-slate-300";
+  return styles[status] || "bg-slate-100 text-slate-600";
 }
 
 export default function SampleFlowClient({
@@ -212,7 +212,7 @@ export default function SampleFlowClient({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h2 className="text-2xl font-bold">
@@ -227,7 +227,7 @@ export default function SampleFlowClient({
 
           <button
             onClick={refreshData}
-            className="inline-flex items-center gap-2 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-300 hover:bg-white/10 hover:text-white"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
             <RefreshCcw size={17} />
             Refresh
@@ -235,16 +235,16 @@ export default function SampleFlowClient({
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-slate-300">
+          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
             {message}
           </p>
         )}
       </div>
 
       {mode === "receive" && (
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6">
           <div className="mb-5 flex items-center gap-3">
-            <div className="rounded-2xl bg-emerald-400/15 p-3 text-emerald-300">
+            <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-600">
               <Plus size={20} />
             </div>
             <div>
@@ -259,10 +259,10 @@ export default function SampleFlowClient({
             {readyQuotations.map((quotation) => (
               <div
                 key={quotation.id}
-                className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-950 p-4 md:flex-row md:items-center md:justify-between"
+                className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between"
               >
                 <div>
-                  <p className="font-semibold text-white">
+                  <p className="font-semibold text-slate-900">
                     {quotation.quotationNo}
                   </p>
                   <p className="mt-1 text-sm text-slate-400">
@@ -276,7 +276,7 @@ export default function SampleFlowClient({
                 <button
                   disabled={loading}
                   onClick={() => createSampleFromQuotation(quotation.id)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
                 >
                   <Send size={16} />
                   Kirim Sample
@@ -285,7 +285,7 @@ export default function SampleFlowClient({
             ))}
 
             {readyQuotations.length === 0 && (
-              <div className="rounded-2xl border border-white/10 bg-slate-950 p-6 text-center text-sm text-slate-400">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-400">
                 Belum ada quotation COC_CREATED yang siap dibuat sample.
               </div>
             )}
@@ -297,12 +297,12 @@ export default function SampleFlowClient({
         {visibleSamples.map((sample) => (
           <div
             key={sample.id}
-            className="rounded-3xl border border-white/10 bg-white/5 p-5 transition hover:bg-white/10"
+            className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:bg-slate-100"
           >
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="font-bold text-white">{sample.sampleNo}</span>
+                  <span className="font-bold text-slate-900">{sample.sampleNo}</span>
 
                   <span
                     className={[
@@ -314,9 +314,9 @@ export default function SampleFlowClient({
                   </span>
                 </div>
 
-                <p className="text-sm text-slate-300">
+                <p className="text-sm text-slate-600">
                   Customer:{" "}
-                  <span className="font-medium text-white">
+                  <span className="font-medium text-slate-900">
                     {sample.customer.name}
                   </span>
                 </p>
@@ -329,10 +329,10 @@ export default function SampleFlowClient({
                   {sample.parameters.map((parameter) => (
                     <div
                       key={parameter.id}
-                      className="grid gap-3 rounded-2xl border border-white/10 bg-slate-950 p-3 md:grid-cols-[1fr_260px]"
+                      className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1fr_260px]"
                     >
                       <div>
-                        <p className="font-medium text-white">
+                        <p className="font-medium text-slate-900">
                           {parameter.parameter.name}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
@@ -350,7 +350,7 @@ export default function SampleFlowClient({
                               event.target.value
                             )
                           }
-                          className="rounded-2xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none focus:border-emerald-400"
+                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
                         >
                           {analysts.map((analyst) => (
                             <option key={analyst.id} value={analyst.id}>
@@ -369,7 +369,7 @@ export default function SampleFlowClient({
                   <button
                     disabled={loading}
                     onClick={() => receiveSample(sample.id)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
                   >
                     <PackageCheck size={16} />
                     Receive Sample
@@ -380,7 +380,7 @@ export default function SampleFlowClient({
                   <button
                     disabled={loading}
                     onClick={() => distributeSample(sample)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-semibold text-slate-950 hover:bg-emerald-300 disabled:opacity-60"
+                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
                   >
                     <FlaskConical size={16} />
                     Distribute
@@ -392,7 +392,7 @@ export default function SampleFlowClient({
         ))}
 
         {visibleSamples.length === 0 && (
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 text-center text-slate-400">
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-400">
             {mode === "receive"
               ? "Belum ada sample yang dikirim customer."
               : "Belum ada sample yang siap dibagi ke analyst."}
