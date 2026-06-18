@@ -4,19 +4,92 @@ import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 import { generateDocumentNo } from "@/lib/document-number";
 
-const quotationCreateSchema = z.object({
-  customerId: z.string().optional(),
-  coaTemplateId: z.string().min(1, "Template COA wajib dipilih"),
-  note: z.string().optional().nullable(),
-  items: z
-    .array(
-      z.object({
-        parameterId: z.string().min(1, "Parameter wajib dipilih"),
-        qty: z.coerce.number().int().min(1, "Qty minimal 1"),
-      })
-    )
-    .min(1, "Minimal pilih 1 parameter"),
+const nullableString = z.preprocess(
+  (value) => (value === "" ? null : value),
+  z.string().optional().nullable()
+);
+
+const nullableDate = z.preprocess(
+  (value) => (value === "" ? null : value),
+  z.string().optional().nullable()
+);
+
+const quotationItemSchema = z.object({
+  parameterId: z.string().min(1, "Parameter wajib dipilih"),
+  qty: z.coerce.number().int().min(1, "Qty minimal 1"),
+  description: nullableString,
+  customerSampleId: nullableString,
+  samplingLocation: nullableString,
+  regulationMatrix: nullableString,
+  durationSampling: nullableString,
+  method: nullableString,
 });
+
+const quotationCreateSchema = z.object({
+  customerId: z.string().optional().nullable(),
+  coaTemplateId: z.string().min(1, "Template COA wajib dipilih"),
+  note: nullableString,
+
+  quotationDate: nullableDate,
+  validUntil: nullableDate,
+
+  samplingBy: z
+    .enum(["MEDIALAB", "CUSTOMER", "THIRD_PARTY"])
+    .optional()
+    .nullable(),
+  testingObjective: z
+    .enum(["ROUTINE_MONITORING", "SUPERVISION", "CASE_PROOF", "RESEARCH", "OTHER"])
+    .optional()
+    .nullable(),
+  tatRequested: z.enum(["NORMAL", "URGENT", "TOP_URGENT"]).optional().nullable(),
+
+  samplingCost: z.coerce.number().min(0).optional(),
+  vatPercent: z.coerce.number().min(0).optional(),
+
+  paymentTerm: nullableString,
+  termsNote: nullableString,
+
+  items: z.array(quotationItemSchema).min(1, "Minimal pilih 1 parameter"),
+});
+
+function toDate(value?: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date;
+}
+
+function calculateTotals(input: {
+  items: Array<{
+    parameterId: string;
+    qty: number;
+  }>;
+  priceMap: Map<string, number>;
+  samplingCost?: number;
+  vatPercent?: number;
+}) {
+  const totalAmount = input.items.reduce((total, item) => {
+    const price = input.priceMap.get(item.parameterId) || 0;
+    return total + price * item.qty;
+  }, 0);
+
+  const samplingCost = input.samplingCost || 0;
+  const vatPercent = input.vatPercent ?? 11;
+  const taxableAmount = totalAmount + samplingCost;
+  const vatAmount = taxableAmount * (vatPercent / 100);
+  const grandTotal = taxableAmount + vatAmount;
+
+  return {
+    totalAmount,
+    samplingCost,
+    vatPercent,
+    vatAmount,
+    grandTotal,
+  };
+}
 
 export async function GET(request: Request) {
   const permission = await requireAnyApiPermission([
@@ -26,6 +99,7 @@ export async function GET(request: Request) {
     { menuKey: "quotation.approve", action: "canView" },
     { menuKey: "sales.ltr", action: "canView" },
     { menuKey: "technical.coc", action: "canView" },
+    { menuKey: "technical.stps", action: "canView" },
   ]);
 
   if (!permission.allowed) return permission.response;
@@ -59,7 +133,13 @@ export async function GET(request: Request) {
       purchaseOrder: true,
       ltr: true,
       coc: true,
+      stps: true,
       invoice: true,
+      samples: {
+        include: {
+          coa: true,
+        },
+      },
     },
     orderBy: {
       createdAt: "desc",
@@ -120,7 +200,11 @@ export async function POST(request: Request) {
       isActive: true,
     },
     include: {
-      parameters: true,
+      parameters: {
+        include: {
+          parameter: true,
+        },
+      },
     },
   });
 
@@ -172,10 +256,16 @@ export async function POST(request: Request) {
     parameters.map((parameter) => [parameter.id, parameter.price])
   );
 
-  const totalAmount = parsed.data.items.reduce((total, item) => {
-    const price = priceMap.get(item.parameterId) || 0;
-    return total + price * item.qty;
-  }, 0);
+  const templateParameterMap = new Map(
+    coaTemplate.parameters.map((item) => [item.parameterId, item])
+  );
+
+  const totals = calculateTotals({
+    items: parsed.data.items,
+    priceMap,
+    samplingCost: parsed.data.samplingCost,
+    vatPercent: parsed.data.vatPercent,
+  });
 
   const quotation = await prisma.quotation.create({
     data: {
@@ -183,15 +273,49 @@ export async function POST(request: Request) {
       customerId,
       coaTemplateId: parsed.data.coaTemplateId,
       note: parsed.data.note || null,
-      totalAmount,
+
+      quotationDate: toDate(parsed.data.quotationDate) || new Date(),
+      validUntil: toDate(parsed.data.validUntil),
+
+      samplingBy: parsed.data.samplingBy || "MEDIALAB",
+      testingObjective: parsed.data.testingObjective || "ROUTINE_MONITORING",
+      tatRequested: parsed.data.tatRequested || "NORMAL",
+
+      totalAmount: totals.totalAmount,
+      samplingCost: totals.samplingCost,
+      vatPercent: totals.vatPercent,
+      vatAmount: totals.vatAmount,
+      grandTotal: totals.grandTotal,
+
+      paymentTerm: parsed.data.paymentTerm || null,
+      termsNote: parsed.data.termsNote || null,
+
       status: "REQUESTED",
       requestedById: permission.session?.userId,
       items: {
-        create: parsed.data.items.map((item) => ({
-          parameterId: item.parameterId,
-          qty: item.qty,
-          price: priceMap.get(item.parameterId) || 0,
-        })),
+        create: parsed.data.items.map((item) => {
+          const templateParameter = templateParameterMap.get(item.parameterId);
+          const parameter = parameters.find((param) => param.id === item.parameterId);
+
+          return {
+            parameterId: item.parameterId,
+            qty: item.qty,
+            price: priceMap.get(item.parameterId) || 0,
+            description: item.description || null,
+            customerSampleId: item.customerSampleId || null,
+            samplingLocation: item.samplingLocation || null,
+            regulationMatrix:
+              item.regulationMatrix ||
+              templateParameter?.standard ||
+              null,
+            durationSampling: item.durationSampling || null,
+            method:
+              item.method ||
+              templateParameter?.method ||
+              parameter?.method ||
+              null,
+          };
+        }),
       },
     },
     include: {
@@ -205,6 +329,7 @@ export async function POST(request: Request) {
       purchaseOrder: true,
       ltr: true,
       coc: true,
+      stps: true,
     },
   });
 

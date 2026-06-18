@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAnyApiPermission, requireApiPermission } from "@/lib/api-permission";
+import { getSession } from "@/lib/auth";
+import {
+  requireAnyApiPermission,
+  requireApiPermission,
+} from "@/lib/api-permission";
 import { generateDocumentNo } from "@/lib/document-number";
 
 const createInvoiceSchema = z.object({
@@ -9,7 +13,77 @@ const createInvoiceSchema = z.object({
   amount: z.coerce.number().min(0, "Amount tidak valid").optional(),
 });
 
+function getInvoiceAmount(quotation: {
+  grandTotal?: number | null;
+  totalAmount?: number | null;
+}) {
+  return quotation.grandTotal && quotation.grandTotal > 0
+    ? quotation.grandTotal
+    : quotation.totalAmount || 0;
+}
+
 export async function GET() {
+  const session = await getSession();
+
+  if (!session) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (session.roleCode === "CUSTOMER_ENGAGEMENT") {
+    if (!session.customerId) {
+      return NextResponse.json(
+        { message: "Customer account belum terhubung ke master customer" },
+        { status: 403 }
+      );
+    }
+
+    const invoices = await prisma.invoice.findMany({
+      where: {
+        quotation: {
+          customerId: session.customerId,
+        },
+      },
+      include: {
+        quotation: {
+          include: {
+            customer: true,
+            coaTemplate: true,
+            items: {
+              include: {
+                parameter: true,
+              },
+            },
+            purchaseOrder: true,
+            ltr: true,
+            coc: {
+              include: {
+                sample: true,
+              },
+            },
+            stps: true,
+            samples: {
+              include: {
+                coa: true,
+                coaTemplate: true,
+              },
+              orderBy: {
+                createdAt: "desc",
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return NextResponse.json({
+      invoices,
+      readyQuotations: [],
+    });
+  }
+
   const permission = await requireAnyApiPermission([
     { menuKey: "finance.create_invoice", action: "canView" },
     { menuKey: "finance.approve_invoice", action: "canView" },
@@ -24,6 +98,19 @@ export async function GET() {
           include: {
             customer: true,
             coaTemplate: true,
+            items: {
+              include: {
+                parameter: true,
+              },
+            },
+            purchaseOrder: true,
+            ltr: true,
+            coc: {
+              include: {
+                sample: true,
+              },
+            },
+            stps: true,
             samples: {
               include: {
                 coa: true,
@@ -55,6 +142,19 @@ export async function GET() {
       include: {
         customer: true,
         coaTemplate: true,
+        items: {
+          include: {
+            parameter: true,
+          },
+        },
+        purchaseOrder: true,
+        ltr: true,
+        coc: {
+          include: {
+            sample: true,
+          },
+        },
+        stps: true,
         samples: {
           where: {
             status: "FINAL_COA",
@@ -105,6 +205,11 @@ export async function POST(request: Request) {
     include: {
       customer: true,
       invoice: true,
+      items: {
+        include: {
+          parameter: true,
+        },
+      },
       samples: {
         include: {
           coa: true,
@@ -138,7 +243,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const amount = parsed.data.amount ?? quotation.totalAmount;
+  const amount = parsed.data.amount ?? getInvoiceAmount(quotation);
 
   const invoice = await prisma.invoice.create({
     data: {
@@ -153,6 +258,19 @@ export async function POST(request: Request) {
         include: {
           customer: true,
           coaTemplate: true,
+          items: {
+            include: {
+              parameter: true,
+            },
+          },
+          purchaseOrder: true,
+          ltr: true,
+          coc: {
+            include: {
+              sample: true,
+            },
+          },
+          stps: true,
           samples: {
             include: {
               coa: true,

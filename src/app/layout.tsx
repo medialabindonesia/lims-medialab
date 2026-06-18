@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import MotionProvider from "@/components/providers/MotionProvider";
 
 export const metadata: Metadata = {
   title: "LIMS-Medialab",
-  description: "Laboratory Information Management System Medialab",
+  description: "Laboratory Information Management System",
 };
 
 export default function RootLayout({
@@ -13,11 +14,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      {/* suppressHydrationWarning: ekstensi browser (Grammarly/ColorZilla)
-          menyuntik atribut ke <body> sebelum React hydrate, memicu mismatch
-          yang tidak berbahaya. Ini hanya menekan warning di level <body>. */}
-      <body suppressHydrationWarning className="antialiased">
-        {children}
+      <body>
+        <MotionProvider>{children}</MotionProvider>
       </body>
     </html>
   );

@@ -4,19 +4,53 @@ import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 import { generateRevisionQuotationNo } from "@/lib/document-number";
 
+const nullableString = z.preprocess(
+  (value) => (value === "" ? null : value),
+  z.string().optional().nullable()
+);
+
+const nullableDate = z.preprocess(
+  (value) => (value === "" ? null : value),
+  z.string().optional().nullable()
+);
+
+const quotationItemSchema = z.object({
+  parameterId: z.string().min(1, "Parameter wajib dipilih"),
+  qty: z.coerce.number().int().min(1, "Qty minimal 1"),
+  customPrice: z.coerce.number().min(0).optional(),
+  description: nullableString,
+  customerSampleId: nullableString,
+  samplingLocation: nullableString,
+  regulationMatrix: nullableString,
+  durationSampling: nullableString,
+  method: nullableString,
+});
+
 const quotationUpdateSchema = z.object({
   customerId: z.string().min(1, "Customer wajib dipilih"),
   coaTemplateId: z.string().min(1, "Template COA wajib dipilih"),
-  note: z.string().optional().nullable(),
-  items: z
-    .array(
-      z.object({
-        parameterId: z.string().min(1, "Parameter wajib dipilih"),
-        qty: z.coerce.number().int().min(1, "Qty minimal 1"),
-        customPrice: z.coerce.number().min(0).optional(),
-      })
-    )
-    .min(1, "Minimal pilih 1 parameter"),
+  note: nullableString,
+
+  quotationDate: nullableDate,
+  validUntil: nullableDate,
+
+  samplingBy: z
+    .enum(["MEDIALAB", "CUSTOMER", "THIRD_PARTY"])
+    .optional()
+    .nullable(),
+  testingObjective: z
+    .enum(["ROUTINE_MONITORING", "SUPERVISION", "CASE_PROOF", "RESEARCH", "OTHER"])
+    .optional()
+    .nullable(),
+  tatRequested: z.enum(["NORMAL", "URGENT", "TOP_URGENT"]).optional().nullable(),
+
+  samplingCost: z.coerce.number().min(0).optional(),
+  vatPercent: z.coerce.number().min(0).optional(),
+
+  paymentTerm: nullableString,
+  termsNote: nullableString,
+
+  items: z.array(quotationItemSchema).min(1, "Minimal pilih 1 parameter"),
 });
 
 type RouteContext = {
@@ -24,6 +58,46 @@ type RouteContext = {
     id: string;
   }>;
 };
+
+function toDate(value?: string | null) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return null;
+
+  return date;
+}
+
+function calculateTotals(input: {
+  items: Array<{
+    parameterId: string;
+    qty: number;
+    customPrice?: number;
+  }>;
+  priceMap: Map<string, number>;
+  samplingCost?: number;
+  vatPercent?: number;
+}) {
+  const totalAmount = input.items.reduce((total, item) => {
+    const price = item.customPrice ?? input.priceMap.get(item.parameterId) ?? 0;
+    return total + price * item.qty;
+  }, 0);
+
+  const samplingCost = input.samplingCost || 0;
+  const vatPercent = input.vatPercent ?? 11;
+  const taxableAmount = totalAmount + samplingCost;
+  const vatAmount = taxableAmount * (vatPercent / 100);
+  const grandTotal = taxableAmount + vatAmount;
+
+  return {
+    totalAmount,
+    samplingCost,
+    vatPercent,
+    vatAmount,
+    grandTotal,
+  };
+}
 
 export async function GET(_request: Request, context: RouteContext) {
   const permission = await requireAnyApiPermission([
@@ -33,6 +107,7 @@ export async function GET(_request: Request, context: RouteContext) {
     { menuKey: "quotation.approve", action: "canView" },
     { menuKey: "sales.ltr", action: "canView" },
     { menuKey: "technical.coc", action: "canView" },
+    { menuKey: "technical.stps", action: "canView" },
   ]);
 
   if (!permission.allowed) return permission.response;
@@ -52,6 +127,13 @@ export async function GET(_request: Request, context: RouteContext) {
       purchaseOrder: true,
       ltr: true,
       coc: true,
+      stps: true,
+      invoice: true,
+      samples: {
+        include: {
+          coa: true,
+        },
+      },
     },
   });
 
@@ -126,7 +208,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       isActive: true,
     },
     include: {
-      parameters: true,
+      parameters: {
+        include: {
+          parameter: true,
+        },
+      },
     },
   });
 
@@ -178,10 +264,16 @@ export async function PATCH(request: Request, context: RouteContext) {
     parameters.map((parameter) => [parameter.id, parameter.price])
   );
 
-  const totalAmount = parsed.data.items.reduce((total, item) => {
-    const price = item.customPrice ?? priceMap.get(item.parameterId) ?? 0;
-    return total + price * item.qty;
-  }, 0);
+  const templateParameterMap = new Map(
+    coaTemplate.parameters.map((item) => [item.parameterId, item])
+  );
+
+  const totals = calculateTotals({
+    items: parsed.data.items,
+    priceMap,
+    samplingCost: parsed.data.samplingCost,
+    vatPercent: parsed.data.vatPercent,
+  });
 
   const nextQuotationNo = generateRevisionQuotationNo(
     existingQuotation.quotationNo
@@ -201,12 +293,37 @@ export async function PATCH(request: Request, context: RouteContext) {
         customerId: parsed.data.customerId,
         coaTemplateId: parsed.data.coaTemplateId,
         note: parsed.data.note || existingQuotation.note,
-        totalAmount,
+
+        quotationDate:
+          toDate(parsed.data.quotationDate) ||
+          existingQuotation.quotationDate ||
+          new Date(),
+        validUntil: toDate(parsed.data.validUntil),
+
+        samplingBy: parsed.data.samplingBy || existingQuotation.samplingBy,
+        testingObjective:
+          parsed.data.testingObjective || existingQuotation.testingObjective,
+        tatRequested: parsed.data.tatRequested || existingQuotation.tatRequested,
+
+        totalAmount: totals.totalAmount,
+        samplingCost: totals.samplingCost,
+        vatPercent: totals.vatPercent,
+        vatAmount: totals.vatAmount,
+        grandTotal: totals.grandTotal,
+
+        paymentTerm: parsed.data.paymentTerm || null,
+        termsNote: parsed.data.termsNote || null,
+
         status: "NEGOTIATION",
         verifiedById: null,
         approvedById: null,
         items: {
           create: parsed.data.items.map((item) => {
+            const templateParameter = templateParameterMap.get(item.parameterId);
+            const parameter = parameters.find(
+              (param) => param.id === item.parameterId
+            );
+
             const price =
               item.customPrice ?? priceMap.get(item.parameterId) ?? 0;
 
@@ -214,6 +331,19 @@ export async function PATCH(request: Request, context: RouteContext) {
               parameterId: item.parameterId,
               qty: item.qty,
               price,
+              description: item.description || null,
+              customerSampleId: item.customerSampleId || null,
+              samplingLocation: item.samplingLocation || null,
+              regulationMatrix:
+                item.regulationMatrix ||
+                templateParameter?.standard ||
+                null,
+              durationSampling: item.durationSampling || null,
+              method:
+                item.method ||
+                templateParameter?.method ||
+                parameter?.method ||
+                null,
             };
           }),
         },
@@ -229,6 +359,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         purchaseOrder: true,
         ltr: true,
         coc: true,
+        stps: true,
       },
     });
 

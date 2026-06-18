@@ -24,6 +24,13 @@ export async function getQuotationPageData() {
   const [customers, parameters, coaTemplates, quotations] = await Promise.all([
     prisma.customer.findMany({
       where: customerWhere,
+      include: {
+        users: {
+          include: {
+            role: true,
+          },
+        },
+      },
       orderBy: {
         name: "asc",
       },
@@ -73,6 +80,13 @@ export async function getQuotationPageData() {
         purchaseOrder: true,
         ltr: true,
         coc: true,
+        stps: true,
+        invoice: true,
+        samples: {
+          include: {
+            coa: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",

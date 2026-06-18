@@ -1,39 +1,34 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
-import { getQuotationPageData } from "@/lib/quotation-page-data";
-import QuotationFlowClient from "@/components/quotation/QuotationFlowClient";
+import { getTechnicalCocPageData } from "@/lib/technical-page-data";
+import TechnicalDocumentClient from "@/components/technical/TechnicalDocumentClient";
 
 export default async function CreateCocPage() {
   const session = await getSession();
 
-  if (!session) {
-    redirect("/login");
-  }
+  if (!session) redirect("/login");
 
   const allowed = await canAccessMenu(session.roleId, "technical.coc");
 
-  if (!allowed) {
-    redirect("/dashboard");
-  }
+  if (!allowed) redirect("/dashboard");
 
-  const data = await getQuotationPageData();
+  const data = await getTechnicalCocPageData();
 
   return (
-    <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-600">Technical Flow</p>
-        <h1 className="mt-2 text-4xl font-bold">Create COC</h1>
-        <p className="mt-3 max-w-3xl text-slate-400">
-          Technical membuat COC setelah LTR selesai dibuat.
+    <section className="min-h-screen">
+      <div className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
+        <p className="text-sm font-semibold text-emerald-600">Technical Flow</p>
+        <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900">
+          Create COC
+        </h1>
+        <p className="mt-3 max-w-3xl text-slate-500">
+          Buat Chain of Custody berdasarkan quotation dan LTR yang sudah selesai.
         </p>
       </div>
 
-      <QuotationFlowClient
+      <TechnicalDocumentClient
         mode="coc"
-        customers={data.customers}
-        parameters={data.parameters}
-        coaTemplates={data.coaTemplates}
         initialQuotations={data.quotations}
       />
     </section>

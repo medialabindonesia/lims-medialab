@@ -59,7 +59,9 @@ const menus = [
   { name: "Approve Quotation", key: "quotation.approve", href: "/quotations/approve", icon: "BadgeCheck", sort: 33 },
 
   { name: "Create LTR", key: "sales.ltr", href: "/sales/ltr", icon: "FileText", sort: 40 },
+
   { name: "Create COC", key: "technical.coc", href: "/technical/coc", icon: "ClipboardCheck", sort: 50 },
+  { name: "Create STPS", key: "technical.stps", href: "/technical/stps", icon: "FileSignature", sort: 51 },
 
   { name: "Receive Sample", key: "lab.receive_sample", href: "/lab/receive-sample", icon: "PackageCheck", sort: 60 },
   { name: "Distribute Parameter", key: "lab.distribute_parameter", href: "/lab/distribute-parameter", icon: "Share2", sort: 61 },
@@ -75,6 +77,7 @@ const menus = [
 
   { name: "Create Invoice", key: "finance.create_invoice", href: "/finance/create-invoice", icon: "Receipt", sort: 80 },
   { name: "Approve Invoice", key: "finance.approve_invoice", href: "/finance/approve-invoice", icon: "BadgeDollarSign", sort: 81 },
+  { name: "My Invoices", key: "customer.invoices", href: "/customer/invoices", icon: "Receipt", sort: 82 },
 ];
 
 const roleAccess: Record<string, string[]> = {
@@ -116,6 +119,7 @@ const roleAccess: Record<string, string[]> = {
     "quotation.request",
     "coa.preliminary",
     "coa.final",
+    "customer.invoices",
   ],
 
   SALES_STAFF: [
@@ -142,6 +146,7 @@ const roleAccess: Record<string, string[]> = {
   TECHNICAL: [
     "dashboard.worker",
     "technical.coc",
+    "technical.stps",
   ],
 };
 
@@ -195,6 +200,12 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
         canExport: true,
       };
     }
+    if (menuKey === "customer.invoices") {
+  return {
+    ...base,
+    canExport: true,
+  };
+}
   }
 
   if (roleCode === "SALES_STAFF") {
@@ -252,7 +263,7 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
   }
 
   if (roleCode === "TECHNICAL") {
-    if (menuKey === "technical.coc") {
+    if (menuKey === "technical.coc" || menuKey === "technical.stps") {
       return {
         ...base,
         canCreate: true,
@@ -434,6 +445,13 @@ async function upsertCustomer(data: {
   company?: string | null;
   email: string;
   phone?: string | null;
+  contactPerson?: string | null;
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  city?: string | null;
+  province?: string | null;
+  npwp?: string | null;
+  npwpAddress?: string | null;
 }) {
   const existing = await prisma.customer.findFirst({
     where: {
@@ -441,28 +459,56 @@ async function upsertCustomer(data: {
     },
   });
 
+  const payload = {
+    name: data.name,
+    company: data.company || null,
+    email: data.email,
+    phone: data.phone || null,
+    contactPerson: data.contactPerson || null,
+    addressLine1: data.addressLine1 || null,
+    addressLine2: data.addressLine2 || null,
+    city: data.city || null,
+    province: data.province || null,
+    npwp: data.npwp || null,
+    npwpAddress: data.npwpAddress || null,
+
+    billingCompany: data.company || null,
+    billingAddressLine1: data.addressLine1 || null,
+    billingAddressLine2: data.addressLine2 || null,
+    billingContactPerson: data.contactPerson || null,
+    billingEmail: data.email || null,
+    billingPhone: data.phone || null,
+
+    samplingCompany: data.company || null,
+    samplingAddressLine1: data.addressLine1 || null,
+    samplingAddressLine2: data.addressLine2 || null,
+    samplingContactPerson: data.contactPerson || null,
+    samplingPhone: data.phone || null,
+
+    documentCompany: data.company || null,
+    documentAddressLine1: data.addressLine1 || null,
+    documentAddressLine2: data.addressLine2 || null,
+    documentContactPerson: data.contactPerson || null,
+    documentPhone: data.phone || null,
+
+    recipientEmail1: data.email || null,
+    recipientEmail2: null,
+    recipientEmail3: null,
+    recipientEmail4: null,
+    isActive: true,
+  };
+
   if (existing) {
     return prisma.customer.update({
       where: {
         id: existing.id,
       },
-      data: {
-        name: data.name,
-        company: data.company || null,
-        phone: data.phone || null,
-        isActive: true,
-      },
+      data: payload,
     });
   }
 
   return prisma.customer.create({
-    data: {
-      name: data.name,
-      company: data.company || null,
-      email: data.email,
-      phone: data.phone || null,
-      isActive: true,
-    },
+    data: payload,
   });
 }
 
@@ -611,7 +657,10 @@ async function main() {
       where: {
         key: menu.key,
       },
-      update: menu,
+      update: {
+        ...menu,
+        isActive: true,
+      },
       create: menu,
     });
   }
@@ -652,6 +701,13 @@ async function main() {
     company: "PT Customer Demo Indonesia",
     email: "customer@medialab.test",
     phone: "08123456789",
+    contactPerson: "Beni",
+    addressLine1: "Jl. Kebagusan Pasar Minggu",
+    addressLine2: "Jakarta Selatan",
+    city: "Jakarta Selatan",
+    province: "DKI Jakarta",
+    npwp: "69.731.704.8-646.000",
+    npwpAddress: "Jl. Kebagusan Pasar Minggu, Jakarta Selatan",
   });
 
   const customerFactory = await upsertCustomer({
@@ -659,6 +715,13 @@ async function main() {
     company: "PT Factory Heat Stress Demo",
     email: "factory@medialab.test",
     phone: "081111222333",
+    contactPerson: "Factory PIC",
+    addressLine1: "Kawasan Industri Demo",
+    addressLine2: "Bekasi",
+    city: "Bekasi",
+    province: "Jawa Barat",
+    npwp: "00.000.000.0-000.000",
+    npwpAddress: "Kawasan Industri Demo, Bekasi",
   });
 
   console.log("Seeding users...");

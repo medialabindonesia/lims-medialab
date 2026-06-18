@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FlaskConical, PackageCheck, Plus, RefreshCcw, Send } from "lucide-react";
+import {
+  FlaskConical,
+  PackageCheck,
+  Plus,
+  RefreshCcw,
+  Send,
+} from "lucide-react";
+import ExportButtons from "@/components/exports/ExportButtons";
 
 type SampleMode = "receive" | "distribute";
 
@@ -66,14 +73,32 @@ type Props = {
 
 function getStatusStyle(status: string) {
   const styles: Record<string, string> = {
-    SAMPLE_SENT: "bg-sky-100 text-sky-600",
-    RECEIVED: "bg-emerald-100 text-emerald-600",
-    DISTRIBUTED: "bg-purple-400/15 text-purple-300",
-    IN_ANALYSIS: "bg-orange-100 text-orange-600",
-    COMPLETED: "bg-green-100 text-green-600",
+    WAITING_SAMPLE: "bg-slate-100 text-slate-600",
+    SAMPLE_SENT: "bg-sky-100 text-sky-700",
+    RECEIVED: "bg-emerald-100 text-emerald-700",
+    DISTRIBUTED: "bg-purple-100 text-purple-700",
+    IN_ANALYSIS: "bg-orange-100 text-orange-700",
+    REVIEWED: "bg-cyan-100 text-cyan-700",
+    VERIFIED: "bg-blue-100 text-blue-700",
+    VALIDATED: "bg-emerald-100 text-emerald-700",
+    PRELIMINARY_COA: "bg-sky-100 text-sky-700",
+    FINAL_COA: "bg-purple-100 text-purple-700",
+    COMPLETED: "bg-green-100 text-green-700",
   };
 
   return styles[status] || "bg-slate-100 text-slate-600";
+}
+
+async function safeReadJson(response: Response) {
+  const text = await response.text();
+
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
 }
 
 export default function SampleFlowClient({
@@ -95,7 +120,8 @@ export default function SampleFlowClient({
 
     if (mode === "distribute") {
       return samples.filter(
-        (sample) => sample.status === "RECEIVED" || sample.status === "DISTRIBUTED"
+        (sample) =>
+          sample.status === "RECEIVED" || sample.status === "DISTRIBUTED"
       );
     }
 
@@ -104,11 +130,14 @@ export default function SampleFlowClient({
 
   async function refreshData() {
     const response = await fetch("/api/samples");
-    const data = await response.json();
+    const data = await safeReadJson(response);
 
     if (response.ok) {
-      setSamples(data.samples);
+      setSamples(data.samples || []);
+      return;
     }
+
+    setMessage(data.message || "Gagal mengambil data sample terbaru");
   }
 
   async function createSampleFromQuotation(quotationId: string) {
@@ -123,7 +152,7 @@ export default function SampleFlowClient({
       body: JSON.stringify({ quotationId }),
     });
 
-    const data = await response.json();
+    const data = await safeReadJson(response);
 
     setLoading(false);
 
@@ -147,7 +176,7 @@ export default function SampleFlowClient({
       method: "PATCH",
     });
 
-    const data = await response.json();
+    const data = await safeReadJson(response);
 
     setLoading(false);
 
@@ -166,6 +195,9 @@ export default function SampleFlowClient({
       return;
     }
 
+    setLoading(true);
+    setMessage("");
+
     const assignments = sample.parameters.map((parameter) => ({
       sampleParameterId: parameter.id,
       analystId: parameter.analystId || analysts[0].id,
@@ -179,7 +211,9 @@ export default function SampleFlowClient({
       body: JSON.stringify({ assignments }),
     });
 
-    const data = await response.json();
+    const data = await safeReadJson(response);
+
+    setLoading(false);
 
     if (!response.ok) {
       setMessage(data.message || "Gagal distribute parameter");
@@ -190,7 +224,11 @@ export default function SampleFlowClient({
     await refreshData();
   }
 
-  function updateAnalyst(sampleId: string, sampleParameterId: string, analystId: string) {
+  function updateAnalyst(
+    sampleId: string,
+    sampleParameterId: string,
+    analystId: string
+  ) {
     setSamples((prev) =>
       prev.map((sample) =>
         sample.id === sampleId
@@ -210,15 +248,59 @@ export default function SampleFlowClient({
     );
   }
 
+  function renderAction(sample: Sample) {
+    return (
+      <div className="flex flex-col items-end gap-2">
+        {mode === "receive" && sample.status === "SAMPLE_SENT" && (
+          <button
+            disabled={loading}
+            onClick={() => receiveSample(sample.id)}
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <PackageCheck size={16} />
+            Receive Sample
+          </button>
+        )}
+
+        {mode === "distribute" && (
+          <button
+            disabled={loading}
+            onClick={() => distributeSample(sample)}
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <FlaskConical size={16} />
+            Distribute
+          </button>
+        )}
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
+          <p className="mb-2 text-right text-[11px] font-bold text-slate-500">
+            Lab Result
+          </p>
+          <ExportButtons
+            compact
+            pdfUrl={`/api/exports/sample/${sample.id}/result-pdf`}
+            excelUrl={`/api/exports/sample/${sample.id}/result-excel`}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h2 className="text-2xl font-bold">
+            <p className="text-sm font-semibold text-emerald-600">
+              Sample Flow
+            </p>
+
+            <h2 className="mt-1 text-2xl font-black text-slate-900">
               {mode === "receive" ? "Receive Sample" : "Distribute Parameter"}
             </h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-400">
+
+            <p className="mt-2 max-w-3xl text-sm text-slate-500">
               {mode === "receive"
                 ? "Buat sample dari quotation yang sudah COC_CREATED lalu terima sample di lab."
                 : "Bagikan parameter sample ke user dengan role LAB_ANALYST."}
@@ -227,7 +309,7 @@ export default function SampleFlowClient({
 
           <button
             onClick={refreshData}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
           >
             <RefreshCcw size={17} />
             Refresh
@@ -242,14 +324,17 @@ export default function SampleFlowClient({
       </div>
 
       {mode === "receive" && (
-        <div className="rounded-3xl border border-slate-200 bg-white p-6">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-5 flex items-center gap-3">
             <div className="rounded-2xl bg-emerald-100 p-3 text-emerald-600">
               <Plus size={20} />
             </div>
+
             <div>
-              <h3 className="text-xl font-bold">Create Sample From COC</h3>
-              <p className="text-sm text-slate-400">
+              <h3 className="text-xl font-black text-slate-900">
+                Create Sample From COC
+              </h3>
+              <p className="text-sm text-slate-500">
                 Quotation dengan status COC_CREATED bisa dibuat sample.
               </p>
             </div>
@@ -265,7 +350,7 @@ export default function SampleFlowClient({
                   <p className="font-semibold text-slate-900">
                     {quotation.quotationNo}
                   </p>
-                  <p className="mt-1 text-sm text-slate-400">
+                  <p className="mt-1 text-sm text-slate-500">
                     Customer: {quotation.customer.name}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
@@ -276,7 +361,7 @@ export default function SampleFlowClient({
                 <button
                   disabled={loading}
                   onClick={() => createSampleFromQuotation(quotation.id)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Send size={16} />
                   Kirim Sample
@@ -285,7 +370,7 @@ export default function SampleFlowClient({
             ))}
 
             {readyQuotations.length === 0 && (
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-400">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center text-sm text-slate-500">
                 Belum ada quotation COC_CREATED yang siap dibuat sample.
               </div>
             )}
@@ -297,16 +382,18 @@ export default function SampleFlowClient({
         {visibleSamples.map((sample) => (
           <div
             key={sample.id}
-            className="rounded-3xl border border-slate-200 bg-white p-5 transition hover:bg-slate-100"
+            className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200"
           >
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="min-w-0 flex-1">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <span className="font-bold text-slate-900">{sample.sampleNo}</span>
+                  <span className="text-lg font-black text-slate-900">
+                    {sample.sampleNo}
+                  </span>
 
                   <span
                     className={[
-                      "rounded-full px-3 py-1 text-xs font-medium",
+                      "rounded-full px-3 py-1 text-xs font-semibold",
                       getStatusStyle(sample.status),
                     ].join(" ")}
                   >
@@ -316,12 +403,12 @@ export default function SampleFlowClient({
 
                 <p className="text-sm text-slate-600">
                   Customer:{" "}
-                  <span className="font-medium text-slate-900">
+                  <span className="font-semibold text-slate-900">
                     {sample.customer.name}
                   </span>
                 </p>
 
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-slate-500">
                   Quotation: {sample.quotation?.quotationNo || "-"}
                 </p>
 
@@ -332,7 +419,7 @@ export default function SampleFlowClient({
                       className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-[1fr_260px]"
                     >
                       <div>
-                        <p className="font-medium text-slate-900">
+                        <p className="font-semibold text-slate-900">
                           {parameter.parameter.name}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
@@ -364,35 +451,13 @@ export default function SampleFlowClient({
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                {mode === "receive" && sample.status === "SAMPLE_SENT" && (
-                  <button
-                    disabled={loading}
-                    onClick={() => receiveSample(sample.id)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
-                  >
-                    <PackageCheck size={16} />
-                    Receive Sample
-                  </button>
-                )}
-
-                {mode === "distribute" && (
-                  <button
-                    disabled={loading}
-                    onClick={() => distributeSample(sample)}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:opacity-60"
-                  >
-                    <FlaskConical size={16} />
-                    Distribute
-                  </button>
-                )}
-              </div>
+              {renderAction(sample)}
             </div>
           </div>
         ))}
 
         {visibleSamples.length === 0 && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-400">
+          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
             {mode === "receive"
               ? "Belum ada sample yang dikirim customer."
               : "Belum ada sample yang siap dibagi ke analyst."}

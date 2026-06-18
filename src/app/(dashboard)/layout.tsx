@@ -1,13 +1,13 @@
+import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/auth";
-import { getUserMenus } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
-import AppShell from "@/components/layout/AppShell";
+import { getSession } from "@/lib/auth";
+import DashboardShell from "@/components/layout/DashboardShell";
 
 export default async function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const session = await getSession();
 
@@ -21,25 +21,46 @@ export default async function DashboardLayout({
     },
     include: {
       role: true,
+      customer: true,
     },
   });
 
-  if (!user) {
+  if (!user || !user.isActive) {
     redirect("/login");
   }
 
-  const menus = await getUserMenus(user.roleId);
+  const roleMenus = await prisma.roleMenu.findMany({
+    where: {
+      roleId: user.roleId,
+      canView: true,
+      menu: {
+        isActive: true,
+      },
+    },
+    include: {
+      menu: true,
+    },
+  });
+
+  const menus = roleMenus
+    .map((item) => item.menu)
+    .sort((a, b) => a.sort - b.sort);
 
   return (
-    <AppShell
-      user={{
+    <DashboardShell
+      session={{
+        userId: user.id,
         name: user.name,
         email: user.email,
+        roleId: user.roleId,
         roleName: user.role.name,
+        roleCode: user.role.code,
+        customerId: user.customerId,
+        customerName: user.customer?.name || null,
       }}
-      menus={menus}
+      menus={JSON.parse(JSON.stringify(menus))}
     >
       {children}
-    </AppShell>
+    </DashboardShell>
   );
 }

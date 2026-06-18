@@ -60,7 +60,40 @@ enum InvoiceStatus {
   WAITING_APPROVAL
   APPROVED
   SENT
+  PAYMENT_SUBMITTED
   PAID
+}
+
+enum SamplingBy {
+  MEDIALAB
+  CUSTOMER
+  THIRD_PARTY
+}
+
+enum TatRequest {
+  NORMAL
+  URGENT
+  TOP_URGENT
+}
+
+enum TestingObjective {
+  ROUTINE_MONITORING
+  SUPERVISION
+  CASE_PROOF
+  RESEARCH
+  OTHER
+}
+
+enum DeliveryMethod {
+  MEDIALAB_SAMPLING
+  CUSTOMER_DELIVERY
+  COURIER
+  OTHER
+}
+
+enum StpsStatus {
+  DRAFT
+  ISSUED
 }
 
 model Role {
@@ -134,6 +167,38 @@ model Customer {
   phone      String?
   isActive   Boolean     @default(true)
 
+  contactPerson String?
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  province      String?
+  npwp          String?
+  npwpAddress   String?
+
+  billingCompany       String?
+  billingAddressLine1  String?
+  billingAddressLine2  String?
+  billingContactPerson String?
+  billingEmail         String?
+  billingPhone         String?
+
+  samplingCompany       String?
+  samplingAddressLine1  String?
+  samplingAddressLine2  String?
+  samplingContactPerson String?
+  samplingPhone         String?
+
+  documentCompany       String?
+  documentAddressLine1  String?
+  documentAddressLine2  String?
+  documentContactPerson String?
+  documentPhone         String?
+
+  recipientEmail1 String?
+  recipientEmail2 String?
+  recipientEmail3 String?
+  recipientEmail4 String?
+
   users      User[]
   quotations Quotation[]
   samples    Sample[]
@@ -206,6 +271,21 @@ model Quotation {
   totalAmount   Float            @default(0)
   note          String?
 
+  quotationDate DateTime         @default(now())
+  validUntil    DateTime?
+
+  samplingBy       SamplingBy?
+  testingObjective TestingObjective?
+  tatRequested     TatRequest?
+
+  samplingCost Float @default(0)
+  vatPercent   Float @default(11)
+  vatAmount    Float @default(0)
+  grandTotal   Float @default(0)
+
+  paymentTerm String?
+  termsNote   String?
+
   requestedById String?
   verifiedById  String?
   approvedById  String?
@@ -218,6 +298,7 @@ model Quotation {
   coc           Coc?
   invoice       Invoice?
   samples       Sample[]
+  stps          Stps[]
 
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
@@ -229,6 +310,13 @@ model QuotationItem {
   parameterId String
   qty         Int               @default(1)
   price       Float             @default(0)
+
+  description       String?
+  customerSampleId  String?
+  samplingLocation  String?
+  regulationMatrix  String?
+  durationSampling  String?
+  method            String?
 
   quotation   Quotation         @relation(fields: [quotationId], references: [id])
   parameter   AnalysisParameter @relation(fields: [parameterId], references: [id])
@@ -266,8 +354,53 @@ model Coc {
   sampleId    String?
   createdById String?
 
+  customerEmailCoa String?
+  customerCode     String?
+  samplerName      String?
+  samplingLocation String? @db.Text
+
+  tatRequested TatRequest?
+  plannedSamplingStart DateTime?
+  plannedSamplingEnd   DateTime?
+  estimatedCoaDate     DateTime?
+
+  sampleConditionSamplingInfo   String?
+  sampleConditionMethod         String?
+  sampleConditionReceived       String?
+  abnormalCondition             String?
+  specialInstruction            String?
+  deliveryMethod                DeliveryMethod?
+
   quotation   Quotation @relation(fields: [quotationId], references: [id])
   sample      Sample?   @relation(fields: [sampleId], references: [id])
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Stps {
+  id          String     @id @default(cuid())
+  stpsNo      String     @unique
+  quotationId String
+  cocId       String?
+  status      StpsStatus @default(DRAFT)
+
+  technicalManagerName     String?
+  technicalManagerPosition String?
+  issuedDate               DateTime?
+
+  sampler1Name     String?
+  sampler1Position String?
+  sampler2Name     String?
+  sampler2Position String?
+  sampler3Name     String?
+  sampler3Position String?
+  sampler4Name     String?
+  sampler4Position String?
+
+  createdById String?
+
+  quotation   Quotation @relation(fields: [quotationId], references: [id])
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -348,6 +481,12 @@ model Invoice {
   approvedById String?
 
   quotation   Quotation     @relation(fields: [quotationId], references: [id])
+  paymentProofUrl        String?
+  paymentProofFileName   String?
+  paymentProofUploadedAt DateTime?
+  paymentNote            String?   @db.Text
+  paidAt                 DateTime?
+  paymentConfirmedById   String?
 
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt

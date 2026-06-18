@@ -46,6 +46,19 @@ export async function PATCH(_request: Request, context: RouteContext) {
         include: {
           customer: true,
           coaTemplate: true,
+          items: {
+            include: {
+              parameter: true,
+            },
+          },
+          purchaseOrder: true,
+          ltr: true,
+          coc: {
+            include: {
+              sample: true,
+            },
+          },
+          stps: true,
           samples: {
             include: {
               coa: true,

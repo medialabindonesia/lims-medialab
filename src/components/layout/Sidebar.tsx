@@ -1,9 +1,10 @@
 "use client";
 
+import type { ElementType } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "framer-motion";
-import { staggerContainer, fadeUpItem, SPRING_SOFT } from "@/lib/motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   Award,
   BadgeCheck,
@@ -17,10 +18,14 @@ import {
   FileCheck,
   FilePenLine,
   FilePlus,
+  FileSignature,
   FileText,
   FlaskConical,
+  Home,
   KeyRound,
   ListChecks,
+  LogOut,
+  Menu as MenuIcon,
   Microscope,
   PackageCheck,
   Receipt,
@@ -28,94 +33,180 @@ import {
   SearchCheck,
   Share2,
   Shield,
-  ShieldCheck,
   UserCog,
   Users,
   Wallet,
-  LogOut,
+  X,
 } from "lucide-react";
 
-const icons = {
-  Shield,
-  Briefcase,
-  Users,
-  Wallet,
-  FlaskConical,
-  KeyRound,
-  UserCog,
-  Building2,
-  ListChecks,
-  FilePlus,
-  FileCheck,
-  FilePenLine,
-  BadgeCheck,
-  FileText,
-  ClipboardCheck,
-  PackageCheck,
-  Share2,
-  Microscope,
-  ClipboardPen,
-  SearchCheck,
-  CheckCheck,
-  ShieldCheck,
-  RefreshCcw,
-  FileBadge,
-  Award,
-  Receipt,
-  BadgeDollarSign,
-};
-
-type MenuItem = {
+export type DashboardMenuItem = {
   id: string;
   name: string;
   key: string;
   href: string;
   icon?: string | null;
+  sort: number;
 };
 
-type SidebarProps = {
-  user: {
-    name: string;
-    email: string;
-    roleName: string;
-  };
-  menus: MenuItem[];
+export type DashboardSession = {
+  userId: string;
+  name: string;
+  email: string;
+  roleId: string;
+  roleName: string;
+  roleCode: string;
+  customerId?: string | null;
+  customerName?: string | null;
 };
 
-function getMenuGroup(menuKey: string) {
-  const prefix = menuKey.split(".")[0];
+type MenuGroup = {
+  key: string;
+  label: string;
+  sort: number;
+  items: DashboardMenuItem[];
+};
 
-  const labels: Record<string, string> = {
-    dashboard: "Dashboard",
-    admin: "Administration",
-    master: "Master Data",
-    quotation: "Quotation",
-    sales: "Sales",
-    technical: "Technical",
-    lab: "Laboratory",
-    coa: "COA",
-    finance: "Finance",
-  };
+const iconMap: Record<string, ElementType> = {
+  Award,
+  BadgeCheck,
+  BadgeDollarSign,
+  Briefcase,
+  Building2,
+  CheckCheck,
+  ClipboardCheck,
+  ClipboardPen,
+  FileBadge,
+  FileCheck,
+  FilePenLine,
+  FilePlus,
+  FileSignature,
+  FileText,
+  FlaskConical,
+  KeyRound,
+  ListChecks,
+  Microscope,
+  PackageCheck,
+  Receipt,
+  RefreshCcw,
+  SearchCheck,
+  Share2,
+  Shield,
+  UserCog,
+  Users,
+  Wallet,
+};
 
-  return labels[prefix] || "Other";
+const groupConfig: Record<
+  string,
+  {
+    label: string;
+    sort: number;
+  }
+> = {
+  dashboard: {
+    label: "Dashboard",
+    sort: 1,
+  },
+  admin: {
+    label: "Administration",
+    sort: 2,
+  },
+  master: {
+    label: "Master Data",
+    sort: 3,
+  },
+  quotation: {
+    label: "Quotation",
+    sort: 4,
+  },
+  sales: {
+    label: "Sales",
+    sort: 5,
+  },
+  technical: {
+    label: "Technical",
+    sort: 6,
+  },
+  lab: {
+    label: "Laboratory",
+    sort: 7,
+  },
+  coa: {
+    label: "Certificate / COA",
+    sort: 8,
+  },
+  finance: {
+    label: "Finance",
+    sort: 9,
+  },
+  customer: {
+    label: "Customer Area",
+    sort: 10,
+  },
+};
+
+function getMenuGroupKey(menuKey: string) {
+  return menuKey.split(".")[0] || "other";
 }
 
-export default function Sidebar({ user, menus }: SidebarProps) {
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((item) => item[0]?.toUpperCase())
+    .join("");
+}
+
+function isActivePath(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === href;
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function SidebarContent({
+  menus,
+  session,
+  onClose,
+}: {
+  menus: DashboardMenuItem[];
+  session: DashboardSession;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
-  const reduce = useReducedMotion();
 
-  const groupedMenus = menus.reduce<Record<string, MenuItem[]>>((acc, menu) => {
-    const group = getMenuGroup(menu.key);
+  const groups = useMemo<MenuGroup[]>(() => {
+    const map = new Map<string, MenuGroup>();
 
-    if (!acc[group]) {
-      acc[group] = [];
+    for (const menu of menus) {
+      const groupKey = getMenuGroupKey(menu.key);
+      const config = groupConfig[groupKey] || {
+        label: "Other",
+        sort: 99,
+      };
+
+      const current = map.get(groupKey);
+
+      if (current) {
+        current.items.push(menu);
+      } else {
+        map.set(groupKey, {
+          key: groupKey,
+          label: config.label,
+          sort: config.sort,
+          items: [menu],
+        });
+      }
     }
 
-    acc[group].push(menu);
-
-    return acc;
-  }, {});
+    return Array.from(map.values())
+      .map((group) => ({
+        ...group,
+        items: group.items.sort((a, b) => a.sort - b.sort),
+      }))
+      .sort((a, b) => a.sort - b.sort);
+  }, [menus]);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", {
@@ -127,102 +218,189 @@ export default function Sidebar({ user, menus }: SidebarProps) {
   }
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-72 flex-col border-r border-slate-200 bg-white/95 backdrop-blur-xl">
-      <div className="shrink-0 px-5 py-6">
-        <motion.div
-          className="mb-6 flex items-center gap-3"
-          initial={reduce ? false : { opacity: 0, x: -12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+    <div className="flex h-full flex-col bg-white">
+      <div className="shrink-0 border-b border-slate-200 px-5 py-5">
+        <Link
+          href="/dashboard"
+          onClick={onClose}
+          className="group flex items-center gap-3"
         >
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-white">
-            <FlaskConical size={22} />
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-500 text-white shadow-sm">
+            <FlaskConical size={25} />
           </div>
 
           <div>
-            <h1 className="font-bold">LIMS-Medialab</h1>
-            <p className="text-xs text-slate-400">Medialab Workflow</p>
+            <p className="text-lg font-black tracking-tight text-slate-900">
+              LIMS-Medialab
+            </p>
+            <p className="text-xs font-medium text-slate-500">
+              Laboratory Workflow
+            </p>
           </div>
-        </motion.div>
-
-        <motion.div
-          className="rounded-2xl border border-slate-200 bg-white p-4"
-          initial={reduce ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <p className="truncate text-sm font-semibold">{user.name}</p>
-          <p className="mt-1 truncate text-xs text-slate-400">{user.roleName}</p>
-          <p className="mt-1 truncate text-xs text-slate-500">{user.email}</p>
-        </motion.div>
+        </Link>
       </div>
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-5 pb-4 pr-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-slate-300">
-        <motion.div
-          className="space-y-6"
-          variants={staggerContainer(0.04, 0.12)}
-          initial={reduce ? false : "hidden"}
-          animate="visible"
-        >
-          {Object.entries(groupedMenus).map(([groupName, items]) => (
-            <div key={groupName}>
-              <p className="mb-2 px-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                {groupName}
+      <div className="shrink-0 px-5 py-4">
+        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-sm font-black text-white">
+              {getInitials(session.name)}
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-black text-slate-900">
+                {session.name}
               </p>
+              <p className="truncate text-xs text-slate-500">
+                {session.roleName}
+              </p>
+            </div>
+          </div>
+
+          {session.customerName && (
+            <p className="mt-3 rounded-2xl bg-white px-3 py-2 text-xs font-medium text-slate-500">
+              Customer: {session.customerName}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-4 pb-4 pr-3">
+        <div className="space-y-5">
+          {groups.map((group) => (
+            <div key={group.key} className="space-y-2">
+              <div className="sticky top-0 z-10 bg-white/95 px-3 py-2 backdrop-blur">
+                <p className="text-xs font-black uppercase tracking-wider text-slate-400">
+                  {group.label}
+                </p>
+              </div>
 
               <div className="space-y-1">
-                {items.map((menu) => {
-                  const Icon = icons[menu.icon as keyof typeof icons] || Shield;
-                  const active =
-                    pathname === menu.href || pathname.startsWith(`${menu.href}/`);
+                {group.items.map((item) => {
+                  const Icon =
+                    item.icon && iconMap[item.icon] ? iconMap[item.icon] : Home;
+
+                  const active = isActivePath(pathname, item.href);
 
                   return (
-                    <motion.div key={menu.id} variants={fadeUpItem}>
-                      <Link
-                        href={menu.href}
+                    <Link
+                      key={item.id}
+                      href={item.href}
+                      onClick={onClose}
+                      className={[
+                        "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition-all",
+                        active
+                          ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20"
+                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                      ].join(" ")}
+                    >
+                      <Icon
+                        size={18}
                         className={[
-                          "group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-colors",
+                          "shrink-0",
                           active
                             ? "text-white"
-                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                            : "text-slate-400 group-hover:text-slate-700",
                         ].join(" ")}
-                      >
-                        {active && (
-                          <motion.span
-                            layoutId="sidebar-active-pill"
-                            className="absolute inset-0 -z-10 rounded-2xl bg-emerald-500 shadow-lg shadow-emerald-500/20"
-                            transition={
-                              reduce
-                                ? { duration: 0 }
-                                : SPRING_SOFT
-                            }
-                          />
-                        )}
-                        <Icon
-                          size={18}
-                          className="shrink-0 transition-transform duration-200 group-hover:scale-110"
-                        />
-                        <span className="truncate">{menu.name}</span>
-                      </Link>
-                    </motion.div>
+                      />
+
+                      <span className="truncate">{item.name}</span>
+                    </Link>
                   );
                 })}
               </div>
             </div>
           ))}
-        </motion.div>
+        </div>
       </nav>
 
-      <div className="shrink-0 border-t border-slate-200 p-5">
-        <motion.button
+      <div className="shrink-0 border-t border-slate-200 p-4">
+        <button
+          type="button"
           onClick={handleLogout}
-          whileTap={reduce ? undefined : { scale: 0.97 }}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-100"
         >
-          <LogOut size={18} />
+          <LogOut size={17} />
           Logout
-        </motion.button>
+        </button>
+
+        <p className="mt-3 text-center text-[11px] text-slate-400">
+          © 2026 LIMS-Medialab
+        </p>
       </div>
-    </aside>
+    </div>
+  );
+}
+
+export default function Sidebar({
+  menus,
+  session,
+}: {
+  menus: DashboardMenuItem[];
+  session: DashboardSession;
+}) {
+  const reduce = useReducedMotion();
+  const [openMobile, setOpenMobile] = useState(false);
+
+  return (
+    <>
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 border-r border-slate-200 bg-white shadow-sm lg:block">
+        <SidebarContent menus={menus} session={session} />
+      </aside>
+
+      <div className="sticky top-0 z-30 mb-4 flex items-center justify-between rounded-[1.5rem] border border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur lg:hidden">
+        <Link href="/dashboard" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-500 text-white">
+            <FlaskConical size={22} />
+          </div>
+
+          <div>
+            <p className="text-sm font-black text-slate-900">LIMS-Medialab</p>
+            <p className="text-xs text-slate-500">{session.roleName}</p>
+          </div>
+        </Link>
+
+        <button
+          type="button"
+          onClick={() => setOpenMobile(true)}
+          className="rounded-2xl border border-slate-200 p-2 text-slate-600"
+        >
+          <MenuIcon size={22} />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {openMobile && (
+          <motion.div
+            initial={reduce ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reduce ? undefined : { opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-slate-900/50 p-4 backdrop-blur-md lg:hidden"
+          >
+            <motion.div
+              initial={reduce ? false : { x: -24, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={reduce ? undefined : { x: -24, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="relative h-full w-full max-w-sm overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl"
+            >
+              <button
+                type="button"
+                onClick={() => setOpenMobile(false)}
+                className="absolute right-4 top-4 z-10 rounded-2xl bg-slate-100 p-2 text-slate-600"
+              >
+                <X size={20} />
+              </button>
+
+              <SidebarContent
+                menus={menus}
+                session={session}
+                onClose={() => setOpenMobile(false)}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

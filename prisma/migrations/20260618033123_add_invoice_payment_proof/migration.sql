@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE `Invoice` ADD COLUMN `paidAt` DATETIME(3) NULL,
+    ADD COLUMN `paymentConfirmedById` VARCHAR(191) NULL,
+    ADD COLUMN `paymentNote` TEXT NULL,
+    ADD COLUMN `paymentProofFileName` VARCHAR(191) NULL,
+    ADD COLUMN `paymentProofUploadedAt` DATETIME(3) NULL,
+    ADD COLUMN `paymentProofUrl` VARCHAR(191) NULL,
+    MODIFY `status` ENUM('DRAFT', 'WAITING_APPROVAL', 'APPROVED', 'SENT', 'PAYMENT_SUBMITTED', 'PAID') NOT NULL DEFAULT 'DRAFT';
