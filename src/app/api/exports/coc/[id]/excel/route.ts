@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { getAuthorizedCocForExport } from "@/lib/exports/technical-data";
 import { buildCocExcel } from "@/lib/exports/excel/coc-excel";
 import { safeFileName } from "@/lib/exports/format";
+import { downloadResponse } from "@/lib/exports/download-response";
 
 export const runtime = "nodejs";
 
@@ -22,12 +22,10 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const filename = `${safeFileName(coc!.cocNo)}-coc.xlsx`;
 
-  return , {
-    headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
-    },
+  return downloadResponse({
+    buffer,
+    filename,
+    contentType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 }
