@@ -22,7 +22,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const filename = `${safeFileName(coc!.cocNo)}-coc.xlsx`;
 
-  return new NextResponse(buffer, {
+  return , {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
