@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { pdf } from "@react-pdf/renderer";
 import InvoicePdf from "@/lib/exports/pdf/InvoicePdf";
+import { renderPdfToBuffer } from "@/lib/exports/pdf/render-utils";
 
 function getLogoDataUri() {
   const logoPath = path.join(
@@ -19,12 +19,10 @@ function getLogoDataUri() {
   return `data:image/png;base64,${base64}`;
 }
 
-export async function renderInvoicePdfBuffer(invoice: any) {
+export async function renderInvoicePdfBuffer(invoice: any): Promise<Buffer> {
   const logoSrc = getLogoDataUri();
 
-  const buffer = await pdf(
+  return renderPdfToBuffer(
     <InvoicePdf invoice={invoice} logoSrc={logoSrc} />
-  ).toBuffer();
-
-  return buffer;
+  );
 }

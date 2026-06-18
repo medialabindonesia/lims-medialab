@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { pdf } from "@react-pdf/renderer";
 import QuotationPdf from "@/lib/exports/pdf/QuotationPdf";
+import { renderPdfToBuffer } from "@/lib/exports/pdf/render-utils";
 
 function getLogoDataUri() {
   const logoPath = path.join(
@@ -19,12 +19,12 @@ function getLogoDataUri() {
   return `data:image/png;base64,${base64}`;
 }
 
-export async function renderQuotationPdfBuffer(quotation: any) {
+export async function renderQuotationPdfBuffer(
+  quotation: any
+): Promise<Buffer> {
   const logoSrc = getLogoDataUri();
 
-  const buffer = await pdf(
+  return renderPdfToBuffer(
     <QuotationPdf quotation={quotation} logoSrc={logoSrc} />
-  ).toBuffer();
-
-  return buffer;
+  );
 }

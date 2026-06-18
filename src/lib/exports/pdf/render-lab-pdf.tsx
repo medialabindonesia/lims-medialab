@@ -1,8 +1,8 @@
 import fs from "fs";
 import path from "path";
-import { pdf } from "@react-pdf/renderer";
 import LabResultPdf from "@/lib/exports/pdf/LabResultPdf";
 import CoaPdf from "@/lib/exports/pdf/CoaPdf";
+import { renderPdfToBuffer } from "@/lib/exports/pdf/render-utils";
 
 function getLogoDataUri() {
   const logoPath = path.join(
@@ -20,20 +20,16 @@ function getLogoDataUri() {
   return `data:image/png;base64,${base64}`;
 }
 
-export async function renderLabResultPdfBuffer(sample: any) {
+export async function renderLabResultPdfBuffer(sample: any): Promise<Buffer> {
   const logoSrc = getLogoDataUri();
 
-  const buffer = await pdf(
+  return renderPdfToBuffer(
     <LabResultPdf sample={sample} logoSrc={logoSrc} />
-  ).toBuffer();
-
-  return buffer;
+  );
 }
 
-export async function renderCoaPdfBuffer(coa: any) {
+export async function renderCoaPdfBuffer(coa: any): Promise<Buffer> {
   const logoSrc = getLogoDataUri();
 
-  const buffer = await pdf(<CoaPdf coa={coa} logoSrc={logoSrc} />).toBuffer();
-
-  return buffer;
+  return renderPdfToBuffer(<CoaPdf coa={coa} logoSrc={logoSrc} />);
 }
