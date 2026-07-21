@@ -75,3 +75,29 @@ body {
     display: none;
   }
 }
+
+/* ── Login loading overlay: cincin gradient berputar ──
+   CSS-driven (bukan JS/framer) supaya putaran kontinu tetap mulus di
+   compositor thread, walau main thread sibuk menunggu request login. */
+@keyframes login-ring-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.login-ring {
+  background: conic-gradient(
+    from 0deg,
+    #10b981,
+    #38bdf8,
+    #10b981 100%
+  );
+  animation: login-ring-spin 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-ring {
+    animation: none;
+    background: linear-gradient(135deg, #10b981, #38bdf8);
+  }
+}

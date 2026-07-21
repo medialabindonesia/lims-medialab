@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { staggerContainer, fadeUpItem, EASE_OUT } from "@/lib/motion";
+import LoginLoadingOverlay from "@/components/auth/LoginLoadingOverlay";
 import {
   ArrowRight,
   BadgeCheck,
@@ -43,13 +44,16 @@ export default function LoginPage() {
 
     const data = await response.json();
 
-    setLoading(false);
-
     if (!response.ok) {
+      setLoading(false);
       setMessage(data.message || "Login gagal");
       return;
     }
 
+    // Sengaja TIDAK setLoading(false) di sini: overlay tetap menutupi layar
+    // selama redirect + halaman dashboard mengambil alih (baru unmount saat
+    // route baru benar-benar swap-in), jadi seluruh waktu tunggu tertutup
+    // animasi, bukan cuma durasi fetch.
     router.push(data.redirectTo || "/dashboard");
     router.refresh();
   }
@@ -79,6 +83,7 @@ export default function LoginPage() {
 
   return (
     <main className="min-h-screen overflow-hidden bg-slate-50 text-slate-900">
+      <LoginLoadingOverlay active={loading} />
       <div className="pointer-events-none fixed inset-0">
         <motion.div
           className="absolute left-[-120px] top-[-120px] h-96 w-96 rounded-full bg-emerald-200/50 blur-3xl"
@@ -218,7 +223,8 @@ export default function LoginPage() {
                   <input
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-emerald-500"
+                    disabled={loading}
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-emerald-500 disabled:opacity-60"
                     placeholder="email@domain.com"
                   />
                 </div>
@@ -237,7 +243,8 @@ export default function LoginPage() {
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-emerald-500"
+                    disabled={loading}
+                    className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-emerald-500 disabled:opacity-60"
                     placeholder="password"
                   />
                 </div>
@@ -273,12 +280,13 @@ export default function LoginPage() {
                   <motion.button
                     key={account.email}
                     type="button"
-                    whileTap={reduce ? undefined : { scale: 0.98 }}
+                    disabled={loading}
+                    whileTap={reduce || loading ? undefined : { scale: 0.98 }}
                     onClick={() => {
                       setEmail(account.email);
                       setPassword(account.password);
                     }}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 px-3 py-2 text-left text-xs text-slate-600 transition-colors hover:border-emerald-200 hover:bg-slate-100 hover:text-slate-900"
+                    className="flex items-center justify-between rounded-2xl border border-slate-200 px-3 py-2 text-left text-xs text-slate-600 transition-colors hover:border-emerald-200 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <span>{account.role}</span>
                     <span className="text-slate-500">{account.email}</span>
