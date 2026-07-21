@@ -15,32 +15,36 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const user = await prisma.user.findUnique({
-    where: {
-      id: session.userId,
-    },
-    include: {
-      role: true,
-      customer: true,
-    },
-  });
+  // Jalankan paralel: query roleMenu hanya butuh roleId yang sudah ada di
+  // session, jadi tak perlu menunggu query user selesai dulu. Ini memangkas
+  // satu round-trip DB (~2 detik saat latensi tinggi) pada tiap load penuh.
+  const [user, roleMenus] = await Promise.all([
+    prisma.user.findUnique({
+      where: {
+        id: session.userId,
+      },
+      include: {
+        role: true,
+        customer: true,
+      },
+    }),
+    prisma.roleMenu.findMany({
+      where: {
+        roleId: session.roleId,
+        canView: true,
+        menu: {
+          isActive: true,
+        },
+      },
+      include: {
+        menu: true,
+      },
+    }),
+  ]);
 
   if (!user || !user.isActive) {
     redirect("/login");
   }
-
-  const roleMenus = await prisma.roleMenu.findMany({
-    where: {
-      roleId: user.roleId,
-      canView: true,
-      menu: {
-        isActive: true,
-      },
-    },
-    include: {
-      menu: true,
-    },
-  });
 
   const menus = roleMenus
     .map((item) => item.menu)

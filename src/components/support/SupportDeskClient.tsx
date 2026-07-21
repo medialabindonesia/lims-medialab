@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Headset, Inbox, Search, UserCheck } from "lucide-react";
@@ -51,7 +51,13 @@ export default function SupportDeskClient({
   }, [status, priority, assigned, q]);
 
   // Refetch saat filter berubah (debounce ringan untuk search).
+  // Lewati eksekusi pertama: data awal sudah dikirim server (hindari query ganda).
+  const didMount = useRef(false);
   useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      return;
+    }
     const t = setTimeout(refetch, 250);
     return () => clearTimeout(t);
   }, [refetch]);

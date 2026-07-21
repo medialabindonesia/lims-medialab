@@ -19,6 +19,9 @@ function createAdapter() {
     password: decodeURIComponent(url.password),
     database: url.pathname.replace("/", ""),
     connectionLimit: 10,
+    // DB remote via internet: latensi bisa 1-5 detik, default 1000ms terlalu ketat.
+    connectTimeout: 20000,
+    acquireTimeout: 20000,
   });
 }
 

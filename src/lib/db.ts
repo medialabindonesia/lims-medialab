@@ -21,6 +21,11 @@ function createAdapter() {
     password: decodeURIComponent(url.password),
     database: url.pathname.replace("/", ""),
     connectionLimit: 10,
+    // DB diakses lewat internet (VPS) dengan latensi bervariasi (bisa 1-5 detik).
+    // Default driver hanya 1000ms → sering timeout dan bikin login 500.
+    // Naikkan agar socket yang lambat tetap sempat terbentuk.
+    connectTimeout: 20000,
+    acquireTimeout: 20000,
   });
 }
 
