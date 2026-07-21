@@ -37,6 +37,7 @@ const roles = [
   { name: "Sales Manager / Director", code: "SALES_MANAGER_DIRECTOR" },
   { name: "Finance Staff", code: "FINANCE_STAFF" },
   { name: "Technical", code: "TECHNICAL" },
+  { name: "Customer Service", code: "CUSTOMER_SERVICE" },
 ];
 
 const menus = [
@@ -78,6 +79,10 @@ const menus = [
   { name: "Create Invoice", key: "finance.create_invoice", href: "/finance/create-invoice", icon: "Receipt", sort: 80 },
   { name: "Approve Invoice", key: "finance.approve_invoice", href: "/finance/approve-invoice", icon: "BadgeDollarSign", sort: 81 },
   { name: "My Invoices", key: "customer.invoices", href: "/customer/invoices", icon: "Receipt", sort: 82 },
+
+  { name: "Support Center", key: "support.center", href: "/support", icon: "LifeBuoy", sort: 90 },
+  { name: "Support Desk", key: "support.desk", href: "/support/desk", icon: "Headset", sort: 91 },
+  { name: "FAQ Management", key: "support.faq", href: "/support/faq", icon: "HelpCircle", sort: 92 },
 ];
 
 const roleAccess: Record<string, string[]> = {
@@ -120,6 +125,7 @@ const roleAccess: Record<string, string[]> = {
     "coa.preliminary",
     "coa.final",
     "customer.invoices",
+    "support.center",
   ],
 
   SALES_STAFF: [
@@ -147,6 +153,12 @@ const roleAccess: Record<string, string[]> = {
     "dashboard.worker",
     "technical.coc",
     "technical.stps",
+  ],
+
+  CUSTOMER_SERVICE: [
+    "dashboard.worker",
+    "support.desk",
+    "support.faq",
   ],
 };
 
@@ -206,6 +218,36 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
     canExport: true,
   };
 }
+
+    if (menuKey === "support.center") {
+      return {
+        ...base,
+        canCreate: true,
+        canUpdate: true,
+      };
+    }
+  }
+
+  if (roleCode === "CUSTOMER_SERVICE") {
+    if (menuKey === "support.desk") {
+      return {
+        ...base,
+        canCreate: true,
+        canUpdate: true,
+        canApprove: true,
+        canExport: true,
+      };
+    }
+
+    if (menuKey === "support.faq") {
+      return {
+        ...base,
+        canCreate: true,
+        canUpdate: true,
+        canDelete: true,
+        canExport: true,
+      };
+    }
   }
 
   if (roleCode === "SALES_STAFF") {
@@ -635,6 +677,94 @@ async function upsertCoaTemplate(data: {
   });
 }
 
+async function upsertFaqCategory(data: {
+  name: string;
+  slug: string;
+  description?: string | null;
+  icon?: string | null;
+  sort: number;
+  items: Array<{
+    question: string;
+    answer: string;
+    sort: number;
+  }>;
+}) {
+  const category = await prisma.faqCategory.upsert({
+    where: {
+      slug: data.slug,
+    },
+    update: {
+      name: data.name,
+      description: data.description || null,
+      icon: data.icon || null,
+      sort: data.sort,
+      isActive: true,
+    },
+    create: {
+      name: data.name,
+      slug: data.slug,
+      description: data.description || null,
+      icon: data.icon || null,
+      sort: data.sort,
+      isActive: true,
+    },
+  });
+
+  await prisma.faqItem.deleteMany({
+    where: {
+      categoryId: category.id,
+    },
+  });
+
+  for (const item of data.items) {
+    await prisma.faqItem.create({
+      data: {
+        categoryId: category.id,
+        question: item.question,
+        answer: item.answer,
+        sort: item.sort,
+        isActive: true,
+      },
+    });
+  }
+
+  return category;
+}
+
+async function upsertCannedReply(data: {
+  title: string;
+  body: string;
+  sort: number;
+}) {
+  const existing = await prisma.cannedReply.findFirst({
+    where: {
+      title: data.title,
+    },
+  });
+
+  if (existing) {
+    return prisma.cannedReply.update({
+      where: {
+        id: existing.id,
+      },
+      data: {
+        body: data.body,
+        sort: data.sort,
+        isActive: true,
+      },
+    });
+  }
+
+  return prisma.cannedReply.create({
+    data: {
+      title: data.title,
+      body: data.body,
+      sort: data.sort,
+      isActive: true,
+    },
+  });
+}
+
 async function main() {
   console.log("Seeding roles...");
 
@@ -787,6 +917,13 @@ async function main() {
     email: "finance@medialab.test",
     password: "password123",
     roleCode: "FINANCE_STAFF",
+  });
+
+  await upsertUser({
+    name: "Customer Service Demo",
+    email: "cs@medialab.test",
+    password: "password123",
+    roleCode: "CUSTOMER_SERVICE",
   });
 
   await upsertUser({
@@ -1067,6 +1204,194 @@ async function main() {
     ],
   });
 
+  console.log("Seeding FAQ categories & items...");
+
+  await upsertFaqCategory({
+    name: "Quotation",
+    slug: "quotation",
+    description: "Pertanyaan seputar permintaan penawaran (quotation).",
+    icon: "FilePlus",
+    sort: 1,
+    items: [
+      {
+        question: "Bagaimana cara mengajukan permintaan quotation?",
+        answer:
+          "Masuk ke menu Quotation → Request Quotation, pilih parameter analisa yang dibutuhkan, isi detail sampel, lalu kirim. Tim sales kami akan memverifikasi dan mengirimkan penawaran resmi.",
+        sort: 1,
+      },
+      {
+        question: "Berapa lama proses penerbitan quotation?",
+        answer:
+          "Umumnya 1–2 hari kerja setelah permintaan diverifikasi. Untuk permintaan URGENT, hubungi kami lewat Support Center agar diprioritaskan.",
+        sort: 2,
+      },
+      {
+        question: "Apakah quotation bisa direvisi?",
+        answer:
+          "Bisa. Selama status masih dalam tahap negosiasi/revisi, sampaikan perubahan yang diinginkan dan tim sales akan menerbitkan revisi quotation.",
+        sort: 3,
+      },
+    ],
+  });
+
+  await upsertFaqCategory({
+    name: "Sample & Pengiriman",
+    slug: "sample-pengiriman",
+    description: "Seputar pengiriman dan penerimaan sampel di laboratorium.",
+    icon: "PackageCheck",
+    sort: 2,
+    items: [
+      {
+        question: "Bagaimana cara mengirim sampel ke laboratorium?",
+        answer:
+          "Setelah quotation disetujui dan LTR/COC terbit, sampel dapat dikirim langsung, diantar kurir, atau dijemput oleh tim sampling Medialab sesuai kesepakatan pada COC.",
+        sort: 1,
+      },
+      {
+        question: "Bagaimana kondisi sampel yang baik saat diterima?",
+        answer:
+          "Sampel harus sesuai wadah dan metode pengambilan yang disepakati, tidak bocor/rusak, dan disertai identitas sampel yang jelas. Kondisi abnormal akan dicatat saat penerimaan.",
+        sort: 2,
+      },
+      {
+        question: "Bagaimana saya tahu sampel sudah diterima?",
+        answer:
+          "Status sampel akan diperbarui menjadi RECEIVED. Anda dapat memantau progres dari dashboard, atau tanyakan ke tim kami lewat Support Center.",
+        sort: 3,
+      },
+    ],
+  });
+
+  await upsertFaqCategory({
+    name: "COA / Hasil",
+    slug: "coa-hasil",
+    description: "Seputar hasil uji dan sertifikat analisa (COA).",
+    icon: "FileBadge",
+    sort: 3,
+    items: [
+      {
+        question: "Apa beda Preliminary COA dan Final COA?",
+        answer:
+          "Preliminary COA adalah hasil awal untuk dikonfirmasi customer sebelum diterbitkan resmi. Final COA adalah sertifikat resmi yang sudah divalidasi dan disahkan.",
+        sort: 1,
+      },
+      {
+        question: "Bagaimana cara mengunduh COA saya?",
+        answer:
+          "COA dapat diunduh dari menu terkait di area customer setelah statusnya terbit. Jika tombol unduh belum muncul, hasil kemungkinan masih dalam proses validasi.",
+        sort: 2,
+      },
+      {
+        question: "Hasil uji melebihi baku mutu, apa yang harus saya lakukan?",
+        answer:
+          "COA mencantumkan acuan baku mutu yang berlaku. Untuk interpretasi lebih lanjut atau permintaan uji ulang (retest), silakan buka tiket di Support Center.",
+        sort: 3,
+      },
+    ],
+  });
+
+  await upsertFaqCategory({
+    name: "Invoice & Pembayaran",
+    slug: "invoice-pembayaran",
+    description: "Seputar tagihan dan pembayaran.",
+    icon: "Receipt",
+    sort: 4,
+    items: [
+      {
+        question: "Kapan invoice diterbitkan?",
+        answer:
+          "Invoice diterbitkan oleh tim finance setelah Final COA terbit. Anda dapat melihatnya di menu My Invoices.",
+        sort: 1,
+      },
+      {
+        question: "Bagaimana cara membayar dan mengunggah bukti pembayaran?",
+        answer:
+          "Buka menu My Invoices, pilih invoice terkait, lalu unggah bukti transfer. Tim finance akan memverifikasi dan memperbarui status menjadi PAID.",
+        sort: 2,
+      },
+      {
+        question: "Berapa lama verifikasi pembayaran?",
+        answer:
+          "Umumnya 1 hari kerja setelah bukti pembayaran diunggah. Jika lebih lama, hubungi kami lewat Support Center.",
+        sort: 3,
+      },
+    ],
+  });
+
+  await upsertFaqCategory({
+    name: "Akun",
+    slug: "akun",
+    description: "Seputar akun dan akses portal customer.",
+    icon: "UserCog",
+    sort: 5,
+    items: [
+      {
+        question: "Saya lupa password, bagaimana cara meresetnya?",
+        answer:
+          "Silakan hubungi tim kami lewat Support Center dengan menyebutkan email akun Anda, dan kami akan membantu proses reset password.",
+        sort: 1,
+      },
+      {
+        question: "Bagaimana cara memperbarui data perusahaan/kontak?",
+        answer:
+          "Ajukan perubahan data melalui Support Center. Tim kami akan memperbarui master data customer Anda.",
+        sort: 2,
+      },
+    ],
+  });
+
+  await upsertFaqCategory({
+    name: "Lainnya",
+    slug: "lainnya",
+    description: "Pertanyaan umum lainnya.",
+    icon: "HelpCircle",
+    sort: 6,
+    items: [
+      {
+        question: "Jam operasional layanan Customer Service?",
+        answer:
+          "Senin–Jumat, 08.00–17.00 WIB. Tiket yang masuk di luar jam kerja akan ditanggapi pada hari kerja berikutnya.",
+        sort: 1,
+      },
+      {
+        question: "Pertanyaan saya tidak ada di FAQ, apa yang harus saya lakukan?",
+        answer:
+          "Pilih topik yang paling mendekati lalu klik 'Masih butuh bantuan? Chat CS' untuk membuka tiket. Tim Customer Service kami akan membantu Anda.",
+        sort: 2,
+      },
+    ],
+  });
+
+  console.log("Seeding canned replies...");
+
+  await upsertCannedReply({
+    title: "Salam pembuka",
+    body:
+      "Halo, terima kasih telah menghubungi Customer Service Medialab. Perkenalkan saya akan membantu Anda. Mohon menunggu sebentar ya.",
+    sort: 1,
+  });
+
+  await upsertCannedReply({
+    title: "Minta detail",
+    body:
+      "Untuk membantu menelusuri, boleh dibantu informasikan nomor quotation / sample / invoice yang terkait?",
+    sort: 2,
+  });
+
+  await upsertCannedReply({
+    title: "Sedang diperiksa",
+    body:
+      "Mohon menunggu sebentar, kami sedang memeriksa hal ini ke tim terkait. Terima kasih atas kesabarannya.",
+    sort: 3,
+  });
+
+  await upsertCannedReply({
+    title: "Penutup",
+    body:
+      "Apakah ada hal lain yang bisa kami bantu? Jika sudah cukup, tiket ini akan kami tandai selesai. Terima kasih telah menghubungi kami.",
+    sort: 4,
+  });
+
   console.log("\nSeed selesai bro.");
   console.log("\nAkun login demo:");
   console.log("SUPER_ADMIN            : admin@lims-medialab.test / admin123");
@@ -1080,6 +1405,7 @@ async function main() {
   console.log("LAB_SUPERVISOR        : supervisor@medialab.test / password123");
   console.log("LAB_MANAGER           : labmanager@medialab.test / password123");
   console.log("FINANCE               : finance@medialab.test / password123");
+  console.log("CUSTOMER_SERVICE      : cs@medialab.test / password123");
 }
 
 main()
