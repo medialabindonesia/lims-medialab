@@ -24,7 +24,7 @@ function createAdapter() {
     acquireTimeout: 20000,
   });
 }
-
+// 
 const prisma = new PrismaClient({
   adapter: createAdapter(),
 });
