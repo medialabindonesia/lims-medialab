@@ -114,6 +114,9 @@
       "src_app_api_exports_coc_id_pdf_route",
       "src_app_api_exports_coc_id_pdf_route_get",
       "src_app_api_exports_coc_id_pdf_route_routecontext",
+      "src_app_api_exports_invoice_id_excel_route",
+      "src_app_api_exports_invoice_id_excel_route_get",
+      "src_app_api_exports_invoice_id_excel_route_routecontext",
       "src_app_api_exports_invoice_id_pdf_route",
       "src_app_api_exports_invoice_id_pdf_route_get",
       "src_app_api_exports_invoice_id_pdf_route_routecontext",
@@ -144,6 +147,14 @@
       "src_lib_exports_excel_coc_excel_stylelabel",
       "src_lib_exports_excel_coc_excel_stylesection",
       "src_lib_exports_excel_coc_excel_stylevalue",
+      "src_lib_exports_excel_invoice_excel",
+      "src_lib_exports_excel_invoice_excel_buildinvoiceexcel",
+      "src_lib_exports_excel_invoice_excel_getfinalcoano",
+      "src_lib_exports_excel_invoice_excel_rupiahformat",
+      "src_lib_exports_excel_invoice_excel_setthinborder",
+      "src_lib_exports_excel_invoice_excel_stylelabel",
+      "src_lib_exports_excel_invoice_excel_stylesection",
+      "src_lib_exports_excel_invoice_excel_stylevalue",
       "src_lib_exports_excel_stps_excel",
       "src_lib_exports_excel_stps_excel_buildstpsexcel",
       "src_lib_exports_excel_stps_excel_getsamplers",
@@ -152,6 +163,8 @@
       "src_lib_exports_excel_stps_excel_stylesection",
       "src_lib_exports_excel_stps_excel_stylevalue",
       "src_lib_exports_format_safefilename",
+      "src_lib_exports_invoice_data",
+      "src_lib_exports_invoice_data_getauthorizedinvoiceforexport",
       "src_lib_exports_ltr_data",
       "src_lib_exports_ltr_data_getauthorizedltrforexport",
       "src_lib_exports_pdf_render_invoice_pdf",
@@ -408,10 +421,6 @@
       "src_app_api_coa_sampleid_customer_confirm_route_routecontext",
       "src_app_api_lab_sample_parameters_route",
       "src_app_api_lab_sample_parameters_route_get",
-      "src_app_api_master_customers_template_route",
-      "src_app_api_master_customers_template_route_columns",
-      "src_app_api_master_customers_template_route_get",
-      "src_app_api_master_customers_template_route_setthinborder",
       "src_app_api_quotations_id_approve_route",
       "src_app_api_quotations_id_approve_route_patch",
       "src_app_api_quotations_id_approve_route_routecontext",
@@ -425,6 +434,13 @@
       "src_app_api_quotations_id_verify_route",
       "src_app_api_quotations_id_verify_route_patch",
       "src_app_api_quotations_id_verify_route_routecontext",
+      "src_app_api_samples_route",
+      "src_app_api_samples_route_createsampleschema",
+      "src_app_api_samples_route_get",
+      "src_app_api_samples_route_post",
+      "src_lib_api_permission",
+      "src_lib_api_permission_permissionaction",
+      "src_lib_api_permission_permissioncheck",
       "src_lib_api_permission_requireanyapipermission"
     ],
     "8": [
@@ -514,7 +530,24 @@
       "src_app_api_lab_sample_parameters_id_result_route",
       "src_app_api_lab_sample_parameters_id_result_route_patch",
       "src_app_api_lab_sample_parameters_id_result_route_resultschema",
-      "src_app_api_lab_sample_parameters_id_result_route_routecontext"
+      "src_app_api_lab_sample_parameters_id_result_route_routecontext",
+      "src_app_api_lab_samples_sampleid_results_route",
+      "src_app_api_lab_samples_sampleid_results_route_patch",
+      "src_app_api_lab_samples_sampleid_results_route_resultschema",
+      "src_app_api_lab_samples_sampleid_results_route_routecontext",
+      "src_app_api_lab_samples_sampleid_review_route",
+      "src_app_api_lab_samples_sampleid_review_route_patch",
+      "src_app_api_lab_samples_sampleid_review_route_routecontext",
+      "src_app_api_lab_samples_sampleid_validate_route",
+      "src_app_api_lab_samples_sampleid_validate_route_patch",
+      "src_app_api_lab_samples_sampleid_validate_route_routecontext",
+      "src_app_api_samples_id_distribute_route",
+      "src_app_api_samples_id_distribute_route_distributeschema",
+      "src_app_api_samples_id_distribute_route_patch",
+      "src_app_api_samples_id_distribute_route_routecontext",
+      "src_lib_db",
+      "src_lib_db_createadapter",
+      "src_lib_db_globalforprisma"
     ],
     "12": [
       "src_components_technical_technicaldocumentclient",
@@ -552,22 +585,13 @@
       "src_components_dashboard_statcard_statcardprops",
       "src_components_layout_motionheader",
       "src_components_layout_motionheader_motionheader",
-      "src_components_layout_motionheader_motionheaderprops",
-      "src_lib_db",
-      "src_lib_db_createadapter",
-      "src_lib_db_globalforprisma"
+      "src_components_layout_motionheader_motionheaderprops"
     ],
     "14": [
       "src_app_dashboard_layout",
       "src_app_dashboard_layout_dashboardlayout",
-      "src_components_layout_appshell",
-      "src_components_layout_appshell_appshell",
-      "src_components_layout_appshell_appshellprops",
-      "src_components_layout_appshell_menuitem",
       "src_components_layout_dashboardshell",
       "src_components_layout_dashboardshell_dashboardshell",
-      "src_components_layout_pagetransition",
-      "src_components_layout_pagetransition_pagetransition",
       "src_components_layout_sidebar",
       "src_components_layout_sidebar_dashboardmenuitem",
       "src_components_layout_sidebar_dashboardsession",
@@ -578,8 +602,7 @@
       "src_components_layout_sidebar_isactivepath",
       "src_components_layout_sidebar_menugroup",
       "src_components_layout_sidebar_sidebar",
-      "src_components_layout_sidebar_sidebarcontent",
-      "src_lib_motion_pagevariants"
+      "src_components_layout_sidebar_sidebarcontent"
     ],
     "15": [
       "src_app_api_coa_sampleid_final_route",
@@ -588,21 +611,12 @@
       "src_app_api_coa_sampleid_preliminary_route",
       "src_app_api_coa_sampleid_preliminary_route_post",
       "src_app_api_coa_sampleid_preliminary_route_routecontext",
-      "src_app_api_finance_invoices_route",
-      "src_app_api_finance_invoices_route_createinvoiceschema",
-      "src_app_api_finance_invoices_route_get",
-      "src_app_api_finance_invoices_route_getinvoiceamount",
-      "src_app_api_finance_invoices_route_post",
       "src_app_api_quotations_id_coc_route",
       "src_app_api_quotations_id_coc_route_post",
       "src_app_api_quotations_id_coc_route_routecontext",
       "src_app_api_quotations_id_ltr_route",
       "src_app_api_quotations_id_ltr_route_post",
       "src_app_api_quotations_id_ltr_route_routecontext",
-      "src_app_api_samples_route",
-      "src_app_api_samples_route_createsampleschema",
-      "src_app_api_samples_route_get",
-      "src_app_api_samples_route_post",
       "src_lib_document_number",
       "src_lib_document_number_generatedocumentno"
     ],
@@ -756,23 +770,13 @@
       "src_app_api_technical_stps_quotationid_route_todate"
     ],
     "28": [
-      "prisma_migrations_20260612120744_init_migration",
-      "prisma_migrations_20260612120744_init_migration_analysisparameter",
-      "prisma_migrations_20260612120744_init_migration_coa",
-      "prisma_migrations_20260612120744_init_migration_coc",
-      "prisma_migrations_20260612120744_init_migration_customer",
-      "prisma_migrations_20260612120744_init_migration_invoice",
-      "prisma_migrations_20260612120744_init_migration_ltr",
-      "prisma_migrations_20260612120744_init_migration_menu",
-      "prisma_migrations_20260612120744_init_migration_purchaseorder",
-      "prisma_migrations_20260612120744_init_migration_quotation",
-      "prisma_migrations_20260612120744_init_migration_quotationitem",
-      "prisma_migrations_20260612120744_init_migration_role",
-      "prisma_migrations_20260612120744_init_migration_rolemenu",
-      "prisma_migrations_20260612120744_init_migration_sample",
-      "prisma_migrations_20260612120744_init_migration_sampleparameter",
-      "prisma_migrations_20260612120744_init_migration_user",
-      "prisma_migrations_20260612120744_init_migration_workflowlog"
+      "src_components_layout_appshell",
+      "src_components_layout_appshell_appshell",
+      "src_components_layout_appshell_appshellprops",
+      "src_components_layout_appshell_menuitem",
+      "src_components_layout_pagetransition",
+      "src_components_layout_pagetransition_pagetransition",
+      "src_lib_motion_pagevariants"
     ],
     "29": [
       "src_app_api_master_coa_templates_route",
@@ -807,19 +811,11 @@
       "src_components_master_masterparameterclient_props"
     ],
     "33": [
-      "src_app_api_exports_invoice_id_excel_route",
-      "src_app_api_exports_invoice_id_excel_route_get",
-      "src_app_api_exports_invoice_id_excel_route_routecontext",
-      "src_lib_exports_excel_invoice_excel",
-      "src_lib_exports_excel_invoice_excel_buildinvoiceexcel",
-      "src_lib_exports_excel_invoice_excel_getfinalcoano",
-      "src_lib_exports_excel_invoice_excel_rupiahformat",
-      "src_lib_exports_excel_invoice_excel_setthinborder",
-      "src_lib_exports_excel_invoice_excel_stylelabel",
-      "src_lib_exports_excel_invoice_excel_stylesection",
-      "src_lib_exports_excel_invoice_excel_stylevalue",
-      "src_lib_exports_invoice_data",
-      "src_lib_exports_invoice_data_getauthorizedinvoiceforexport"
+      "src_app_api_finance_invoices_route",
+      "src_app_api_finance_invoices_route_createinvoiceschema",
+      "src_app_api_finance_invoices_route_get",
+      "src_app_api_finance_invoices_route_getinvoiceamount",
+      "src_app_api_finance_invoices_route_post"
     ],
     "34": [
       "src_app_api_master_customers_import_route",
@@ -836,34 +832,16 @@
       "src_components_providers_motionprovider_motionprovider"
     ],
     "36": [
-      "src_app_api_finance_invoices_id_approve_route",
-      "src_app_api_finance_invoices_id_approve_route_patch",
-      "src_app_api_finance_invoices_id_approve_route_routecontext",
       "src_app_api_lab_sample_parameters_id_retest_route",
       "src_app_api_lab_sample_parameters_id_retest_route_patch",
       "src_app_api_lab_sample_parameters_id_retest_route_retestschema",
-      "src_app_api_lab_sample_parameters_id_retest_route_routecontext",
-      "src_app_api_lab_sample_parameters_id_review_route",
-      "src_app_api_lab_sample_parameters_id_review_route_patch",
-      "src_app_api_lab_sample_parameters_id_review_route_routecontext",
+      "src_app_api_lab_sample_parameters_id_retest_route_routecontext"
+    ],
+    "37": [
       "src_app_api_lab_samples_sampleid_retest_route",
       "src_app_api_lab_samples_sampleid_retest_route_patch",
       "src_app_api_lab_samples_sampleid_retest_route_retestschema",
-      "src_app_api_lab_samples_sampleid_retest_route_routecontext",
-      "src_app_api_lab_samples_sampleid_validate_route",
-      "src_app_api_lab_samples_sampleid_validate_route_patch",
-      "src_app_api_lab_samples_sampleid_validate_route_routecontext",
-      "src_lib_api_permission",
-      "src_lib_api_permission_permissionaction",
-      "src_lib_api_permission_permissioncheck"
-    ],
-    "37": [
-      "prisma_migrations_20260612165544_add_coa_templates_migration",
-      "prisma_migrations_20260612165544_add_coa_templates_migration_coatemplate",
-      "prisma_migrations_20260612165544_add_coa_templates_migration_coatemplateparameter",
-      "prisma_migrations_20260612165544_add_coa_templates_migration_quotation",
-      "prisma_migrations_20260612165544_add_coa_templates_migration_sample",
-      "prisma_migrations_20260612165544_add_coa_templates_migration_sampleparameter"
+      "src_app_api_lab_samples_sampleid_retest_route_routecontext"
     ],
     "38": [
       "src_app_api_master_customers_id_account_route",
@@ -872,12 +850,10 @@
       "src_app_api_master_customers_id_account_route_routecontext"
     ],
     "39": [
-      "prisma_migrations_20260614062943_add_excel_document_fields_migration",
-      "prisma_migrations_20260614062943_add_excel_document_fields_migration_coc",
-      "prisma_migrations_20260614062943_add_excel_document_fields_migration_customer",
-      "prisma_migrations_20260614062943_add_excel_document_fields_migration_quotation",
-      "prisma_migrations_20260614062943_add_excel_document_fields_migration_quotationitem",
-      "prisma_migrations_20260614062943_add_excel_document_fields_migration_stps"
+      "src_app_api_master_customers_template_route",
+      "src_app_api_master_customers_template_route_columns",
+      "src_app_api_master_customers_template_route_get",
+      "src_app_api_master_customers_template_route_setthinborder"
     ],
     "40": [
       "src_app_api_quotations_id_po_route",
@@ -886,10 +862,9 @@
       "src_app_api_quotations_id_po_route_routecontext"
     ],
     "41": [
-      "src_app_api_lab_samples_sampleid_results_route",
-      "src_app_api_lab_samples_sampleid_results_route_patch",
-      "src_app_api_lab_samples_sampleid_results_route_resultschema",
-      "src_app_api_lab_samples_sampleid_results_route_routecontext"
+      "src_app_api_finance_invoices_id_approve_route",
+      "src_app_api_finance_invoices_id_approve_route_patch",
+      "src_app_api_finance_invoices_id_approve_route_routecontext"
     ],
     "42": [
       "src_app_api_finance_invoices_id_paid_route",
@@ -902,10 +877,9 @@
       "src_app_api_finance_invoices_id_send_route_routecontext"
     ],
     "44": [
-      "src_app_api_samples_id_distribute_route",
-      "src_app_api_samples_id_distribute_route_distributeschema",
-      "src_app_api_samples_id_distribute_route_patch",
-      "src_app_api_samples_id_distribute_route_routecontext"
+      "src_app_api_lab_sample_parameters_id_review_route",
+      "src_app_api_lab_sample_parameters_id_review_route_patch",
+      "src_app_api_lab_sample_parameters_id_review_route_routecontext"
     ],
     "45": [
       "src_app_api_lab_sample_parameters_id_start_route",
@@ -977,42 +951,25 @@
     ],
     "62": [
       "public_window_svg"
-    ],
-    "63": [
-      "src_app_api_lab_samples_sampleid_review_route",
-      "src_app_api_lab_samples_sampleid_review_route_patch",
-      "src_app_api_lab_samples_sampleid_review_route_routecontext"
-    ],
-    "64": [
-      "prisma_migrations_20260612125026_add_customer_active_migration",
-      "prisma_migrations_20260612125026_add_customer_active_migration_customer"
-    ],
-    "65": [
-      "prisma_migrations_20260618021336_add_coc_sampling_location_migration",
-      "prisma_migrations_20260618021336_add_coc_sampling_location_migration_coc"
-    ],
-    "66": [
-      "prisma_migrations_20260618033123_add_invoice_payment_proof_migration",
-      "prisma_migrations_20260618033123_add_invoice_payment_proof_migration_invoice"
     ]
   },
   "cohesion": {
     "0": 0.05934065934065934,
-    "1": 0.06308610400682012,
+    "1": 0.053297199638663056,
     "2": 0.06418219461697723,
     "3": 0.10299003322259136,
     "4": 0.04878048780487805,
     "5": 0.06896551724137931,
     "6": 0.06896551724137931,
-    "7": 0.11,
+    "7": 0.1164021164021164,
     "8": 0.09523809523809523,
     "9": 0.1111111111111111,
     "10": 0.09956709956709957,
-    "11": 0.5,
+    "11": 0.09523809523809523,
     "12": 0.12418300653594772,
-    "13": 0.18128654970760233,
-    "14": 0.12121212121212122,
-    "15": 0.1383399209486166,
+    "13": 0.2,
+    "14": 0.19047619047619047,
+    "15": 0.23076923076923078,
     "16": 0.2087912087912088,
     "17": 0.1978021978021978,
     "18": 0.1794871794871795,
@@ -1025,23 +982,23 @@
     "25": 0.25,
     "26": 0.2857142857142857,
     "27": 0.3333333333333333,
-    "28": 0.25,
+    "28": 0.3333333333333333,
     "29": 0.4,
     "30": 0.3333333333333333,
     "31": 0.3333333333333333,
     "32": 0.4,
-    "33": 0.3076923076923077,
+    "33": 0.5,
     "34": 0.7,
     "35": 0.5,
-    "36": 0.1,
-    "37": 0.6,
+    "36": 0.5,
+    "37": 0.5,
     "38": 0.5,
-    "39": 0.4,
+    "39": 0.6666666666666666,
     "40": 0.5,
-    "41": 0.5,
+    "41": 0.6666666666666666,
     "42": 0.6666666666666666,
     "43": 0.6666666666666666,
-    "44": 0.5,
+    "44": 0.6666666666666666,
     "45": 0.6666666666666666,
     "46": 0.6666666666666666,
     "47": 0.6666666666666666,
@@ -1059,11 +1016,7 @@
     "59": 1.0,
     "60": 1.0,
     "61": 1.0,
-    "62": 1.0,
-    "63": 0.6666666666666666,
-    "64": 1.0,
-    "65": 1.0,
-    "66": 1.0
+    "62": 1.0
   },
   "gods": [
     {
@@ -1182,33 +1135,33 @@
     },
     {
       "type": "bridge_node",
-      "question": "Why does `getSession()` connect `Session and Permissions API` to `Invoice Approval and Retest API`, `API Permissions and Approvals`, `Dashboard Pages`, `Dashboard Layout Components`, `Invoice and Document Numbering`?",
-      "why": "High betweenness centrality (0.140) - this node is a cross-community bridge."
+      "question": "Why does `getSession()` connect `Session and Permissions` to `Invoices API`, `Dashboard Pages`, `Dashboard Layout and Navigation`, `API Permission and Approval`?",
+      "why": "High betweenness centrality (0.153) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `requireAnyApiPermission()` connect `API Permissions and Approvals` to `Session and Permissions API`, `Invoice Excel Export`, `Data Import API`, `Certificate of Analysis Reports`, `Invoice Approval and Retest API`, `PDF and Excel Document Generation`, `Purchase Order API`, `User Management API`, `Invoice and Document Numbering`, `Quotation Item Management`, `Quotation Creation and Listing`?",
-      "why": "High betweenness centrality (0.117) - this node is a cross-community bridge."
+      "question": "Why does `requireAnyApiPermission()` connect `API Permission and Approval` to `Session and Permissions`, `Invoices API`, `Import API`, `PDF and Excel Rendering`, `COA and Result Exports`, `Template Utilities`, `Purchase Order API`, `User Management API`, `Document Number Generation`, `Quotation Item API`, `Quotation Creation API`?",
+      "why": "High betweenness centrality (0.128) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `requireApiPermission()` connect `User Management API` to `API Permissions and Approvals`, `result/route.ts`, `Invoice and Document Numbering`, `Certificate of Compliance API`, `Certificate of Analysis Templates`, `Customer API`, `STPS API`, `Certificate of Analysis Template API`, `Customer Listing API`, `Invoice Approval and Retest API`, `Account API`, `Results API`, `Payment Status API`, `Send Operation API`, `Distribution API`, `Start Process API`, `Validation API`, `Sample Parameter Verification API`, `Sample Start API`, `Sample Verification API`, `Receive Operation API`, `Sample Review API`?",
-      "why": "High betweenness centrality (0.051) - this node is a cross-community bridge."
+      "question": "Why does `requireApiPermission()` connect `User Management API` to `API Permission and Approval`, `Result Management API`, `Certificate of Compliance API`, `COA Template API`, `Customer API`, `STPS API`, `COA Templates API`, `Customers API`, `Invoices API`, `Retest API by ID`, `Retest API by Sample`, `Account API`, `Invoice Approval API`, `Payment API`, `Send API`, `Review API`, `Start Process API`, `Validation API`, `Sample Parameter Verification API`, `Sample Start API`, `Sample Verification API`, `Receive API`?",
+      "why": "High betweenness centrality (0.056) - this node is a cross-community bridge."
     },
     {
       "type": "isolated_nodes",
       "question": "What connects `eslintConfig`, `nextConfig`, `name` to the rest of the system?",
-      "why": "274 weakly-connected nodes found - possible documentation gaps or missing edges."
+      "why": "267 weakly-connected nodes found - possible documentation gaps or missing edges."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `Session and Permissions API` be split into smaller, more focused modules?",
+      "question": "Should `Session and Permissions` be split into smaller, more focused modules?",
       "why": "Cohesion score 0.05934065934065934 - nodes in this community are weakly interconnected."
     },
     {
       "type": "low_cohesion",
-      "question": "Should `PDF and Excel Document Generation` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.06308610400682012 - nodes in this community are weakly interconnected."
+      "question": "Should `PDF and Excel Rendering` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.053297199638663056 - nodes in this community are weakly interconnected."
     }
   ]
 }
