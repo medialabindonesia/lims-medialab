@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
+import { prisma } from "@/lib/db";
 import { getCannedReplies, getTicketDetail } from "@/lib/support-page-data";
 import SupportConversationClient from "@/components/support/SupportConversationClient";
 
@@ -17,9 +18,13 @@ export default async function AgentTicketPage({ params }: PageProps) {
   if (!allowed) redirect("/dashboard");
 
   const { id } = await params;
-  const [detail, cannedReplies] = await Promise.all([
+  const [detail, cannedReplies, agent] = await Promise.all([
     getTicketDetail(id, session, false),
     getCannedReplies(),
+    prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { name: true },
+    }),
   ]);
 
   if (!detail) notFound();
@@ -30,6 +35,7 @@ export default async function AgentTicketPage({ params }: PageProps) {
       initialMessages={detail.messages}
       cannedReplies={cannedReplies}
       agentId={session.userId}
+      viewerName={agent?.name || "Customer Service"}
     />
   );
 }

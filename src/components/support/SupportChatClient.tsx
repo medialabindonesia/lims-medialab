@@ -4,9 +4,17 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Wifi, WifiOff } from "lucide-react";
 import {
+  type ChatMessage,
   type SupportMessageDTO,
   type SupportTicketDTO,
 } from "@/lib/support";
+import {
+  applyRead,
+  ingestReal,
+  makeOptimistic,
+  markFailed,
+  removeByKey,
+} from "@/lib/chat-messages";
 import { TicketStatusBadge } from "@/components/support/Badges";
 import ChatThread from "@/components/support/ChatThread";
 import ChatComposer from "@/components/support/ChatComposer";
@@ -21,8 +29,7 @@ export default function SupportChatClient({
   initialMessages: SupportMessageDTO[];
 }) {
   const [ticket, setTicket] = useState(initialTicket);
-  const [messages, setMessages] = useState(initialMessages);
-  const [sending, setSending] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [typingName, setTypingName] = useState<string | null>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -31,12 +38,9 @@ export default function SupportChatClient({
   const [ratingSubmitting, setRatingSubmitting] = useState(false);
 
   const appendMessage = useCallback((incoming: SupportMessageDTO) => {
-    setMessages((prev) => {
-      if (prev.some((m) => m.id === incoming.id)) return prev;
-      // Customer tidak boleh melihat internal note (pertahanan tambahan).
-      if (incoming.isInternalNote) return prev;
-      return [...prev, incoming];
-    });
+    // Customer tidak boleh melihat internal note (pertahanan tambahan).
+    if (incoming.isInternalNote) return;
+    setMessages((prev) => ingestReal(prev, incoming));
   }, []);
 
   const markRead = useCallback(async () => {
@@ -66,13 +70,7 @@ export default function SupportChatClient({
     onRead: ({ reader, at }) => {
       // Agent membaca pesan customer → tandai pesan customer sebagai dibaca.
       if (reader !== "AGENT") return;
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.senderRole === "CUSTOMER" && !m.readByAgentAt
-            ? { ...m, readByAgentAt: at }
-            : m
-        )
-      );
+      setMessages((prev) => applyRead(prev, "AGENT", at));
     },
   });
 
@@ -80,22 +78,46 @@ export default function SupportChatClient({
     markRead();
   }, [markRead]);
 
-  async function handleSend(body: string) {
-    setSending(true);
-    try {
-      const res = await fetch(`/api/support/tickets/${ticket.id}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
+  // Optimistic: pesan langsung tampil, dikirim di latar belakang.
+  const sendMessage = useCallback(
+    (body: string) => {
+      const optimistic = makeOptimistic({
+        ticketId: ticket.id,
+        senderRole: "CUSTOMER",
+        senderName: ticket.customerName || "Anda",
+        body,
+        isInternalNote: false,
       });
-      const data = await res.json();
-      if (res.ok && data.message) {
-        appendMessage(data.message);
-        if (data.ticket) setTicket(data.ticket);
-      }
-    } finally {
-      setSending(false);
-    }
+      setMessages((prev) => [...prev, optimistic]);
+
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/support/tickets/${ticket.id}/messages`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ body }),
+            }
+          );
+          const data = await res.json();
+          if (res.ok && data.message) {
+            setMessages((prev) => ingestReal(prev, data.message));
+            if (data.ticket) setTicket(data.ticket);
+          } else {
+            setMessages((prev) => markFailed(prev, optimistic.clientKey!));
+          }
+        } catch {
+          setMessages((prev) => markFailed(prev, optimistic.clientKey!));
+        }
+      })();
+    },
+    [ticket.id, ticket.customerName]
+  );
+
+  function handleRetry(message: ChatMessage) {
+    setMessages((prev) => removeByKey(prev, message.clientKey ?? message.id));
+    sendMessage(message.body);
   }
 
   async function submitRating() {
@@ -198,6 +220,7 @@ export default function SupportChatClient({
           viewer="customer"
           typingName={typingName}
           emptyHint="Mulai percakapan dengan tim kami."
+          onRetry={handleRetry}
         />
       </div>
 
@@ -210,8 +233,7 @@ export default function SupportChatClient({
           </div>
         ) : (
           <ChatComposer
-            onSend={handleSend}
-            sending={sending}
+            onSend={(body) => sendMessage(body)}
             onTyping={() =>
               publishTyping({
                 name: ticket.customerName || "Customer",

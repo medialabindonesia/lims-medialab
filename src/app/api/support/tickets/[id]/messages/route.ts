@@ -114,10 +114,12 @@ export async function POST(request: Request, context: RouteContext) {
   const messageDto = serializeMessage(message);
   const ticketDto = updatedTicket ? serializeTicket(updatedTicket) : null;
 
-  // Realtime: kirim pesan ke kanal tiket (kedua pihak yang sedang membuka).
-  await publishSupport(supportChannels.ticket(id), "message", messageDto);
-
+  // Catatan internal TIDAK boleh di-broadcast: customer ikut subscribe kanal
+  // tiket, jadi kita hanya publish pesan non-internal. Pengirim tetap melihat
+  // catatannya via optimistic; agent lain melihatnya saat memuat ulang.
   if (!isInternalNote) {
+    await publishSupport(supportChannels.ticket(id), "message", messageDto);
+
     if (isCustomer) {
       // Beri tahu antrian agent + refresh list.
       await publishSupport(supportChannels.desk(), "ticket.update", ticketDto);

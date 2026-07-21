@@ -16,11 +16,19 @@ import {
   TICKET_PRIORITIES,
   formatChatTime,
   type CannedReplyDTO,
+  type ChatMessage,
   type SupportMessageDTO,
   type SupportTicketDTO,
   type TicketPriority,
   type TicketStatus,
 } from "@/lib/support";
+import {
+  applyRead,
+  ingestReal,
+  makeOptimistic,
+  markFailed,
+  removeByKey,
+} from "@/lib/chat-messages";
 import { PriorityBadge, TicketStatusBadge } from "@/components/support/Badges";
 import ChatThread from "@/components/support/ChatThread";
 import ChatComposer from "@/components/support/ChatComposer";
@@ -37,23 +45,22 @@ export default function SupportConversationClient({
   initialMessages,
   cannedReplies,
   agentId,
+  viewerName,
 }: {
   initialTicket: SupportTicketDTO;
   initialMessages: SupportMessageDTO[];
   cannedReplies: CannedReplyDTO[];
   agentId: string;
+  viewerName: string;
 }) {
   const [ticket, setTicket] = useState(initialTicket);
-  const [messages, setMessages] = useState(initialMessages);
-  const [sending, setSending] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
   const [typingName, setTypingName] = useState<string | null>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const appendMessage = useCallback((incoming: SupportMessageDTO) => {
-    setMessages((prev) =>
-      prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]
-    );
+    setMessages((prev) => ingestReal(prev, incoming));
   }, []);
 
   const markRead = useCallback(async () => {
@@ -83,13 +90,7 @@ export default function SupportConversationClient({
     onRead: ({ reader, at }) => {
       // Customer membaca pesan agent → tandai pesan agent sebagai dibaca.
       if (reader !== "CUSTOMER") return;
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.senderRole === "AGENT" && !m.readByCustomerAt
-            ? { ...m, readByCustomerAt: at }
-            : m
-        )
-      );
+      setMessages((prev) => applyRead(prev, "CUSTOMER", at));
     },
   });
 
@@ -97,22 +98,46 @@ export default function SupportConversationClient({
     markRead();
   }, [markRead]);
 
-  async function handleSend(body: string, isInternalNote: boolean) {
-    setSending(true);
-    try {
-      const res = await fetch(`/api/support/tickets/${ticket.id}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body, isInternalNote }),
+  // Optimistic: pesan/catatan langsung tampil, dikirim di latar belakang.
+  const sendMessage = useCallback(
+    (body: string, isInternalNote: boolean) => {
+      const optimistic = makeOptimistic({
+        ticketId: ticket.id,
+        senderRole: "AGENT",
+        senderName: viewerName,
+        body,
+        isInternalNote,
       });
-      const data = await res.json();
-      if (res.ok && data.message) {
-        appendMessage(data.message);
-        if (data.ticket) setTicket(data.ticket);
-      }
-    } finally {
-      setSending(false);
-    }
+      setMessages((prev) => [...prev, optimistic]);
+
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/support/tickets/${ticket.id}/messages`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ body, isInternalNote }),
+            }
+          );
+          const data = await res.json();
+          if (res.ok && data.message) {
+            setMessages((prev) => ingestReal(prev, data.message));
+            if (data.ticket) setTicket(data.ticket);
+          } else {
+            setMessages((prev) => markFailed(prev, optimistic.clientKey!));
+          }
+        } catch {
+          setMessages((prev) => markFailed(prev, optimistic.clientKey!));
+        }
+      })();
+    },
+    [ticket.id, viewerName]
+  );
+
+  function handleRetry(message: ChatMessage) {
+    setMessages((prev) => removeByKey(prev, message.clientKey ?? message.id));
+    sendMessage(message.body, message.isInternalNote);
   }
 
   async function patchTicket(payload: Record<string, unknown>) {
@@ -174,6 +199,7 @@ export default function SupportConversationClient({
               viewer="agent"
               typingName={typingName}
               emptyHint="Belum ada percakapan."
+              onRetry={handleRetry}
             />
           </div>
 
@@ -184,12 +210,11 @@ export default function SupportConversationClient({
               </div>
             ) : (
               <ChatComposer
-                onSend={handleSend}
-                sending={sending}
+                onSend={sendMessage}
                 allowInternalNote
                 cannedReplies={cannedReplies}
                 onTyping={() =>
-                  publishTyping({ name: "Customer Service", role: "AGENT" })
+                  publishTyping({ name: viewerName, role: "AGENT" })
                 }
               />
             )}

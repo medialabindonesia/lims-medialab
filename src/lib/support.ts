@@ -27,6 +27,17 @@ export type SupportMessageDTO = {
   createdAt: string;
 };
 
+/**
+ * Pesan sisi-klien: DTO server + status optimistic (pending/failed) dan
+ * clientKey stabil supaya animasi tak mengulang saat pesan sementara
+ * digantikan versi asli dari server/realtime.
+ */
+export type ChatMessage = SupportMessageDTO & {
+  pending?: boolean;
+  failed?: boolean;
+  clientKey?: string;
+};
+
 export type SupportTicketDTO = {
   id: string;
   ticketNo: string;

@@ -8,7 +8,6 @@ type Props = {
   onSend: (body: string, isInternalNote: boolean) => Promise<void> | void;
   onTyping?: () => void;
   disabled?: boolean;
-  sending?: boolean;
   /** Agent-only: izinkan internal note + canned replies. */
   allowInternalNote?: boolean;
   cannedReplies?: CannedReplyDTO[];
@@ -19,7 +18,6 @@ export default function ChatComposer({
   onSend,
   onTyping,
   disabled,
-  sending,
   allowInternalNote,
   cannedReplies,
   placeholder,
@@ -29,20 +27,23 @@ export default function ChatComposer({
   const [showCanned, setShowCanned] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  async function submit() {
+  // Optimistic: bersihkan input SEKARANG, kirim di latar (jangan tunggu server).
+  // Tombol/textarea tak pernah nge-freeze — terasa snappy seperti WhatsApp.
+  function submit() {
     const trimmed = value.trim();
-    if (!trimmed || disabled || sending) return;
+    if (!trimmed || disabled) return;
 
-    await onSend(trimmed, internal);
+    const noteFlag = internal;
     setValue("");
     setInternal(false);
-    textareaRef.current?.focus();
+    onSend(trimmed, noteFlag);
+    requestAnimationFrame(() => textareaRef.current?.focus());
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
-      void submit();
+      submit();
     }
   }
 
@@ -100,7 +101,7 @@ export default function ChatComposer({
             onTyping?.();
           }}
           onKeyDown={handleKeyDown}
-          disabled={disabled || sending}
+          disabled={disabled}
           rows={1}
           placeholder={
             placeholder ||
@@ -111,9 +112,9 @@ export default function ChatComposer({
 
         <button
           type="button"
-          onClick={() => void submit()}
-          disabled={disabled || sending || !value.trim()}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={submit}
+          disabled={disabled || !value.trim()}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Send size={18} />
         </button>
