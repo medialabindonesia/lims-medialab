@@ -1,0 +1,215 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, CheckCircle2, Wifi, WifiOff } from "lucide-react";
+import {
+  type SupportMessageDTO,
+  type SupportTicketDTO,
+} from "@/lib/support";
+import { TicketStatusBadge } from "@/components/support/Badges";
+import ChatThread from "@/components/support/ChatThread";
+import ChatComposer from "@/components/support/ChatComposer";
+import StarRating from "@/components/support/StarRating";
+import { useTicketChannel } from "@/hooks/useTicketChannel";
+
+export default function SupportChatClient({
+  initialTicket,
+  initialMessages,
+}: {
+  initialTicket: SupportTicketDTO;
+  initialMessages: SupportMessageDTO[];
+}) {
+  const [ticket, setTicket] = useState(initialTicket);
+  const [messages, setMessages] = useState(initialMessages);
+  const [sending, setSending] = useState(false);
+  const [typingName, setTypingName] = useState<string | null>(null);
+  const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [rating, setRating] = useState(0);
+  const [ratingComment, setRatingComment] = useState("");
+  const [ratingSubmitting, setRatingSubmitting] = useState(false);
+
+  const appendMessage = useCallback((incoming: SupportMessageDTO) => {
+    setMessages((prev) => {
+      if (prev.some((m) => m.id === incoming.id)) return prev;
+      // Customer tidak boleh melihat internal note (pertahanan tambahan).
+      if (incoming.isInternalNote) return prev;
+      return [...prev, incoming];
+    });
+  }, []);
+
+  const markRead = useCallback(async () => {
+    try {
+      await fetch(`/api/support/tickets/${ticket.id}/read`, { method: "POST" });
+    } catch {
+      /* diamkan */
+    }
+  }, [ticket.id]);
+
+  const { connected, publishTyping } = useTicketChannel(ticket.id, {
+    onMessage: (message) => {
+      appendMessage(message);
+      if (message.senderRole === "AGENT") markRead();
+    },
+    onTicketUpdate: ({ ticket: updated, message }) => {
+      setTicket(updated);
+      if (message) appendMessage(message);
+    },
+    onTyping: (payload) => {
+      if (payload.role === "AGENT") {
+        setTypingName(payload.name);
+        if (typingTimer.current) clearTimeout(typingTimer.current);
+        typingTimer.current = setTimeout(() => setTypingName(null), 3000);
+      }
+    },
+  });
+
+  useEffect(() => {
+    markRead();
+  }, [markRead]);
+
+  async function handleSend(body: string) {
+    setSending(true);
+    try {
+      const res = await fetch(`/api/support/tickets/${ticket.id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      });
+      const data = await res.json();
+      if (res.ok && data.message) {
+        appendMessage(data.message);
+        if (data.ticket) setTicket(data.ticket);
+      }
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function submitRating() {
+    if (rating < 1) return;
+    setRatingSubmitting(true);
+    try {
+      const res = await fetch(`/api/support/tickets/${ticket.id}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating, ratingComment }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ticket) setTicket(data.ticket);
+    } finally {
+      setRatingSubmitting(false);
+    }
+  }
+
+  const closed = ticket.status === "CLOSED";
+  const resolved = ticket.status === "RESOLVED";
+  const alreadyRated = ticket.rating != null;
+
+  return (
+    <section className="flex min-h-[calc(100vh-2rem)] flex-col">
+      {/* Header */}
+      <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex min-w-0 items-center gap-3">
+          <Link
+            href="/support"
+            className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+          >
+            <ArrowLeft size={18} />
+          </Link>
+          <div className="min-w-0">
+            <h1 className="truncate text-lg font-black text-slate-900">
+              {ticket.subject}
+            </h1>
+            <p className="text-xs text-slate-400">
+              {ticket.ticketNo}
+              {ticket.categoryName ? ` · ${ticket.categoryName}` : ""}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span
+            title={connected ? "Realtime aktif" : "Realtime offline"}
+            className={connected ? "text-emerald-500" : "text-slate-300"}
+          >
+            {connected ? <Wifi size={16} /> : <WifiOff size={16} />}
+          </span>
+          <TicketStatusBadge status={ticket.status} />
+        </div>
+      </div>
+
+      {/* Rating panel (resolved) */}
+      {resolved && !alreadyRated && (
+        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+          <div className="flex items-center gap-2 text-amber-900">
+            <CheckCircle2 size={18} />
+            <p className="font-bold">Tiket ini ditandai selesai</p>
+          </div>
+          <p className="mt-1 text-sm text-amber-700">
+            Beri penilaian atas bantuan kami. Setelah dinilai, tiket akan ditutup.
+          </p>
+          <div className="mt-3">
+            <StarRating value={rating} onChange={setRating} />
+          </div>
+          <textarea
+            value={ratingComment}
+            onChange={(event) => setRatingComment(event.target.value)}
+            rows={2}
+            placeholder="Komentar (opsional)"
+            className="mt-3 w-full resize-none rounded-xl border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400"
+          />
+          <button
+            type="button"
+            onClick={submitRating}
+            disabled={rating < 1 || ratingSubmitting}
+            className="mt-3 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white hover:bg-amber-600 disabled:opacity-60"
+          >
+            {ratingSubmitting ? "Mengirim…" : "Kirim Penilaian"}
+          </button>
+        </div>
+      )}
+
+      {closed && alreadyRated && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+          <p className="text-sm font-semibold text-slate-600">
+            Penilaian Anda:
+          </p>
+          <StarRating value={ticket.rating ?? 0} readOnly size={18} />
+        </div>
+      )}
+
+      {/* Thread */}
+      <div className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+        <ChatThread
+          messages={messages}
+          viewer="customer"
+          typingName={typingName}
+          emptyHint="Mulai percakapan dengan tim kami."
+        />
+      </div>
+
+      {/* Composer */}
+      <div className="mt-4">
+        {closed ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-400">
+            Tiket sudah ditutup. Buat tiket baru dari Support Center bila
+            diperlukan.
+          </div>
+        ) : (
+          <ChatComposer
+            onSend={handleSend}
+            sending={sending}
+            onTyping={() =>
+              publishTyping({
+                name: ticket.customerName || "Customer",
+                role: "CUSTOMER",
+              })
+            }
+          />
+        )}
+      </div>
+    </section>
+  );
+}

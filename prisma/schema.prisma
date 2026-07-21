@@ -96,6 +96,27 @@ enum StpsStatus {
   ISSUED
 }
 
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum SupportPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportSenderRole {
+  CUSTOMER
+  AGENT
+  SYSTEM
+}
+
 model Role {
   id        String     @id @default(cuid())
   name      String
@@ -117,6 +138,11 @@ model User {
 
   role       Role      @relation(fields: [roleId], references: [id])
   customer   Customer? @relation(fields: [customerId], references: [id])
+
+  supportTicketsCreated  SupportTicket[]  @relation("TicketCreatedBy")
+  supportTicketsAssigned SupportTicket[]  @relation("TicketAssignedTo")
+  supportMessages        SupportMessage[]
+  cannedReplies          CannedReply[]
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -202,6 +228,7 @@ model Customer {
   users      User[]
   quotations Quotation[]
   samples    Sample[]
+  supportTickets SupportTicket[]
 
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
@@ -500,4 +527,105 @@ model WorkflowLog {
   note      String?
 
   createdAt DateTime @default(now())
+}
+
+model FaqCategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?   @db.Text
+  icon        String?
+  sort        Int       @default(0)
+  isActive    Boolean   @default(true)
+
+  items   FaqItem[]
+  tickets SupportTicket[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FaqItem {
+  id         String  @id @default(cuid())
+  categoryId String
+  question   String  @db.Text
+  answer     String  @db.Text
+  sort       Int     @default(0)
+  isActive   Boolean @default(true)
+
+  helpfulCount    Int @default(0)
+  notHelpfulCount Int @default(0)
+
+  category FaqCategory @relation(fields: [categoryId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+model SupportTicket {
+  id         String              @id @default(cuid())
+  ticketNo   String              @unique
+  customerId String
+  categoryId String?
+  createdById String
+  subject    String
+  status     SupportTicketStatus @default(OPEN)
+  priority   SupportPriority     @default(NORMAL)
+
+  assignedToId    String?
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  lastMessageAt   DateTime?
+
+  rating        Int?
+  ratingComment String? @db.Text
+
+  customer   Customer     @relation(fields: [customerId], references: [id])
+  category   FaqCategory? @relation(fields: [categoryId], references: [id])
+  createdBy  User         @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  assignedTo User?        @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  messages   SupportMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([assignedToId])
+  @@index([status])
+}
+
+model SupportMessage {
+  id       String            @id @default(cuid())
+  ticketId String
+  senderId String?
+  senderRole SupportSenderRole
+  body     String            @db.Text
+  isInternalNote Boolean     @default(false)
+
+  readByCustomerAt DateTime?
+  readByAgentAt    DateTime?
+
+  ticket SupportTicket @relation(fields: [ticketId], references: [id])
+  sender User?         @relation(fields: [senderId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model CannedReply {
+  id       String  @id @default(cuid())
+  title    String
+  body     String  @db.Text
+  sort     Int     @default(0)
+  isActive Boolean @default(true)
+
+  createdById String?
+  createdBy   User?   @relation(fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -21,8 +21,11 @@ import {
   FileSignature,
   FileText,
   FlaskConical,
+  Headset,
+  HelpCircle,
   Home,
   KeyRound,
+  LifeBuoy,
   ListChecks,
   LogOut,
   Menu as MenuIcon,
@@ -38,6 +41,7 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import { useSupportUnread } from "@/hooks/useSupportUnread";
 
 export type DashboardMenuItem = {
   id: string;
@@ -82,7 +86,10 @@ const iconMap: Record<string, ElementType> = {
   FileSignature,
   FileText,
   FlaskConical,
+  Headset,
+  HelpCircle,
   KeyRound,
+  LifeBuoy,
   ListChecks,
   Microscope,
   PackageCheck,
@@ -139,9 +146,13 @@ const groupConfig: Record<
     label: "Finance",
     sort: 9,
   },
+  support: {
+    label: "Support",
+    sort: 10,
+  },
   customer: {
     label: "Customer Area",
-    sort: 10,
+    sort: 11,
   },
 };
 
@@ -168,10 +179,12 @@ function SidebarContent({
   menus,
   session,
   onClose,
+  supportBadge,
 }: {
   menus: DashboardMenuItem[];
   session: DashboardSession;
   onClose?: () => void;
+  supportBadge?: { key: string; count: number };
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -305,6 +318,21 @@ function SidebarContent({
                       />
 
                       <span className="truncate">{item.name}</span>
+
+                      {supportBadge &&
+                        supportBadge.key === item.key &&
+                        supportBadge.count > 0 && (
+                          <span
+                            className={[
+                              "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
+                              active
+                                ? "bg-white/25 text-white"
+                                : "bg-red-500 text-white",
+                            ].join(" ")}
+                          >
+                            {supportBadge.count}
+                          </span>
+                        )}
                     </Link>
                   );
                 })}
@@ -342,10 +370,29 @@ export default function Sidebar({
   const reduce = useReducedMotion();
   const [openMobile, setOpenMobile] = useState(false);
 
+  const isCustomer = session.roleCode === "CUSTOMER_ENGAGEMENT";
+  const supportKey = menus.find(
+    (menu) => menu.key === "support.center" || menu.key === "support.desk"
+  )?.key;
+
+  const { count: supportUnread } = useSupportUnread({
+    isCustomer,
+    customerId: session.customerId,
+    enabled: Boolean(supportKey),
+  });
+
+  const supportBadge = supportKey
+    ? { key: supportKey, count: supportUnread }
+    : undefined;
+
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 border-r border-slate-200 bg-white shadow-sm lg:block">
-        <SidebarContent menus={menus} session={session} />
+        <SidebarContent
+          menus={menus}
+          session={session}
+          supportBadge={supportBadge}
+        />
       </aside>
 
       <div className="sticky top-0 z-30 mb-4 flex items-center justify-between rounded-[1.5rem] border border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur lg:hidden">
@@ -395,6 +442,7 @@ export default function Sidebar({
               <SidebarContent
                 menus={menus}
                 session={session}
+                supportBadge={supportBadge}
                 onClose={() => setOpenMobile(false)}
               />
             </motion.div>
