@@ -46,7 +46,7 @@ const menus = [
   { name: "Finance Dashboard", key: "dashboard.finance", href: "/dashboard/finance", icon: "Wallet", sort: 4 },
   { name: "Lab Dashboard", key: "dashboard.lab", href: "/dashboard/lab", icon: "FlaskConical", sort: 5 },
 
-  { name: "RBAC Role & Menu", key: "admin.rbac", href: "/admin/rbac", icon: "KeyRound", sort: 10 },
+  { name: "RBAC Role & Menu", keysa: "admin.rbac", href: "/admin/rbac", icon: "KeyRound", sort: 10 },
   { name: "Users", key: "admin.users", href: "/admin/users", icon: "UserCog", sort: 11 },
 
   { name: "Master Customer", key: "master.customers", href: "/master/customers", icon: "Building2", sort: 20 },
