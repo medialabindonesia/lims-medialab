@@ -48,7 +48,7 @@ export default function ChatThread({
       };
 
   return (
-    <div className="flex h-full flex-col gap-4 overflow-y-auto px-1 py-2">
+    <div className="flex h-full flex-col gap-4 overflow-y-auto overscroll-contain px-1 py-2">
       {messages.length === 0 && (
         <div className="flex flex-1 items-center justify-center">
           <p className="text-sm text-slate-400">

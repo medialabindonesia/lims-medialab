@@ -173,9 +173,13 @@ export default function SupportConversationClient({
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
-        {/* Conversation */}
-        <div className="flex min-h-[70vh] flex-col">
-          <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        {/* Conversation — tinggi TETAP (bukan min-height) dikurangi ruang di
+            atasnya (shell dashboard + baris "Antrian"), supaya kotak chat di
+            bawah bisa dibatasi dan scroll sendiri (bukan seluruh halaman).
+            Panel samping (aside) sengaja TIDAK dibatasi tingginya, agar
+            kontennya tak pernah terpotong walau lebih tinggi dari kolom ini. */}
+        <div className="flex h-[calc(100dvh-10rem)] flex-col lg:h-[calc(100dvh-6.5rem)]">
+          <div className="mb-3 flex shrink-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="min-w-0">
               <h1 className="truncate text-lg font-black text-slate-900">
                 {ticket.subject}
@@ -193,7 +197,7 @@ export default function SupportConversationClient({
             </span>
           </div>
 
-          <div className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <div className="min-h-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-3">
             <ChatThread
               messages={messages}
               viewer="agent"
@@ -203,7 +207,7 @@ export default function SupportConversationClient({
             />
           </div>
 
-          <div className="mt-3">
+          <div className="mt-3 shrink-0">
             {closed ? (
               <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-400">
                 Tiket sudah ditutup.

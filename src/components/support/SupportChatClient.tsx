@@ -141,9 +141,13 @@ export default function SupportChatClient({
   const alreadyRated = ticket.rating != null;
 
   return (
-    <section className="flex min-h-[calc(100vh-2rem)] flex-col">
+    // Tinggi TETAP (bukan min-height) relatif viewport, dikurangi ruang
+    // shell dashboard (padding + top bar mobile). Ini yang membuat kotak
+    // chat di bawah punya batas nyata sehingga overflow-y-auto-nya bisa
+    // aktif — hanya kotak chat yang scroll, bukan seluruh halaman.
+    <section className="flex h-[calc(100dvh-8.5rem)] flex-col lg:h-[calc(100dvh-5rem)]">
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex shrink-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="flex min-w-0 items-center gap-3">
           <Link
             href="/support"
@@ -175,7 +179,7 @@ export default function SupportChatClient({
 
       {/* Rating panel (resolved) */}
       {resolved && !alreadyRated && (
-        <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+        <div className="mb-4 shrink-0 rounded-2xl border border-amber-200 bg-amber-50 p-5">
           <div className="flex items-center gap-2 text-amber-900">
             <CheckCircle2 size={18} />
             <p className="font-bold">Tiket ini ditandai selesai</p>
@@ -205,7 +209,7 @@ export default function SupportChatClient({
       )}
 
       {closed && alreadyRated && (
-        <div className="mb-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
+        <div className="mb-4 flex shrink-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
           <p className="text-sm font-semibold text-slate-600">
             Penilaian Anda:
           </p>
@@ -213,8 +217,9 @@ export default function SupportChatClient({
         </div>
       )}
 
-      {/* Thread */}
-      <div className="flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      {/* Thread — min-h-0 wajib agar flex-1 benar-benar dibatasi (bukan
+          mengikuti tinggi konten), sehingga overflow-y-auto di dalamnya aktif. */}
+      <div className="min-h-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-3">
         <ChatThread
           messages={messages}
           viewer="customer"
@@ -225,7 +230,7 @@ export default function SupportChatClient({
       </div>
 
       {/* Composer */}
-      <div className="mt-4">
+      <div className="mt-4 shrink-0">
         {closed ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center text-sm text-slate-400">
             Tiket sudah ditutup. Buat tiket baru dari Support Center bila
