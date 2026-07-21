@@ -108,77 +108,6 @@
       "src_lib_technical_page_data_gettechnicalstpspagedata"
     ],
     "1": [
-      "src_app_api_exports_coc_id_excel_route",
-      "src_app_api_exports_coc_id_excel_route_get",
-      "src_app_api_exports_coc_id_excel_route_routecontext",
-      "src_app_api_exports_coc_id_pdf_route",
-      "src_app_api_exports_coc_id_pdf_route_get",
-      "src_app_api_exports_coc_id_pdf_route_routecontext",
-      "src_app_api_exports_invoice_id_pdf_route",
-      "src_app_api_exports_invoice_id_pdf_route_get",
-      "src_app_api_exports_invoice_id_pdf_route_routecontext",
-      "src_app_api_exports_ltr_id_excel_route",
-      "src_app_api_exports_ltr_id_excel_route_get",
-      "src_app_api_exports_ltr_id_excel_route_routecontext",
-      "src_app_api_exports_ltr_id_pdf_route",
-      "src_app_api_exports_ltr_id_pdf_route_get",
-      "src_app_api_exports_ltr_id_pdf_route_routecontext",
-      "src_app_api_exports_quotation_id_excel_route",
-      "src_app_api_exports_quotation_id_excel_route_get",
-      "src_app_api_exports_quotation_id_excel_route_routecontext",
-      "src_app_api_exports_quotation_id_pdf_route",
-      "src_app_api_exports_quotation_id_pdf_route_get",
-      "src_app_api_exports_quotation_id_pdf_route_routecontext",
-      "src_app_api_exports_stps_id_excel_route",
-      "src_app_api_exports_stps_id_excel_route_get",
-      "src_app_api_exports_stps_id_excel_route_routecontext",
-      "src_app_api_exports_stps_id_pdf_route",
-      "src_app_api_exports_stps_id_pdf_route_get",
-      "src_app_api_exports_stps_id_pdf_route_routecontext",
-      "src_lib_exports_excel_coc_excel",
-      "src_lib_exports_excel_coc_excel_buildcocexcel",
-      "src_lib_exports_excel_coc_excel_deliverymethodlabel",
-      "src_lib_exports_excel_coc_excel_formatdatetime",
-      "src_lib_exports_excel_coc_excel_getsamplinglocation",
-      "src_lib_exports_excel_coc_excel_setthinborder",
-      "src_lib_exports_excel_coc_excel_stylelabel",
-      "src_lib_exports_excel_coc_excel_stylesection",
-      "src_lib_exports_excel_coc_excel_stylevalue",
-      "src_lib_exports_excel_stps_excel",
-      "src_lib_exports_excel_stps_excel_buildstpsexcel",
-      "src_lib_exports_excel_stps_excel_getsamplers",
-      "src_lib_exports_excel_stps_excel_setthinborder",
-      "src_lib_exports_excel_stps_excel_stylelabel",
-      "src_lib_exports_excel_stps_excel_stylesection",
-      "src_lib_exports_excel_stps_excel_stylevalue",
-      "src_lib_exports_format_safefilename",
-      "src_lib_exports_ltr_data",
-      "src_lib_exports_ltr_data_getauthorizedltrforexport",
-      "src_lib_exports_pdf_render_invoice_pdf",
-      "src_lib_exports_pdf_render_invoice_pdf_getlogodatauri",
-      "src_lib_exports_pdf_render_invoice_pdf_renderinvoicepdfbuffer",
-      "src_lib_exports_pdf_render_ltr_pdf",
-      "src_lib_exports_pdf_render_ltr_pdf_getlogodatauri",
-      "src_lib_exports_pdf_render_ltr_pdf_renderltrpdfbuffer",
-      "src_lib_exports_pdf_render_quotation_pdf",
-      "src_lib_exports_pdf_render_quotation_pdf_getlogodatauri",
-      "src_lib_exports_pdf_render_quotation_pdf_renderquotationpdfbuffer",
-      "src_lib_exports_pdf_render_technical_pdf",
-      "src_lib_exports_pdf_render_technical_pdf_getlogodatauri",
-      "src_lib_exports_pdf_render_technical_pdf_rendercocpdfbuffer",
-      "src_lib_exports_pdf_render_technical_pdf_renderstpspdfbuffer",
-      "src_lib_exports_pdf_render_utils",
-      "src_lib_exports_pdf_render_utils_iswebreadablestream",
-      "src_lib_exports_pdf_render_utils_renderpdftobuffer",
-      "src_lib_exports_pdf_render_utils_tobufferchunk",
-      "src_lib_exports_quotation_data",
-      "src_lib_exports_quotation_data_getauthorizedquotationforexport",
-      "src_lib_exports_technical_data",
-      "src_lib_exports_technical_data_exportpermissions",
-      "src_lib_exports_technical_data_getauthorizedcocforexport",
-      "src_lib_exports_technical_data_getauthorizedstpsforexport"
-    ],
-    "2": [
       "src_lib_exports_excel_ltr_excel",
       "src_lib_exports_excel_ltr_excel_buildltrexcel",
       "src_lib_exports_excel_ltr_excel_rupiahformat",
@@ -249,6 +178,77 @@
       "src_lib_exports_pdf_stpspdf_props",
       "src_lib_exports_pdf_stpspdf_stpspdf",
       "src_lib_exports_pdf_stpspdf_styles"
+    ],
+    "2": [
+      "src_app_api_exports_coc_id_excel_route",
+      "src_app_api_exports_coc_id_excel_route_get",
+      "src_app_api_exports_coc_id_excel_route_routecontext",
+      "src_app_api_exports_coc_id_pdf_route",
+      "src_app_api_exports_coc_id_pdf_route_get",
+      "src_app_api_exports_coc_id_pdf_route_routecontext",
+      "src_app_api_exports_invoice_id_pdf_route",
+      "src_app_api_exports_invoice_id_pdf_route_get",
+      "src_app_api_exports_invoice_id_pdf_route_routecontext",
+      "src_app_api_exports_ltr_id_excel_route",
+      "src_app_api_exports_ltr_id_excel_route_get",
+      "src_app_api_exports_ltr_id_excel_route_routecontext",
+      "src_app_api_exports_ltr_id_pdf_route",
+      "src_app_api_exports_ltr_id_pdf_route_get",
+      "src_app_api_exports_ltr_id_pdf_route_routecontext",
+      "src_app_api_exports_quotation_id_excel_route",
+      "src_app_api_exports_quotation_id_excel_route_get",
+      "src_app_api_exports_quotation_id_excel_route_routecontext",
+      "src_app_api_exports_quotation_id_pdf_route",
+      "src_app_api_exports_quotation_id_pdf_route_get",
+      "src_app_api_exports_quotation_id_pdf_route_routecontext",
+      "src_app_api_exports_stps_id_excel_route",
+      "src_app_api_exports_stps_id_excel_route_get",
+      "src_app_api_exports_stps_id_excel_route_routecontext",
+      "src_app_api_exports_stps_id_pdf_route",
+      "src_app_api_exports_stps_id_pdf_route_get",
+      "src_app_api_exports_stps_id_pdf_route_routecontext",
+      "src_lib_exports_excel_coc_excel",
+      "src_lib_exports_excel_coc_excel_buildcocexcel",
+      "src_lib_exports_excel_coc_excel_deliverymethodlabel",
+      "src_lib_exports_excel_coc_excel_formatdatetime",
+      "src_lib_exports_excel_coc_excel_getsamplinglocation",
+      "src_lib_exports_excel_coc_excel_setthinborder",
+      "src_lib_exports_excel_coc_excel_stylelabel",
+      "src_lib_exports_excel_coc_excel_stylesection",
+      "src_lib_exports_excel_coc_excel_stylevalue",
+      "src_lib_exports_excel_stps_excel",
+      "src_lib_exports_excel_stps_excel_buildstpsexcel",
+      "src_lib_exports_excel_stps_excel_getsamplers",
+      "src_lib_exports_excel_stps_excel_setthinborder",
+      "src_lib_exports_excel_stps_excel_stylelabel",
+      "src_lib_exports_excel_stps_excel_stylesection",
+      "src_lib_exports_excel_stps_excel_stylevalue",
+      "src_lib_exports_format_safefilename",
+      "src_lib_exports_ltr_data",
+      "src_lib_exports_ltr_data_getauthorizedltrforexport",
+      "src_lib_exports_pdf_render_invoice_pdf",
+      "src_lib_exports_pdf_render_invoice_pdf_getlogodatauri",
+      "src_lib_exports_pdf_render_invoice_pdf_renderinvoicepdfbuffer",
+      "src_lib_exports_pdf_render_ltr_pdf",
+      "src_lib_exports_pdf_render_ltr_pdf_getlogodatauri",
+      "src_lib_exports_pdf_render_ltr_pdf_renderltrpdfbuffer",
+      "src_lib_exports_pdf_render_quotation_pdf",
+      "src_lib_exports_pdf_render_quotation_pdf_getlogodatauri",
+      "src_lib_exports_pdf_render_quotation_pdf_renderquotationpdfbuffer",
+      "src_lib_exports_pdf_render_technical_pdf",
+      "src_lib_exports_pdf_render_technical_pdf_getlogodatauri",
+      "src_lib_exports_pdf_render_technical_pdf_rendercocpdfbuffer",
+      "src_lib_exports_pdf_render_technical_pdf_renderstpspdfbuffer",
+      "src_lib_exports_pdf_render_utils",
+      "src_lib_exports_pdf_render_utils_iswebreadablestream",
+      "src_lib_exports_pdf_render_utils_renderpdftobuffer",
+      "src_lib_exports_pdf_render_utils_tobufferchunk",
+      "src_lib_exports_quotation_data",
+      "src_lib_exports_quotation_data_getauthorizedquotationforexport",
+      "src_lib_exports_technical_data",
+      "src_lib_exports_technical_data_exportpermissions",
+      "src_lib_exports_technical_data_getauthorizedcocforexport",
+      "src_lib_exports_technical_data_getauthorizedstpsforexport"
     ],
     "3": [
       "src_app_api_exports_coa_id_excel_route",
@@ -401,33 +401,6 @@
       "tsconfig_include"
     ],
     "7": [
-      "src_app_api_coa_route",
-      "src_app_api_coa_route_get",
-      "src_app_api_coa_sampleid_customer_confirm_route",
-      "src_app_api_coa_sampleid_customer_confirm_route_patch",
-      "src_app_api_coa_sampleid_customer_confirm_route_routecontext",
-      "src_app_api_lab_sample_parameters_route",
-      "src_app_api_lab_sample_parameters_route_get",
-      "src_app_api_master_customers_template_route",
-      "src_app_api_master_customers_template_route_columns",
-      "src_app_api_master_customers_template_route_get",
-      "src_app_api_master_customers_template_route_setthinborder",
-      "src_app_api_quotations_id_approve_route",
-      "src_app_api_quotations_id_approve_route_patch",
-      "src_app_api_quotations_id_approve_route_routecontext",
-      "src_app_api_quotations_id_confirm_route",
-      "src_app_api_quotations_id_confirm_route_patch",
-      "src_app_api_quotations_id_confirm_route_routecontext",
-      "src_app_api_quotations_id_revision_route",
-      "src_app_api_quotations_id_revision_route_patch",
-      "src_app_api_quotations_id_revision_route_revisionschema",
-      "src_app_api_quotations_id_revision_route_routecontext",
-      "src_app_api_quotations_id_verify_route",
-      "src_app_api_quotations_id_verify_route_patch",
-      "src_app_api_quotations_id_verify_route_routecontext",
-      "src_lib_api_permission_requireanyapipermission"
-    ],
-    "8": [
       "src_components_quotation_quotationflowclient",
       "src_components_quotation_quotationflowclient_adddaysinputdate",
       "src_components_quotation_quotationflowclient_coatemplateoption",
@@ -457,7 +430,7 @@
       "src_components_quotation_quotationflowclient_textareafield",
       "src_components_quotation_quotationflowclient_toinputdate"
     ],
-    "9": [
+    "8": [
       "src_app_api_admin_users_id_route",
       "src_app_api_admin_users_id_route_delete",
       "src_app_api_admin_users_id_route_get",
@@ -486,102 +459,34 @@
       "src_app_api_technical_stps_route_get",
       "src_lib_api_permission_requireapipermission"
     ],
+    "9": [
+      "src_app_api_coa_route",
+      "src_app_api_coa_route_get",
+      "src_app_api_coa_sampleid_customer_confirm_route",
+      "src_app_api_coa_sampleid_customer_confirm_route_patch",
+      "src_app_api_coa_sampleid_customer_confirm_route_routecontext",
+      "src_app_api_lab_sample_parameters_route",
+      "src_app_api_lab_sample_parameters_route_get",
+      "src_app_api_master_customers_template_route",
+      "src_app_api_master_customers_template_route_columns",
+      "src_app_api_master_customers_template_route_get",
+      "src_app_api_master_customers_template_route_setthinborder",
+      "src_app_api_quotations_id_approve_route",
+      "src_app_api_quotations_id_approve_route_patch",
+      "src_app_api_quotations_id_approve_route_routecontext",
+      "src_app_api_quotations_id_confirm_route",
+      "src_app_api_quotations_id_confirm_route_patch",
+      "src_app_api_quotations_id_confirm_route_routecontext",
+      "src_app_api_quotations_id_revision_route",
+      "src_app_api_quotations_id_revision_route_patch",
+      "src_app_api_quotations_id_revision_route_revisionschema",
+      "src_app_api_quotations_id_revision_route_routecontext",
+      "src_app_api_quotations_id_verify_route",
+      "src_app_api_quotations_id_verify_route_patch",
+      "src_app_api_quotations_id_verify_route_routecontext",
+      "src_lib_api_permission_requireanyapipermission"
+    ],
     "10": [
-      "src_components_coa_coaflowclient",
-      "src_components_coa_coaflowclient_coa",
-      "src_components_coa_coaflowclient_coaflowclient",
-      "src_components_coa_coaflowclient_coamode",
-      "src_components_coa_coaflowclient_getstatusstyle",
-      "src_components_coa_coaflowclient_props",
-      "src_components_coa_coaflowclient_safereadjson",
-      "src_components_coa_coaflowclient_sample",
-      "src_components_coa_coaflowclient_sampleparameter",
-      "src_components_exports_exportbuttons",
-      "src_components_exports_exportbuttons_exportbuttons",
-      "src_components_exports_exportbuttons_props",
-      "src_components_sample_sampleflowclient",
-      "src_components_sample_sampleflowclient_analyst",
-      "src_components_sample_sampleflowclient_getstatusstyle",
-      "src_components_sample_sampleflowclient_props",
-      "src_components_sample_sampleflowclient_quotationready",
-      "src_components_sample_sampleflowclient_safereadjson",
-      "src_components_sample_sampleflowclient_sample",
-      "src_components_sample_sampleflowclient_sampleflowclient",
-      "src_components_sample_sampleflowclient_samplemode",
-      "src_components_sample_sampleflowclient_sampleparameter"
-    ],
-    "11": [
-      "src_app_api_lab_sample_parameters_id_result_route",
-      "src_app_api_lab_sample_parameters_id_result_route_patch",
-      "src_app_api_lab_sample_parameters_id_result_route_resultschema",
-      "src_app_api_lab_sample_parameters_id_result_route_routecontext"
-    ],
-    "12": [
-      "src_components_technical_technicaldocumentclient",
-      "src_components_technical_technicaldocumentclient_cocform",
-      "src_components_technical_technicaldocumentclient_cocitemform",
-      "src_components_technical_technicaldocumentclient_customer",
-      "src_components_technical_technicaldocumentclient_field",
-      "src_components_technical_technicaldocumentclient_formatdatetime",
-      "src_components_technical_technicaldocumentclient_gettodayinputdate",
-      "src_components_technical_technicaldocumentclient_mode",
-      "src_components_technical_technicaldocumentclient_props",
-      "src_components_technical_technicaldocumentclient_quotation",
-      "src_components_technical_technicaldocumentclient_quotationitem",
-      "src_components_technical_technicaldocumentclient_safereadjson",
-      "src_components_technical_technicaldocumentclient_selectfield",
-      "src_components_technical_technicaldocumentclient_stpsform",
-      "src_components_technical_technicaldocumentclient_technicaldocumentclient",
-      "src_components_technical_technicaldocumentclient_textareafield",
-      "src_components_technical_technicaldocumentclient_toinputdate",
-      "src_components_technical_technicaldocumentclient_toinputdatetime"
-    ],
-    "13": [
-      "src_app_dashboard_dashboard_admin_page",
-      "src_app_dashboard_dashboard_admin_page_admindashboardpage",
-      "src_app_dashboard_dashboard_customer_page",
-      "src_app_dashboard_dashboard_customer_page_customerdashboardpage",
-      "src_app_dashboard_dashboard_finance_page",
-      "src_app_dashboard_dashboard_finance_page_financedashboardpage",
-      "src_app_dashboard_dashboard_lab_page",
-      "src_app_dashboard_dashboard_lab_page_labdashboardpage",
-      "src_app_dashboard_dashboard_worker_page",
-      "src_app_dashboard_dashboard_worker_page_workerdashboardpage",
-      "src_components_dashboard_statcard",
-      "src_components_dashboard_statcard_statcard",
-      "src_components_dashboard_statcard_statcardprops",
-      "src_components_layout_motionheader",
-      "src_components_layout_motionheader_motionheader",
-      "src_components_layout_motionheader_motionheaderprops",
-      "src_lib_db",
-      "src_lib_db_createadapter",
-      "src_lib_db_globalforprisma"
-    ],
-    "14": [
-      "src_app_dashboard_layout",
-      "src_app_dashboard_layout_dashboardlayout",
-      "src_components_layout_appshell",
-      "src_components_layout_appshell_appshell",
-      "src_components_layout_appshell_appshellprops",
-      "src_components_layout_appshell_menuitem",
-      "src_components_layout_dashboardshell",
-      "src_components_layout_dashboardshell_dashboardshell",
-      "src_components_layout_pagetransition",
-      "src_components_layout_pagetransition_pagetransition",
-      "src_components_layout_sidebar",
-      "src_components_layout_sidebar_dashboardmenuitem",
-      "src_components_layout_sidebar_dashboardsession",
-      "src_components_layout_sidebar_getinitials",
-      "src_components_layout_sidebar_getmenugroupkey",
-      "src_components_layout_sidebar_groupconfig",
-      "src_components_layout_sidebar_iconmap",
-      "src_components_layout_sidebar_isactivepath",
-      "src_components_layout_sidebar_menugroup",
-      "src_components_layout_sidebar_sidebar",
-      "src_components_layout_sidebar_sidebarcontent",
-      "src_lib_motion_pagevariants"
-    ],
-    "15": [
       "src_app_api_coa_sampleid_final_route",
       "src_app_api_coa_sampleid_final_route_post",
       "src_app_api_coa_sampleid_final_route_routecontext",
@@ -606,236 +511,55 @@
       "src_lib_document_number",
       "src_lib_document_number_generatedocumentno"
     ],
-    "16": [
-      "src_app_auth_login_page",
-      "src_app_auth_login_page_loginpage",
-      "src_components_dashboard_statcardshell",
-      "src_components_dashboard_statcardshell_statcardshell",
-      "src_lib_motion",
-      "src_lib_motion_buttonhover",
-      "src_lib_motion_buttontap",
-      "src_lib_motion_ease_in_out",
-      "src_lib_motion_ease_out",
-      "src_lib_motion_fadescale",
-      "src_lib_motion_fadeup",
-      "src_lib_motion_fadeupitem",
-      "src_lib_motion_spring_soft",
-      "src_lib_motion_staggercontainer"
+    "11": [
+      "src_app_dashboard_layout",
+      "src_app_dashboard_layout_dashboardlayout",
+      "src_components_layout_appshell",
+      "src_components_layout_appshell_appshell",
+      "src_components_layout_appshell_appshellprops",
+      "src_components_layout_appshell_menuitem",
+      "src_components_layout_dashboardshell",
+      "src_components_layout_dashboardshell_dashboardshell",
+      "src_components_layout_pagetransition",
+      "src_components_layout_pagetransition_pagetransition",
+      "src_components_layout_sidebar",
+      "src_components_layout_sidebar_dashboardmenuitem",
+      "src_components_layout_sidebar_dashboardsession",
+      "src_components_layout_sidebar_getinitials",
+      "src_components_layout_sidebar_getmenugroupkey",
+      "src_components_layout_sidebar_groupconfig",
+      "src_components_layout_sidebar_iconmap",
+      "src_components_layout_sidebar_isactivepath",
+      "src_components_layout_sidebar_menugroup",
+      "src_components_layout_sidebar_sidebar",
+      "src_components_layout_sidebar_sidebarcontent",
+      "src_lib_motion_pagevariants"
     ],
-    "17": [
-      "src_components_finance_invoiceflowclient",
-      "src_components_finance_invoiceflowclient_customer",
-      "src_components_finance_invoiceflowclient_formatdate",
-      "src_components_finance_invoiceflowclient_formatrupiah",
-      "src_components_finance_invoiceflowclient_getinvoicestatustext",
-      "src_components_finance_invoiceflowclient_getquotationgrandtotal",
-      "src_components_finance_invoiceflowclient_getstatusstyle",
-      "src_components_finance_invoiceflowclient_invoice",
-      "src_components_finance_invoiceflowclient_invoiceflowclient",
-      "src_components_finance_invoiceflowclient_invoicemode",
-      "src_components_finance_invoiceflowclient_props",
-      "src_components_finance_invoiceflowclient_quotationitem",
-      "src_components_finance_invoiceflowclient_quotationready",
-      "src_components_finance_invoiceflowclient_sample"
+    "12": [
+      "src_components_coa_coaflowclient",
+      "src_components_coa_coaflowclient_coa",
+      "src_components_coa_coaflowclient_coaflowclient",
+      "src_components_coa_coaflowclient_coamode",
+      "src_components_coa_coaflowclient_getstatusstyle",
+      "src_components_coa_coaflowclient_props",
+      "src_components_coa_coaflowclient_safereadjson",
+      "src_components_coa_coaflowclient_sample",
+      "src_components_coa_coaflowclient_sampleparameter",
+      "src_components_exports_exportbuttons",
+      "src_components_exports_exportbuttons_exportbuttons",
+      "src_components_exports_exportbuttons_props",
+      "src_components_sample_sampleflowclient",
+      "src_components_sample_sampleflowclient_analyst",
+      "src_components_sample_sampleflowclient_getstatusstyle",
+      "src_components_sample_sampleflowclient_props",
+      "src_components_sample_sampleflowclient_quotationready",
+      "src_components_sample_sampleflowclient_safereadjson",
+      "src_components_sample_sampleflowclient_sample",
+      "src_components_sample_sampleflowclient_sampleflowclient",
+      "src_components_sample_sampleflowclient_samplemode",
+      "src_components_sample_sampleflowclient_sampleparameter"
     ],
-    "18": [
-      "src_components_master_mastercustomerclient",
-      "src_components_master_mastercustomerclient_cleanform",
-      "src_components_master_mastercustomerclient_customerform",
-      "src_components_master_mastercustomerclient_customerrow",
-      "src_components_master_mastercustomerclient_customeruser",
-      "src_components_master_mastercustomerclient_emptyform",
-      "src_components_master_mastercustomerclient_field",
-      "src_components_master_mastercustomerclient_getcustomerloginuser",
-      "src_components_master_mastercustomerclient_mastercustomerclient",
-      "src_components_master_mastercustomerclient_props",
-      "src_components_master_mastercustomerclient_tabkey",
-      "src_components_master_mastercustomerclient_tabs",
-      "src_components_master_mastercustomerclient_textareafield"
-    ],
-    "19": [
-      "prisma_seed",
-      "prisma_seed_createadapter",
-      "prisma_seed_getpermissionbyroleandmenu",
-      "prisma_seed_main",
-      "prisma_seed_menus",
-      "prisma_seed_prisma",
-      "prisma_seed_roleaccess",
-      "prisma_seed_roles",
-      "prisma_seed_upsertcoatemplate",
-      "prisma_seed_upsertcustomer",
-      "prisma_seed_upsertparameter",
-      "prisma_seed_upsertuser"
-    ],
-    "20": [
-      "src_app_dashboard_admin_rbac_page",
-      "src_app_dashboard_admin_rbac_page_rbacpage",
-      "src_components_rbac_rbacpermissiontable",
-      "src_components_rbac_rbacpermissiontable_createinitialpermissions",
-      "src_components_rbac_rbacpermissiontable_getmenugroup",
-      "src_components_rbac_rbacpermissiontable_permissionitem",
-      "src_components_rbac_rbacpermissiontable_permissionkey",
-      "src_components_rbac_rbacpermissiontable_permissions",
-      "src_components_rbac_rbacpermissiontable_permissionstate",
-      "src_components_rbac_rbacpermissiontable_props",
-      "src_components_rbac_rbacpermissiontable_rbacpermissiontable",
-      "src_components_rbac_rbacpermissiontable_rolewithmenus"
-    ],
-    "21": [
-      "src_app_api_quotations_id_route",
-      "src_app_api_quotations_id_route_calculatetotals",
-      "src_app_api_quotations_id_route_get",
-      "src_app_api_quotations_id_route_nullabledate",
-      "src_app_api_quotations_id_route_nullablestring",
-      "src_app_api_quotations_id_route_patch",
-      "src_app_api_quotations_id_route_quotationitemschema",
-      "src_app_api_quotations_id_route_quotationupdateschema",
-      "src_app_api_quotations_id_route_routecontext",
-      "src_app_api_quotations_id_route_todate",
-      "src_lib_document_number_generaterevisionquotationno"
-    ],
-    "22": [
-      "src_app_api_quotations_route",
-      "src_app_api_quotations_route_calculatetotals",
-      "src_app_api_quotations_route_get",
-      "src_app_api_quotations_route_nullabledate",
-      "src_app_api_quotations_route_nullablestring",
-      "src_app_api_quotations_route_post",
-      "src_app_api_quotations_route_quotationcreateschema",
-      "src_app_api_quotations_route_quotationitemschema",
-      "src_app_api_quotations_route_todate"
-    ],
-    "23": [
-      "src_app_api_technical_coc_quotationid_route",
-      "src_app_api_technical_coc_quotationid_route_cocitemschema",
-      "src_app_api_technical_coc_quotationid_route_cocschema",
-      "src_app_api_technical_coc_quotationid_route_ensuresampleandparameterstx",
-      "src_app_api_technical_coc_quotationid_route_nullabledate",
-      "src_app_api_technical_coc_quotationid_route_nullablestring",
-      "src_app_api_technical_coc_quotationid_route_post",
-      "src_app_api_technical_coc_quotationid_route_routecontext",
-      "src_app_api_technical_coc_quotationid_route_todate"
-    ],
-    "24": [
-      "src_app_api_master_coa_templates_id_route",
-      "src_app_api_master_coa_templates_id_route_delete",
-      "src_app_api_master_coa_templates_id_route_get",
-      "src_app_api_master_coa_templates_id_route_normalizecode",
-      "src_app_api_master_coa_templates_id_route_patch",
-      "src_app_api_master_coa_templates_id_route_routecontext",
-      "src_app_api_master_coa_templates_id_route_templateparameterschema",
-      "src_app_api_master_coa_templates_id_route_templateschema"
-    ],
-    "25": [
-      "src_app_api_master_customers_id_route",
-      "src_app_api_master_customers_id_route_customerschema",
-      "src_app_api_master_customers_id_route_delete",
-      "src_app_api_master_customers_id_route_get",
-      "src_app_api_master_customers_id_route_nullableemail",
-      "src_app_api_master_customers_id_route_nullablestring",
-      "src_app_api_master_customers_id_route_patch",
-      "src_app_api_master_customers_id_route_routecontext"
-    ],
-    "26": [
-      "src_components_master_mastercoatemplateclient",
-      "src_components_master_mastercoatemplateclient_emptyform",
-      "src_components_master_mastercoatemplateclient_mastercoatemplateclient",
-      "src_components_master_mastercoatemplateclient_normalizecode",
-      "src_components_master_mastercoatemplateclient_props",
-      "src_components_master_mastercoatemplateclient_templateform",
-      "src_components_master_mastercoatemplateclient_templateparamform",
-      "src_components_master_mastercoatemplateclient_templatewithparams"
-    ],
-    "27": [
-      "src_app_api_technical_stps_quotationid_route",
-      "src_app_api_technical_stps_quotationid_route_nullabledate",
-      "src_app_api_technical_stps_quotationid_route_nullablestring",
-      "src_app_api_technical_stps_quotationid_route_post",
-      "src_app_api_technical_stps_quotationid_route_routecontext",
-      "src_app_api_technical_stps_quotationid_route_stpsschema",
-      "src_app_api_technical_stps_quotationid_route_todate"
-    ],
-    "28": [
-      "prisma_migrations_20260612120744_init_migration",
-      "prisma_migrations_20260612120744_init_migration_analysisparameter",
-      "prisma_migrations_20260612120744_init_migration_coa",
-      "prisma_migrations_20260612120744_init_migration_coc",
-      "prisma_migrations_20260612120744_init_migration_customer",
-      "prisma_migrations_20260612120744_init_migration_invoice",
-      "prisma_migrations_20260612120744_init_migration_ltr",
-      "prisma_migrations_20260612120744_init_migration_menu",
-      "prisma_migrations_20260612120744_init_migration_purchaseorder",
-      "prisma_migrations_20260612120744_init_migration_quotation",
-      "prisma_migrations_20260612120744_init_migration_quotationitem",
-      "prisma_migrations_20260612120744_init_migration_role",
-      "prisma_migrations_20260612120744_init_migration_rolemenu",
-      "prisma_migrations_20260612120744_init_migration_sample",
-      "prisma_migrations_20260612120744_init_migration_sampleparameter",
-      "prisma_migrations_20260612120744_init_migration_user",
-      "prisma_migrations_20260612120744_init_migration_workflowlog"
-    ],
-    "29": [
-      "src_app_api_master_coa_templates_route",
-      "src_app_api_master_coa_templates_route_get",
-      "src_app_api_master_coa_templates_route_normalizecode",
-      "src_app_api_master_coa_templates_route_post",
-      "src_app_api_master_coa_templates_route_templateparameterschema",
-      "src_app_api_master_coa_templates_route_templateschema"
-    ],
-    "30": [
-      "src_app_api_master_customers_route",
-      "src_app_api_master_customers_route_customerschema",
-      "src_app_api_master_customers_route_get",
-      "src_app_api_master_customers_route_nullableemail",
-      "src_app_api_master_customers_route_nullablestring",
-      "src_app_api_master_customers_route_post"
-    ],
-    "31": [
-      "src_components_admin_adminusersclient",
-      "src_components_admin_adminusersclient_adminusersclient",
-      "src_components_admin_adminusersclient_emptyform",
-      "src_components_admin_adminusersclient_props",
-      "src_components_admin_adminusersclient_userform",
-      "src_components_admin_adminusersclient_userwithrelations"
-    ],
-    "32": [
-      "src_components_master_masterparameterclient",
-      "src_components_master_masterparameterclient_emptyform",
-      "src_components_master_masterparameterclient_formatrupiah",
-      "src_components_master_masterparameterclient_masterparameterclient",
-      "src_components_master_masterparameterclient_parameterform",
-      "src_components_master_masterparameterclient_props"
-    ],
-    "33": [
-      "src_app_api_exports_invoice_id_excel_route",
-      "src_app_api_exports_invoice_id_excel_route_get",
-      "src_app_api_exports_invoice_id_excel_route_routecontext",
-      "src_lib_exports_excel_invoice_excel",
-      "src_lib_exports_excel_invoice_excel_buildinvoiceexcel",
-      "src_lib_exports_excel_invoice_excel_getfinalcoano",
-      "src_lib_exports_excel_invoice_excel_rupiahformat",
-      "src_lib_exports_excel_invoice_excel_setthinborder",
-      "src_lib_exports_excel_invoice_excel_stylelabel",
-      "src_lib_exports_excel_invoice_excel_stylesection",
-      "src_lib_exports_excel_invoice_excel_stylevalue",
-      "src_lib_exports_invoice_data",
-      "src_lib_exports_invoice_data_getauthorizedinvoiceforexport"
-    ],
-    "34": [
-      "src_app_api_master_customers_import_route",
-      "src_app_api_master_customers_import_route_clean",
-      "src_app_api_master_customers_import_route_getcell",
-      "src_app_api_master_customers_import_route_post",
-      "src_app_api_master_customers_import_route_yes"
-    ],
-    "35": [
-      "src_app_layout",
-      "src_app_layout_metadata",
-      "src_app_layout_rootlayout",
-      "src_components_providers_motionprovider",
-      "src_components_providers_motionprovider_motionprovider"
-    ],
-    "36": [
+    "13": [
       "src_app_api_finance_invoices_id_approve_route",
       "src_app_api_finance_invoices_id_approve_route_patch",
       "src_app_api_finance_invoices_id_approve_route_routecontext",
@@ -857,7 +581,231 @@
       "src_lib_api_permission_permissionaction",
       "src_lib_api_permission_permissioncheck"
     ],
-    "37": [
+    "14": [
+      "src_app_dashboard_dashboard_admin_page",
+      "src_app_dashboard_dashboard_admin_page_admindashboardpage",
+      "src_app_dashboard_dashboard_customer_page",
+      "src_app_dashboard_dashboard_customer_page_customerdashboardpage",
+      "src_app_dashboard_dashboard_finance_page",
+      "src_app_dashboard_dashboard_finance_page_financedashboardpage",
+      "src_app_dashboard_dashboard_lab_page",
+      "src_app_dashboard_dashboard_lab_page_labdashboardpage",
+      "src_app_dashboard_dashboard_worker_page",
+      "src_app_dashboard_dashboard_worker_page_workerdashboardpage",
+      "src_components_dashboard_statcard",
+      "src_components_dashboard_statcard_statcard",
+      "src_components_dashboard_statcard_statcardprops",
+      "src_components_layout_motionheader",
+      "src_components_layout_motionheader_motionheader",
+      "src_components_layout_motionheader_motionheaderprops",
+      "src_lib_db",
+      "src_lib_db_createadapter",
+      "src_lib_db_globalforprisma"
+    ],
+    "15": [
+      "src_components_technical_technicaldocumentclient",
+      "src_components_technical_technicaldocumentclient_cocform",
+      "src_components_technical_technicaldocumentclient_cocitemform",
+      "src_components_technical_technicaldocumentclient_customer",
+      "src_components_technical_technicaldocumentclient_field",
+      "src_components_technical_technicaldocumentclient_formatdatetime",
+      "src_components_technical_technicaldocumentclient_gettodayinputdate",
+      "src_components_technical_technicaldocumentclient_mode",
+      "src_components_technical_technicaldocumentclient_props",
+      "src_components_technical_technicaldocumentclient_quotation",
+      "src_components_technical_technicaldocumentclient_quotationitem",
+      "src_components_technical_technicaldocumentclient_safereadjson",
+      "src_components_technical_technicaldocumentclient_selectfield",
+      "src_components_technical_technicaldocumentclient_stpsform",
+      "src_components_technical_technicaldocumentclient_technicaldocumentclient",
+      "src_components_technical_technicaldocumentclient_textareafield",
+      "src_components_technical_technicaldocumentclient_toinputdate",
+      "src_components_technical_technicaldocumentclient_toinputdatetime"
+    ],
+    "16": [
+      "prisma_migrations_20260612120744_init_migration",
+      "prisma_migrations_20260612120744_init_migration_analysisparameter",
+      "prisma_migrations_20260612120744_init_migration_coa",
+      "prisma_migrations_20260612120744_init_migration_coc",
+      "prisma_migrations_20260612120744_init_migration_customer",
+      "prisma_migrations_20260612120744_init_migration_invoice",
+      "prisma_migrations_20260612120744_init_migration_ltr",
+      "prisma_migrations_20260612120744_init_migration_menu",
+      "prisma_migrations_20260612120744_init_migration_purchaseorder",
+      "prisma_migrations_20260612120744_init_migration_quotation",
+      "prisma_migrations_20260612120744_init_migration_quotationitem",
+      "prisma_migrations_20260612120744_init_migration_role",
+      "prisma_migrations_20260612120744_init_migration_rolemenu",
+      "prisma_migrations_20260612120744_init_migration_sample",
+      "prisma_migrations_20260612120744_init_migration_sampleparameter",
+      "prisma_migrations_20260612120744_init_migration_user",
+      "prisma_migrations_20260612120744_init_migration_workflowlog"
+    ],
+    "17": [
+      "src_app_auth_login_page",
+      "src_app_auth_login_page_loginpage",
+      "src_components_dashboard_statcardshell",
+      "src_components_dashboard_statcardshell_statcardshell",
+      "src_lib_motion",
+      "src_lib_motion_buttonhover",
+      "src_lib_motion_buttontap",
+      "src_lib_motion_ease_in_out",
+      "src_lib_motion_ease_out",
+      "src_lib_motion_fadescale",
+      "src_lib_motion_fadeup",
+      "src_lib_motion_fadeupitem",
+      "src_lib_motion_spring_soft",
+      "src_lib_motion_staggercontainer"
+    ],
+    "18": [
+      "src_components_finance_invoiceflowclient",
+      "src_components_finance_invoiceflowclient_customer",
+      "src_components_finance_invoiceflowclient_formatdate",
+      "src_components_finance_invoiceflowclient_formatrupiah",
+      "src_components_finance_invoiceflowclient_getinvoicestatustext",
+      "src_components_finance_invoiceflowclient_getquotationgrandtotal",
+      "src_components_finance_invoiceflowclient_getstatusstyle",
+      "src_components_finance_invoiceflowclient_invoice",
+      "src_components_finance_invoiceflowclient_invoiceflowclient",
+      "src_components_finance_invoiceflowclient_invoicemode",
+      "src_components_finance_invoiceflowclient_props",
+      "src_components_finance_invoiceflowclient_quotationitem",
+      "src_components_finance_invoiceflowclient_quotationready",
+      "src_components_finance_invoiceflowclient_sample"
+    ],
+    "19": [
+      "src_app_api_exports_invoice_id_excel_route",
+      "src_app_api_exports_invoice_id_excel_route_get",
+      "src_app_api_exports_invoice_id_excel_route_routecontext",
+      "src_lib_exports_excel_invoice_excel",
+      "src_lib_exports_excel_invoice_excel_buildinvoiceexcel",
+      "src_lib_exports_excel_invoice_excel_getfinalcoano",
+      "src_lib_exports_excel_invoice_excel_rupiahformat",
+      "src_lib_exports_excel_invoice_excel_setthinborder",
+      "src_lib_exports_excel_invoice_excel_stylelabel",
+      "src_lib_exports_excel_invoice_excel_stylesection",
+      "src_lib_exports_excel_invoice_excel_stylevalue",
+      "src_lib_exports_invoice_data",
+      "src_lib_exports_invoice_data_getauthorizedinvoiceforexport"
+    ],
+    "20": [
+      "src_components_master_mastercustomerclient",
+      "src_components_master_mastercustomerclient_cleanform",
+      "src_components_master_mastercustomerclient_customerform",
+      "src_components_master_mastercustomerclient_customerrow",
+      "src_components_master_mastercustomerclient_customeruser",
+      "src_components_master_mastercustomerclient_emptyform",
+      "src_components_master_mastercustomerclient_field",
+      "src_components_master_mastercustomerclient_getcustomerloginuser",
+      "src_components_master_mastercustomerclient_mastercustomerclient",
+      "src_components_master_mastercustomerclient_props",
+      "src_components_master_mastercustomerclient_tabkey",
+      "src_components_master_mastercustomerclient_tabs",
+      "src_components_master_mastercustomerclient_textareafield"
+    ],
+    "21": [
+      "prisma_seed",
+      "prisma_seed_createadapter",
+      "prisma_seed_getpermissionbyroleandmenu",
+      "prisma_seed_main",
+      "prisma_seed_menus",
+      "prisma_seed_prisma",
+      "prisma_seed_roleaccess",
+      "prisma_seed_roles",
+      "prisma_seed_upsertcoatemplate",
+      "prisma_seed_upsertcustomer",
+      "prisma_seed_upsertparameter",
+      "prisma_seed_upsertuser"
+    ],
+    "22": [
+      "src_app_dashboard_admin_rbac_page",
+      "src_app_dashboard_admin_rbac_page_rbacpage",
+      "src_components_rbac_rbacpermissiontable",
+      "src_components_rbac_rbacpermissiontable_createinitialpermissions",
+      "src_components_rbac_rbacpermissiontable_getmenugroup",
+      "src_components_rbac_rbacpermissiontable_permissionitem",
+      "src_components_rbac_rbacpermissiontable_permissionkey",
+      "src_components_rbac_rbacpermissiontable_permissions",
+      "src_components_rbac_rbacpermissiontable_permissionstate",
+      "src_components_rbac_rbacpermissiontable_props",
+      "src_components_rbac_rbacpermissiontable_rbacpermissiontable",
+      "src_components_rbac_rbacpermissiontable_rolewithmenus"
+    ],
+    "23": [
+      "src_app_api_quotations_id_route",
+      "src_app_api_quotations_id_route_calculatetotals",
+      "src_app_api_quotations_id_route_get",
+      "src_app_api_quotations_id_route_nullabledate",
+      "src_app_api_quotations_id_route_nullablestring",
+      "src_app_api_quotations_id_route_patch",
+      "src_app_api_quotations_id_route_quotationitemschema",
+      "src_app_api_quotations_id_route_quotationupdateschema",
+      "src_app_api_quotations_id_route_routecontext",
+      "src_app_api_quotations_id_route_todate",
+      "src_lib_document_number_generaterevisionquotationno"
+    ],
+    "24": [
+      "src_app_api_quotations_route",
+      "src_app_api_quotations_route_calculatetotals",
+      "src_app_api_quotations_route_get",
+      "src_app_api_quotations_route_nullabledate",
+      "src_app_api_quotations_route_nullablestring",
+      "src_app_api_quotations_route_post",
+      "src_app_api_quotations_route_quotationcreateschema",
+      "src_app_api_quotations_route_quotationitemschema",
+      "src_app_api_quotations_route_todate"
+    ],
+    "25": [
+      "src_app_api_technical_coc_quotationid_route",
+      "src_app_api_technical_coc_quotationid_route_cocitemschema",
+      "src_app_api_technical_coc_quotationid_route_cocschema",
+      "src_app_api_technical_coc_quotationid_route_ensuresampleandparameterstx",
+      "src_app_api_technical_coc_quotationid_route_nullabledate",
+      "src_app_api_technical_coc_quotationid_route_nullablestring",
+      "src_app_api_technical_coc_quotationid_route_post",
+      "src_app_api_technical_coc_quotationid_route_routecontext",
+      "src_app_api_technical_coc_quotationid_route_todate"
+    ],
+    "26": [
+      "src_app_api_master_coa_templates_id_route",
+      "src_app_api_master_coa_templates_id_route_delete",
+      "src_app_api_master_coa_templates_id_route_get",
+      "src_app_api_master_coa_templates_id_route_normalizecode",
+      "src_app_api_master_coa_templates_id_route_patch",
+      "src_app_api_master_coa_templates_id_route_routecontext",
+      "src_app_api_master_coa_templates_id_route_templateparameterschema",
+      "src_app_api_master_coa_templates_id_route_templateschema"
+    ],
+    "27": [
+      "src_app_api_master_customers_id_route",
+      "src_app_api_master_customers_id_route_customerschema",
+      "src_app_api_master_customers_id_route_delete",
+      "src_app_api_master_customers_id_route_get",
+      "src_app_api_master_customers_id_route_nullableemail",
+      "src_app_api_master_customers_id_route_nullablestring",
+      "src_app_api_master_customers_id_route_patch",
+      "src_app_api_master_customers_id_route_routecontext"
+    ],
+    "28": [
+      "src_components_master_mastercoatemplateclient",
+      "src_components_master_mastercoatemplateclient_emptyform",
+      "src_components_master_mastercoatemplateclient_mastercoatemplateclient",
+      "src_components_master_mastercoatemplateclient_normalizecode",
+      "src_components_master_mastercoatemplateclient_props",
+      "src_components_master_mastercoatemplateclient_templateform",
+      "src_components_master_mastercoatemplateclient_templateparamform",
+      "src_components_master_mastercoatemplateclient_templatewithparams"
+    ],
+    "29": [
+      "src_app_api_technical_stps_quotationid_route",
+      "src_app_api_technical_stps_quotationid_route_nullabledate",
+      "src_app_api_technical_stps_quotationid_route_nullablestring",
+      "src_app_api_technical_stps_quotationid_route_post",
+      "src_app_api_technical_stps_quotationid_route_routecontext",
+      "src_app_api_technical_stps_quotationid_route_stpsschema",
+      "src_app_api_technical_stps_quotationid_route_todate"
+    ],
+    "30": [
       "prisma_migrations_20260612165544_add_coa_templates_migration",
       "prisma_migrations_20260612165544_add_coa_templates_migration_coatemplate",
       "prisma_migrations_20260612165544_add_coa_templates_migration_coatemplateparameter",
@@ -865,13 +813,7 @@
       "prisma_migrations_20260612165544_add_coa_templates_migration_sample",
       "prisma_migrations_20260612165544_add_coa_templates_migration_sampleparameter"
     ],
-    "38": [
-      "src_app_api_master_customers_id_account_route",
-      "src_app_api_master_customers_id_account_route_accountschema",
-      "src_app_api_master_customers_id_account_route_post",
-      "src_app_api_master_customers_id_account_route_routecontext"
-    ],
-    "39": [
+    "31": [
       "prisma_migrations_20260614062943_add_excel_document_fields_migration",
       "prisma_migrations_20260614062943_add_excel_document_fields_migration_coc",
       "prisma_migrations_20260614062943_add_excel_document_fields_migration_customer",
@@ -879,33 +821,91 @@
       "prisma_migrations_20260614062943_add_excel_document_fields_migration_quotationitem",
       "prisma_migrations_20260614062943_add_excel_document_fields_migration_stps"
     ],
-    "40": [
-      "src_app_api_quotations_id_po_route",
-      "src_app_api_quotations_id_po_route_poschema",
-      "src_app_api_quotations_id_po_route_post",
-      "src_app_api_quotations_id_po_route_routecontext"
+    "32": [
+      "src_app_api_master_coa_templates_route",
+      "src_app_api_master_coa_templates_route_get",
+      "src_app_api_master_coa_templates_route_normalizecode",
+      "src_app_api_master_coa_templates_route_post",
+      "src_app_api_master_coa_templates_route_templateparameterschema",
+      "src_app_api_master_coa_templates_route_templateschema"
     ],
-    "41": [
+    "33": [
+      "src_app_api_master_customers_route",
+      "src_app_api_master_customers_route_customerschema",
+      "src_app_api_master_customers_route_get",
+      "src_app_api_master_customers_route_nullableemail",
+      "src_app_api_master_customers_route_nullablestring",
+      "src_app_api_master_customers_route_post"
+    ],
+    "34": [
+      "src_components_admin_adminusersclient",
+      "src_components_admin_adminusersclient_adminusersclient",
+      "src_components_admin_adminusersclient_emptyform",
+      "src_components_admin_adminusersclient_props",
+      "src_components_admin_adminusersclient_userform",
+      "src_components_admin_adminusersclient_userwithrelations"
+    ],
+    "35": [
+      "src_components_master_masterparameterclient",
+      "src_components_master_masterparameterclient_emptyform",
+      "src_components_master_masterparameterclient_formatrupiah",
+      "src_components_master_masterparameterclient_masterparameterclient",
+      "src_components_master_masterparameterclient_parameterform",
+      "src_components_master_masterparameterclient_props"
+    ],
+    "36": [
+      "src_app_api_master_customers_import_route",
+      "src_app_api_master_customers_import_route_clean",
+      "src_app_api_master_customers_import_route_getcell",
+      "src_app_api_master_customers_import_route_post",
+      "src_app_api_master_customers_import_route_yes"
+    ],
+    "37": [
+      "src_app_layout",
+      "src_app_layout_metadata",
+      "src_app_layout_rootlayout",
+      "src_components_providers_motionprovider",
+      "src_components_providers_motionprovider_motionprovider"
+    ],
+    "38": [
+      "src_app_api_lab_sample_parameters_id_result_route",
+      "src_app_api_lab_sample_parameters_id_result_route_patch",
+      "src_app_api_lab_sample_parameters_id_result_route_resultschema",
+      "src_app_api_lab_sample_parameters_id_result_route_routecontext"
+    ],
+    "39": [
       "src_app_api_lab_samples_sampleid_results_route",
       "src_app_api_lab_samples_sampleid_results_route_patch",
       "src_app_api_lab_samples_sampleid_results_route_resultschema",
       "src_app_api_lab_samples_sampleid_results_route_routecontext"
     ],
+    "40": [
+      "src_app_api_master_customers_id_account_route",
+      "src_app_api_master_customers_id_account_route_accountschema",
+      "src_app_api_master_customers_id_account_route_post",
+      "src_app_api_master_customers_id_account_route_routecontext"
+    ],
+    "41": [
+      "src_app_api_quotations_id_po_route",
+      "src_app_api_quotations_id_po_route_poschema",
+      "src_app_api_quotations_id_po_route_post",
+      "src_app_api_quotations_id_po_route_routecontext"
+    ],
     "42": [
-      "src_app_api_finance_invoices_id_paid_route",
-      "src_app_api_finance_invoices_id_paid_route_patch",
-      "src_app_api_finance_invoices_id_paid_route_routecontext"
-    ],
-    "43": [
-      "src_app_api_finance_invoices_id_send_route",
-      "src_app_api_finance_invoices_id_send_route_patch",
-      "src_app_api_finance_invoices_id_send_route_routecontext"
-    ],
-    "44": [
       "src_app_api_samples_id_distribute_route",
       "src_app_api_samples_id_distribute_route_distributeschema",
       "src_app_api_samples_id_distribute_route_patch",
       "src_app_api_samples_id_distribute_route_routecontext"
+    ],
+    "43": [
+      "src_app_api_finance_invoices_id_paid_route",
+      "src_app_api_finance_invoices_id_paid_route_patch",
+      "src_app_api_finance_invoices_id_paid_route_routecontext"
+    ],
+    "44": [
+      "src_app_api_finance_invoices_id_send_route",
+      "src_app_api_finance_invoices_id_send_route_patch",
+      "src_app_api_finance_invoices_id_send_route_routecontext"
     ],
     "45": [
       "src_app_api_lab_sample_parameters_id_start_route",
@@ -923,135 +923,135 @@
       "src_app_api_lab_sample_parameters_id_verify_route_routecontext"
     ],
     "48": [
-      "src_app_api_lab_samples_sampleid_start_route",
-      "src_app_api_lab_samples_sampleid_start_route_patch",
-      "src_app_api_lab_samples_sampleid_start_route_routecontext"
-    ],
-    "49": [
-      "src_app_api_lab_samples_sampleid_verify_route",
-      "src_app_api_lab_samples_sampleid_verify_route_patch",
-      "src_app_api_lab_samples_sampleid_verify_route_routecontext"
-    ],
-    "50": [
-      "src_app_api_samples_id_receive_route",
-      "src_app_api_samples_id_receive_route_patch",
-      "src_app_api_samples_id_receive_route_routecontext"
-    ],
-    "51": [
-      "eslint_config",
-      "eslint_config_eslintconfig"
-    ],
-    "52": [
-      "next_config",
-      "next_config_nextconfig"
-    ],
-    "53": [
-      "pnpm_workspace_yaml",
-      "readme_md"
-    ],
-    "54": [
-      "postcss_config",
-      "postcss_config_config"
-    ],
-    "55": [
-      "src_app_api_auth_logout_route",
-      "src_app_api_auth_logout_route_post"
-    ],
-    "56": [
-      "prisma_config"
-    ],
-    "57": [
-      "public_file_svg"
-    ],
-    "58": [
-      "public_globe_svg"
-    ],
-    "59": [
-      "public_images_logo_medialab_png"
-    ],
-    "60": [
-      "public_next_svg"
-    ],
-    "61": [
-      "public_vercel_svg"
-    ],
-    "62": [
-      "public_window_svg"
-    ],
-    "63": [
       "src_app_api_lab_samples_sampleid_review_route",
       "src_app_api_lab_samples_sampleid_review_route_patch",
       "src_app_api_lab_samples_sampleid_review_route_routecontext"
     ],
-    "64": [
+    "49": [
+      "src_app_api_lab_samples_sampleid_start_route",
+      "src_app_api_lab_samples_sampleid_start_route_patch",
+      "src_app_api_lab_samples_sampleid_start_route_routecontext"
+    ],
+    "50": [
+      "src_app_api_lab_samples_sampleid_verify_route",
+      "src_app_api_lab_samples_sampleid_verify_route_patch",
+      "src_app_api_lab_samples_sampleid_verify_route_routecontext"
+    ],
+    "51": [
+      "src_app_api_samples_id_receive_route",
+      "src_app_api_samples_id_receive_route_patch",
+      "src_app_api_samples_id_receive_route_routecontext"
+    ],
+    "52": [
+      "eslint_config",
+      "eslint_config_eslintconfig"
+    ],
+    "53": [
+      "next_config",
+      "next_config_nextconfig"
+    ],
+    "54": [
+      "pnpm_workspace_yaml",
+      "readme_md"
+    ],
+    "55": [
+      "postcss_config",
+      "postcss_config_config"
+    ],
+    "56": [
       "prisma_migrations_20260612125026_add_customer_active_migration",
       "prisma_migrations_20260612125026_add_customer_active_migration_customer"
     ],
-    "65": [
+    "57": [
       "prisma_migrations_20260618021336_add_coc_sampling_location_migration",
       "prisma_migrations_20260618021336_add_coc_sampling_location_migration_coc"
     ],
-    "66": [
+    "58": [
       "prisma_migrations_20260618033123_add_invoice_payment_proof_migration",
       "prisma_migrations_20260618033123_add_invoice_payment_proof_migration_invoice"
+    ],
+    "59": [
+      "src_app_api_auth_logout_route",
+      "src_app_api_auth_logout_route_post"
+    ],
+    "60": [
+      "prisma_config"
+    ],
+    "61": [
+      "public_file_svg"
+    ],
+    "62": [
+      "public_globe_svg"
+    ],
+    "63": [
+      "public_images_logo_medialab_png"
+    ],
+    "64": [
+      "public_next_svg"
+    ],
+    "65": [
+      "public_vercel_svg"
+    ],
+    "66": [
+      "public_window_svg"
     ]
   },
   "cohesion": {
     "0": 0.05934065934065934,
-    "1": 0.06308610400682012,
-    "2": 0.06418219461697723,
+    "1": 0.06418219461697723,
+    "2": 0.06308610400682012,
     "3": 0.10299003322259136,
     "4": 0.04878048780487805,
     "5": 0.06896551724137931,
     "6": 0.06896551724137931,
-    "7": 0.11,
-    "8": 0.09523809523809523,
-    "9": 0.1111111111111111,
-    "10": 0.09956709956709957,
-    "11": 0.5,
-    "12": 0.12418300653594772,
-    "13": 0.18128654970760233,
-    "14": 0.12121212121212122,
-    "15": 0.1383399209486166,
-    "16": 0.2087912087912088,
-    "17": 0.1978021978021978,
-    "18": 0.1794871794871795,
-    "19": 0.24242424242424243,
-    "20": 0.19696969696969696,
-    "21": 0.23636363636363636,
-    "22": 0.2777777777777778,
-    "23": 0.2777777777777778,
-    "24": 0.2857142857142857,
-    "25": 0.25,
+    "7": 0.09523809523809523,
+    "8": 0.1111111111111111,
+    "9": 0.11,
+    "10": 0.1383399209486166,
+    "11": 0.12121212121212122,
+    "12": 0.09956709956709957,
+    "13": 0.1,
+    "14": 0.18128654970760233,
+    "15": 0.12418300653594772,
+    "16": 0.25,
+    "17": 0.2087912087912088,
+    "18": 0.1978021978021978,
+    "19": 0.3076923076923077,
+    "20": 0.1794871794871795,
+    "21": 0.24242424242424243,
+    "22": 0.19696969696969696,
+    "23": 0.23636363636363636,
+    "24": 0.2777777777777778,
+    "25": 0.2777777777777778,
     "26": 0.2857142857142857,
-    "27": 0.3333333333333333,
-    "28": 0.25,
-    "29": 0.4,
-    "30": 0.3333333333333333,
-    "31": 0.3333333333333333,
+    "27": 0.25,
+    "28": 0.2857142857142857,
+    "29": 0.3333333333333333,
+    "30": 0.6,
+    "31": 0.4,
     "32": 0.4,
-    "33": 0.3076923076923077,
-    "34": 0.7,
-    "35": 0.5,
-    "36": 0.1,
-    "37": 0.6,
+    "33": 0.3333333333333333,
+    "34": 0.3333333333333333,
+    "35": 0.4,
+    "36": 0.7,
+    "37": 0.5,
     "38": 0.5,
-    "39": 0.4,
+    "39": 0.5,
     "40": 0.5,
     "41": 0.5,
-    "42": 0.6666666666666666,
+    "42": 0.5,
     "43": 0.6666666666666666,
-    "44": 0.5,
+    "44": 0.6666666666666666,
     "45": 0.6666666666666666,
     "46": 0.6666666666666666,
     "47": 0.6666666666666666,
     "48": 0.6666666666666666,
     "49": 0.6666666666666666,
     "50": 0.6666666666666666,
-    "51": 1.0,
+    "51": 0.6666666666666666,
     "52": 1.0,
-    "53": 2.0,
-    "54": 1.0,
+    "53": 1.0,
+    "54": 2.0,
     "55": 1.0,
     "56": 1.0,
     "57": 1.0,
@@ -1060,7 +1060,7 @@
     "60": 1.0,
     "61": 1.0,
     "62": 1.0,
-    "63": 0.6666666666666666,
+    "63": 1.0,
     "64": 1.0,
     "65": 1.0,
     "66": 1.0
@@ -1182,17 +1182,17 @@
     },
     {
       "type": "bridge_node",
-      "question": "Why does `getSession()` connect `Session and Permissions API` to `Invoice Approval and Retest API`, `API Permissions and Approvals`, `Dashboard Pages`, `Dashboard Layout Components`, `Invoice and Document Numbering`?",
+      "question": "Why does `getSession()` connect `Session and Permissions API` to `API Permissions and Approvals`, `Invoice and Document Generation`, `Dashboard Layout Components`, `Sample Review and Permissions`, `Dashboard Pages`?",
       "why": "High betweenness centrality (0.140) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `requireAnyApiPermission()` connect `API Permissions and Approvals` to `Session and Permissions API`, `Invoice Excel Export`, `Data Import API`, `Certificate of Analysis Reports`, `Invoice Approval and Retest API`, `PDF and Excel Document Generation`, `Purchase Order API`, `User Management API`, `Invoice and Document Numbering`, `Quotation Item Management`, `Quotation Creation and Listing`?",
+      "question": "Why does `requireAnyApiPermission()` connect `API Permissions and Approvals` to `Session and Permissions API`, `PDF and Excel Rendering`, `Certificate of Analysis Exports`, `Import API`, `User Management API`, `Purchase Order API`, `Invoice and Document Generation`, `Sample Review and Permissions`, `Invoice Excel Exports`, `Quotation Item Management`, `Quotation Creation API`?",
       "why": "High betweenness centrality (0.117) - this node is a cross-community bridge."
     },
     {
       "type": "bridge_node",
-      "question": "Why does `requireApiPermission()` connect `User Management API` to `API Permissions and Approvals`, `result/route.ts`, `Invoice and Document Numbering`, `Certificate of Compliance API`, `Certificate of Analysis Templates`, `Customer API`, `STPS API`, `Certificate of Analysis Template API`, `Customer Listing API`, `Invoice Approval and Retest API`, `Account API`, `Results API`, `Payment Status API`, `Send Operation API`, `Distribution API`, `Start Process API`, `Validation API`, `Sample Parameter Verification API`, `Sample Start API`, `Sample Verification API`, `Receive Operation API`, `Sample Review API`?",
+      "question": "Why does `requireApiPermission()` connect `User Management API` to `API Permissions and Approvals`, `Invoice and Document Generation`, `Sample Review and Permissions`, `Certificate of Conformance API`, `Coa Template Management API`, `Customer API`, `STPS API`, `Coa Template API`, `Customer API Endpoints`, `Result API Patch`, `Results API Patch`, `Account API`, `Distribution API`, `Payment Status API`, `Send API`, `Start Process API`, `Validation API`, `Sample Parameter Verification API`, `Sample Review API`, `Sample Start API`, `Sample Verification API`, `Receive API`?",
       "why": "High betweenness centrality (0.051) - this node is a cross-community bridge."
     },
     {
@@ -1207,8 +1207,8 @@
     },
     {
       "type": "low_cohesion",
-      "question": "Should `PDF and Excel Document Generation` be split into smaller, more focused modules?",
-      "why": "Cohesion score 0.06308610400682012 - nodes in this community are weakly interconnected."
+      "question": "Should `Excel Formatting Utilities` be split into smaller, more focused modules?",
+      "why": "Cohesion score 0.06418219461697723 - nodes in this community are weakly interconnected."
     }
   ]
 }

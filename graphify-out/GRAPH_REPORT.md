@@ -6,73 +6,73 @@
 ## Summary
 - 861 nodes · 1720 edges · 67 communities (50 shown, 17 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
-- Token cost: 2,194 input · 632 output
+- Token cost: 2,194 input · 628 output
 
 ## Graph Freshness
-- Built from commit: `8f26530e`
+- Built from commit: `673a4762`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Session and Permissions API
-- PDF and Excel Document Generation
-- Date and Number Formatting
-- Certificate of Analysis Reports
-- Development Dependencies Setup
-- Runtime Dependencies Management
-- TypeScript and Build Configuration
-- API Permissions and Approvals
-- Quotation and Form Utilities
+- Excel Formatting Utilities
+- PDF and Excel Rendering
+- Certificate of Analysis Exports
+- Development Dependencies
+- Runtime Dependencies
+- TypeScript Configuration
+- Quotation and Form Flow
 - User Management API
-- Certificate of Analysis UI Components
-- result/route.ts
-- Technical Documents and Forms
-- Dashboard Pages
+- API Permissions and Approvals
+- Invoice and Document Generation
 - Dashboard Layout Components
-- Invoice and Document Numbering
+- Certificate of Analysis Flow
+- Sample Review and Permissions
+- Dashboard Pages
+- Technical Document and Forms
+- Database Schema Entities
 - Login and Animation Components
-- Invoice UI Components
+- Invoice Flow and Status
+- Invoice Excel Exports
 - Customer Management UI
-- Database Seeding and Role Access
+- Role and Permission Setup
 - Role-Based Access Control UI
 - Quotation Item Management
-- Quotation Creation and Listing
-- Certificate of Compliance API
-- Certificate of Analysis Templates
+- Quotation Creation API
+- Certificate of Conformance API
+- Coa Template Management API
 - Customer API
-- Certificate of Analysis Template UI
+- Master Coa Template UI
 - STPS API
-- Database Schema and Entities
-- Certificate of Analysis Template API
-- Customer Listing API
-- Admin User Management UI
-- Parameter Management UI
-- Invoice Excel Export
-- Data Import API
-- Application Layout and Motion
-- Invoice Approval and Retest API
-- Certificate Template Database Migration
-- Account API
+- Coa Template Database Migration
 - Excel Document Database Migration
+- Coa Template API
+- Customer API Endpoints
+- Admin User Management UI
+- Master Parameter Management UI
+- Import API
+- App Layout and Motion
+- Result API Patch
+- Results API Patch
+- Account API
 - Purchase Order API
-- Results API
-- Payment Status API
-- Send Operation API
 - Distribution API
+- Payment Status API
+- Send API
 - Start Process API
 - Validation API
 - Sample Parameter Verification API
+- Sample Review API
 - Sample Start API
 - Sample Verification API
-- Receive Operation API
+- Receive API
 - ESLint Configuration
 - Next.js Configuration
 - PostCSS Configuration
-- Logo Asset
-- Sample Review API
-- Customer Active Status Migration
+- Customer Migration
 - Coc Sampling Location Migration
 - Invoice Payment Proof Migration
+- Medialab Logo
 
 ## God Nodes (most connected - your core abstractions)
 1. `getSession()` - 81 edges
@@ -107,167 +107,167 @@
 Cohesion: 0.06
 Nodes (62): GET(), PATCH(), PermissionInput, RouteContext, GET(), POST(), POST(), GET() (+54 more)
 
-### Community 1 - "PDF and Excel Document Generation"
-Cohesion: 0.06
-Nodes (50): GET(), RouteContext, GET(), RouteContext, GET(), RouteContext, GET(), RouteContext (+42 more)
-
-### Community 2 - "Date and Number Formatting"
+### Community 1 - "Excel Formatting Utilities"
 Cohesion: 0.06
 Nodes (59): buildLtrExcel(), rupiahFormat(), setThinBorder(), styleLabel(), styleSection(), styleValue(), buildQuotationExcel(), rupiahFormat() (+51 more)
 
-### Community 3 - "Certificate of Analysis Reports"
+### Community 2 - "PDF and Excel Rendering"
+Cohesion: 0.06
+Nodes (50): GET(), RouteContext, GET(), RouteContext, GET(), RouteContext, GET(), RouteContext (+42 more)
+
+### Community 3 - "Certificate of Analysis Exports"
 Cohesion: 0.10
 Nodes (34): GET(), RouteContext, GET(), RouteContext, GET(), RouteContext, GET(), RouteContext (+26 more)
 
-### Community 4 - "Development Dependencies Setup"
+### Community 4 - "Development Dependencies"
 Cohesion: 0.05
 Nodes (40): bcrypt, dotenv, eslint, eslint-config-next, devDependencies, bcrypt, dotenv, eslint (+32 more)
 
-### Community 5 - "Runtime Dependencies Management"
+### Community 5 - "Runtime Dependencies"
 Cohesion: 0.07
 Nodes (29): bcryptjs, clsx, exceljs, framer-motion, jose, lucide-react, next, dependencies (+21 more)
 
-### Community 6 - "TypeScript and Build Configuration"
+### Community 6 - "TypeScript Configuration"
 Cohesion: 0.07
 Nodes (28): dom, dom.iterable, esnext, **/*.mts, .next/dev/types/**/*.ts, next-env.d.ts, .next/types/**/*.ts, node_modules (+20 more)
 
-### Community 7 - "API Permissions and Approvals"
-Cohesion: 0.11
-Nodes (17): GET(), PATCH(), RouteContext, GET(), columns, GET(), setThinBorder(), PATCH() (+9 more)
-
-### Community 8 - "Quotation and Form Utilities"
+### Community 7 - "Quotation and Form Flow"
 Cohesion: 0.10
 Nodes (23): addDaysInputDate(), CoaTemplateOption, CustomerOption, FlowMode, flowSteps, formatDate(), formatRupiah(), FormItem (+15 more)
 
-### Community 9 - "User Management API"
+### Community 8 - "User Management API"
 Cohesion: 0.11
 Nodes (20): DELETE(), GET(), PATCH(), RouteContext, updateUserSchema, createUserSchema, GET(), POST() (+12 more)
 
-### Community 10 - "Certificate of Analysis UI Components"
-Cohesion: 0.10
-Nodes (16): Coa, CoaFlowClient(), CoaMode, getStatusStyle(), Props, Sample, SampleParameter, Props (+8 more)
+### Community 9 - "API Permissions and Approvals"
+Cohesion: 0.11
+Nodes (17): GET(), PATCH(), RouteContext, GET(), columns, GET(), setThinBorder(), PATCH() (+9 more)
 
-### Community 11 - "result/route.ts"
-Cohesion: 0.50
-Nodes (3): PATCH(), resultSchema, RouteContext
-
-### Community 12 - "Technical Documents and Forms"
-Cohesion: 0.12
-Nodes (11): CocForm, CocItemForm, Customer, formatDateTime(), getTodayInputDate(), Mode, Props, Quotation (+3 more)
-
-### Community 13 - "Dashboard Pages"
-Cohesion: 0.18
-Nodes (5): CustomerDashboardPage(), StatCardProps, MotionHeader(), MotionHeaderProps, globalForPrisma
-
-### Community 14 - "Dashboard Layout Components"
-Cohesion: 0.12
-Nodes (15): DashboardLayout(), AppShellProps, MenuItem, DashboardShell(), PageTransition(), DashboardMenuItem, DashboardSession, getInitials() (+7 more)
-
-### Community 15 - "Invoice and Document Numbering"
+### Community 10 - "Invoice and Document Generation"
 Cohesion: 0.14
 Nodes (16): POST(), RouteContext, POST(), RouteContext, createInvoiceSchema, GET(), getInvoiceAmount(), POST() (+8 more)
 
-### Community 16 - "Login and Animation Components"
-Cohesion: 0.21
-Nodes (11): LoginPage(), StatCardShell(), buttonHover, buttonTap, EASE_IN_OUT, EASE_OUT, fadeScale, fadeUp (+3 more)
+### Community 11 - "Dashboard Layout Components"
+Cohesion: 0.12
+Nodes (15): DashboardLayout(), AppShellProps, MenuItem, DashboardShell(), PageTransition(), DashboardMenuItem, DashboardSession, getInitials() (+7 more)
 
-### Community 17 - "Invoice UI Components"
-Cohesion: 0.20
-Nodes (13): Customer, formatDate(), formatRupiah(), getInvoiceStatusText(), getQuotationGrandTotal(), getStatusStyle(), Invoice, InvoiceFlowClient() (+5 more)
+### Community 12 - "Certificate of Analysis Flow"
+Cohesion: 0.10
+Nodes (16): Coa, CoaFlowClient(), CoaMode, getStatusStyle(), Props, Sample, SampleParameter, Props (+8 more)
 
-### Community 18 - "Customer Management UI"
-Cohesion: 0.18
-Nodes (10): cleanForm(), CustomerForm, CustomerRow, CustomerUser, emptyForm, getCustomerLoginUser(), MasterCustomerClient(), Props (+2 more)
-
-### Community 19 - "Database Seeding and Role Access"
-Cohesion: 0.24
-Nodes (10): getPermissionByRoleAndMenu(), main(), menus, prisma, roleAccess, roles, upsertCoaTemplate(), upsertCustomer() (+2 more)
-
-### Community 20 - "Role-Based Access Control UI"
-Cohesion: 0.20
-Nodes (9): createInitialPermissions(), getMenuGroup(), PermissionItem, PermissionKey, permissions, PermissionState, Props, RbacPermissionTable() (+1 more)
-
-### Community 21 - "Quotation Item Management"
-Cohesion: 0.24
-Nodes (10): calculateTotals(), GET(), nullableDate, nullableString, PATCH(), quotationItemSchema, quotationUpdateSchema, RouteContext (+2 more)
-
-### Community 22 - "Quotation Creation and Listing"
-Cohesion: 0.28
-Nodes (8): calculateTotals(), GET(), nullableDate, nullableString, POST(), quotationCreateSchema, quotationItemSchema, toDate()
-
-### Community 23 - "Certificate of Compliance API"
-Cohesion: 0.28
-Nodes (8): cocItemSchema, cocSchema, ensureSampleAndParametersTx(), nullableDate, nullableString, POST(), RouteContext, toDate()
-
-### Community 24 - "Certificate of Analysis Templates"
-Cohesion: 0.29
-Nodes (7): DELETE(), GET(), normalizeCode(), PATCH(), RouteContext, templateParameterSchema, templateSchema
-
-### Community 25 - "Customer API"
-Cohesion: 0.25
-Nodes (7): customerSchema, DELETE(), GET(), nullableEmail, nullableString, PATCH(), RouteContext
-
-### Community 26 - "Certificate of Analysis Template UI"
-Cohesion: 0.29
-Nodes (7): emptyForm, MasterCoaTemplateClient(), normalizeCode(), Props, TemplateForm, TemplateParamForm, TemplateWithParams
-
-### Community 27 - "STPS API"
-Cohesion: 0.33
-Nodes (6): nullableDate, nullableString, POST(), RouteContext, stpsSchema, toDate()
-
-### Community 28 - "Database Schema and Entities"
-Cohesion: 0.25
-Nodes (16): `AnalysisParameter`, `Coa`, `Coc`, `Customer`, `Invoice`, `Ltr`, `Menu`, `PurchaseOrder` (+8 more)
-
-### Community 29 - "Certificate of Analysis Template API"
-Cohesion: 0.40
-Nodes (5): GET(), normalizeCode(), POST(), templateParameterSchema, templateSchema
-
-### Community 30 - "Customer Listing API"
-Cohesion: 0.33
-Nodes (5): customerSchema, GET(), nullableEmail, nullableString, POST()
-
-### Community 31 - "Admin User Management UI"
-Cohesion: 0.33
-Nodes (4): emptyForm, Props, UserForm, UserWithRelations
-
-### Community 32 - "Parameter Management UI"
-Cohesion: 0.40
-Nodes (5): emptyForm, formatRupiah(), MasterParameterClient(), ParameterForm, Props
-
-### Community 33 - "Invoice Excel Export"
-Cohesion: 0.31
-Nodes (10): GET(), RouteContext, buildInvoiceExcel(), getFinalCoaNo(), rupiahFormat(), setThinBorder(), styleLabel(), styleSection() (+2 more)
-
-### Community 34 - "Data Import API"
-Cohesion: 0.70
-Nodes (4): clean(), getCell(), POST(), yes()
-
-### Community 36 - "Invoice Approval and Retest API"
+### Community 13 - "Sample Review and Permissions"
 Cohesion: 0.10
 Nodes (14): PATCH(), RouteContext, PATCH(), retestSchema, RouteContext, PATCH(), RouteContext, PATCH() (+6 more)
 
-### Community 37 - "Certificate Template Database Migration"
+### Community 14 - "Dashboard Pages"
+Cohesion: 0.18
+Nodes (5): CustomerDashboardPage(), StatCardProps, MotionHeader(), MotionHeaderProps, globalForPrisma
+
+### Community 15 - "Technical Document and Forms"
+Cohesion: 0.12
+Nodes (11): CocForm, CocItemForm, Customer, formatDateTime(), getTodayInputDate(), Mode, Props, Quotation (+3 more)
+
+### Community 16 - "Database Schema Entities"
+Cohesion: 0.25
+Nodes (16): `AnalysisParameter`, `Coa`, `Coc`, `Customer`, `Invoice`, `Ltr`, `Menu`, `PurchaseOrder` (+8 more)
+
+### Community 17 - "Login and Animation Components"
+Cohesion: 0.21
+Nodes (11): LoginPage(), StatCardShell(), buttonHover, buttonTap, EASE_IN_OUT, EASE_OUT, fadeScale, fadeUp (+3 more)
+
+### Community 18 - "Invoice Flow and Status"
+Cohesion: 0.20
+Nodes (13): Customer, formatDate(), formatRupiah(), getInvoiceStatusText(), getQuotationGrandTotal(), getStatusStyle(), Invoice, InvoiceFlowClient() (+5 more)
+
+### Community 19 - "Invoice Excel Exports"
+Cohesion: 0.31
+Nodes (10): GET(), RouteContext, buildInvoiceExcel(), getFinalCoaNo(), rupiahFormat(), setThinBorder(), styleLabel(), styleSection() (+2 more)
+
+### Community 20 - "Customer Management UI"
+Cohesion: 0.18
+Nodes (10): cleanForm(), CustomerForm, CustomerRow, CustomerUser, emptyForm, getCustomerLoginUser(), MasterCustomerClient(), Props (+2 more)
+
+### Community 21 - "Role and Permission Setup"
+Cohesion: 0.24
+Nodes (10): getPermissionByRoleAndMenu(), main(), menus, prisma, roleAccess, roles, upsertCoaTemplate(), upsertCustomer() (+2 more)
+
+### Community 22 - "Role-Based Access Control UI"
+Cohesion: 0.20
+Nodes (9): createInitialPermissions(), getMenuGroup(), PermissionItem, PermissionKey, permissions, PermissionState, Props, RbacPermissionTable() (+1 more)
+
+### Community 23 - "Quotation Item Management"
+Cohesion: 0.24
+Nodes (10): calculateTotals(), GET(), nullableDate, nullableString, PATCH(), quotationItemSchema, quotationUpdateSchema, RouteContext (+2 more)
+
+### Community 24 - "Quotation Creation API"
+Cohesion: 0.28
+Nodes (8): calculateTotals(), GET(), nullableDate, nullableString, POST(), quotationCreateSchema, quotationItemSchema, toDate()
+
+### Community 25 - "Certificate of Conformance API"
+Cohesion: 0.28
+Nodes (8): cocItemSchema, cocSchema, ensureSampleAndParametersTx(), nullableDate, nullableString, POST(), RouteContext, toDate()
+
+### Community 26 - "Coa Template Management API"
+Cohesion: 0.29
+Nodes (7): DELETE(), GET(), normalizeCode(), PATCH(), RouteContext, templateParameterSchema, templateSchema
+
+### Community 27 - "Customer API"
+Cohesion: 0.25
+Nodes (7): customerSchema, DELETE(), GET(), nullableEmail, nullableString, PATCH(), RouteContext
+
+### Community 28 - "Master Coa Template UI"
+Cohesion: 0.29
+Nodes (7): emptyForm, MasterCoaTemplateClient(), normalizeCode(), Props, TemplateForm, TemplateParamForm, TemplateWithParams
+
+### Community 29 - "STPS API"
+Cohesion: 0.33
+Nodes (6): nullableDate, nullableString, POST(), RouteContext, stpsSchema, toDate()
+
+### Community 30 - "Coa Template Database Migration"
 Cohesion: 0.60
 Nodes (5): `CoaTemplate`, `CoaTemplateParameter`, `Quotation`, `Sample`, `SampleParameter`
 
-### Community 38 - "Account API"
-Cohesion: 0.50
-Nodes (3): accountSchema, POST(), RouteContext
-
-### Community 39 - "Excel Document Database Migration"
+### Community 31 - "Excel Document Database Migration"
 Cohesion: 0.40
 Nodes (5): `Coc`, `Customer`, `Quotation`, `QuotationItem`, `Stps`
 
-### Community 40 - "Purchase Order API"
-Cohesion: 0.50
-Nodes (3): poSchema, POST(), RouteContext
+### Community 32 - "Coa Template API"
+Cohesion: 0.40
+Nodes (5): GET(), normalizeCode(), POST(), templateParameterSchema, templateSchema
 
-### Community 41 - "Results API"
+### Community 33 - "Customer API Endpoints"
+Cohesion: 0.33
+Nodes (5): customerSchema, GET(), nullableEmail, nullableString, POST()
+
+### Community 34 - "Admin User Management UI"
+Cohesion: 0.33
+Nodes (4): emptyForm, Props, UserForm, UserWithRelations
+
+### Community 35 - "Master Parameter Management UI"
+Cohesion: 0.40
+Nodes (5): emptyForm, formatRupiah(), MasterParameterClient(), ParameterForm, Props
+
+### Community 36 - "Import API"
+Cohesion: 0.70
+Nodes (4): clean(), getCell(), POST(), yes()
+
+### Community 38 - "Result API Patch"
 Cohesion: 0.50
 Nodes (3): PATCH(), resultSchema, RouteContext
 
-### Community 44 - "Distribution API"
+### Community 39 - "Results API Patch"
+Cohesion: 0.50
+Nodes (3): PATCH(), resultSchema, RouteContext
+
+### Community 40 - "Account API"
+Cohesion: 0.50
+Nodes (3): accountSchema, POST(), RouteContext
+
+### Community 41 - "Purchase Order API"
+Cohesion: 0.50
+Nodes (3): poSchema, POST(), RouteContext
+
+### Community 42 - "Distribution API"
 Cohesion: 0.50
 Nodes (3): distributeSchema, PATCH(), RouteContext
 
@@ -285,15 +285,15 @@ _Questions this graph is uniquely positioned to answer:_
 
 - **What is the exact relationship between `README.md` and `pnpm-workspace.yaml`?**
   _Edge tagged AMBIGUOUS (relation: references) - confidence is low._
-- **Why does `getSession()` connect `Session and Permissions API` to `Invoice Approval and Retest API`, `API Permissions and Approvals`, `Dashboard Pages`, `Dashboard Layout Components`, `Invoice and Document Numbering`?**
+- **Why does `getSession()` connect `Session and Permissions API` to `API Permissions and Approvals`, `Invoice and Document Generation`, `Dashboard Layout Components`, `Sample Review and Permissions`, `Dashboard Pages`?**
   _High betweenness centrality (0.140) - this node is a cross-community bridge._
-- **Why does `requireAnyApiPermission()` connect `API Permissions and Approvals` to `Session and Permissions API`, `Invoice Excel Export`, `Data Import API`, `Certificate of Analysis Reports`, `Invoice Approval and Retest API`, `PDF and Excel Document Generation`, `Purchase Order API`, `User Management API`, `Invoice and Document Numbering`, `Quotation Item Management`, `Quotation Creation and Listing`?**
+- **Why does `requireAnyApiPermission()` connect `API Permissions and Approvals` to `Session and Permissions API`, `PDF and Excel Rendering`, `Certificate of Analysis Exports`, `Import API`, `User Management API`, `Purchase Order API`, `Invoice and Document Generation`, `Sample Review and Permissions`, `Invoice Excel Exports`, `Quotation Item Management`, `Quotation Creation API`?**
   _High betweenness centrality (0.117) - this node is a cross-community bridge._
-- **Why does `requireApiPermission()` connect `User Management API` to `API Permissions and Approvals`, `result/route.ts`, `Invoice and Document Numbering`, `Certificate of Compliance API`, `Certificate of Analysis Templates`, `Customer API`, `STPS API`, `Certificate of Analysis Template API`, `Customer Listing API`, `Invoice Approval and Retest API`, `Account API`, `Results API`, `Payment Status API`, `Send Operation API`, `Distribution API`, `Start Process API`, `Validation API`, `Sample Parameter Verification API`, `Sample Start API`, `Sample Verification API`, `Receive Operation API`, `Sample Review API`?**
+- **Why does `requireApiPermission()` connect `User Management API` to `API Permissions and Approvals`, `Invoice and Document Generation`, `Sample Review and Permissions`, `Certificate of Conformance API`, `Coa Template Management API`, `Customer API`, `STPS API`, `Coa Template API`, `Customer API Endpoints`, `Result API Patch`, `Results API Patch`, `Account API`, `Distribution API`, `Payment Status API`, `Send API`, `Start Process API`, `Validation API`, `Sample Parameter Verification API`, `Sample Review API`, `Sample Start API`, `Sample Verification API`, `Receive API`?**
   _High betweenness centrality (0.051) - this node is a cross-community bridge._
 - **What connects `eslintConfig`, `nextConfig`, `name` to the rest of the system?**
   _274 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Session and Permissions API` be split into smaller, more focused modules?**
   _Cohesion score 0.05934065934065934 - nodes in this community are weakly interconnected._
-- **Should `PDF and Excel Document Generation` be split into smaller, more focused modules?**
-  _Cohesion score 0.06308610400682012 - nodes in this community are weakly interconnected._
+- **Should `Excel Formatting Utilities` be split into smaller, more focused modules?**
+  _Cohesion score 0.06418219461697723 - nodes in this community are weakly interconnected._
