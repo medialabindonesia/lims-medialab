@@ -22,6 +22,8 @@ export type SupportMessageDTO = {
   senderName?: string | null;
   body: string;
   isInternalNote: boolean;
+  readByCustomerAt: string | null;
+  readByAgentAt: string | null;
   createdAt: string;
 };
 

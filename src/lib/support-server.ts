@@ -68,6 +68,8 @@ export function serializeMessage(
     senderName: message.sender?.name ?? null,
     body: message.body,
     isInternalNote: message.isInternalNote,
+    readByCustomerAt: message.readByCustomerAt?.toISOString() ?? null,
+    readByAgentAt: message.readByAgentAt?.toISOString() ?? null,
     createdAt: message.createdAt.toISOString(),
   };
 }

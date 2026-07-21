@@ -80,6 +80,17 @@ export default function SupportConversationClient({
         typingTimer.current = setTimeout(() => setTypingName(null), 3000);
       }
     },
+    onRead: ({ reader, at }) => {
+      // Customer membaca pesan agent → tandai pesan agent sebagai dibaca.
+      if (reader !== "CUSTOMER") return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.senderRole === "AGENT" && !m.readByCustomerAt
+            ? { ...m, readByCustomerAt: at }
+            : m
+        )
+      );
+    },
   });
 
   useEffect(() => {

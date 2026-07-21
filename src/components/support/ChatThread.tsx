@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Lock } from "lucide-react";
+import { Check, CheckCheck, Lock } from "lucide-react";
 import { formatChatTime, type SupportMessageDTO } from "@/lib/support";
 
 type Props = {
@@ -61,6 +61,13 @@ export default function ChatThread({
 
         const isInternal = message.isInternalNote;
 
+        // Tanda "dibaca" hanya untuk pesan milik viewer sendiri (bukan internal).
+        const readByOther =
+          viewer === "customer"
+            ? message.readByAgentAt != null
+            : message.readByCustomerAt != null;
+        const showReadMark = isOwn && !isInternal;
+
         return (
           <div
             key={message.id}
@@ -111,8 +118,8 @@ export default function ChatThread({
                 {message.body}
               </p>
 
-              <p
-                className={`mt-1 text-right text-[10px] ${
+              <div
+                className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
                   isInternal
                     ? "text-amber-600"
                     : isOwn
@@ -120,8 +127,21 @@ export default function ChatThread({
                     : "text-slate-400"
                 }`}
               >
-                {formatChatTime(message.createdAt)}
-              </p>
+                <span>{formatChatTime(message.createdAt)}</span>
+                {showReadMark &&
+                  (readByOther ? (
+                    <span
+                      title="Dibaca"
+                      className="flex items-center gap-0.5 font-semibold text-sky-200"
+                    >
+                      <CheckCheck size={13} />
+                    </span>
+                  ) : (
+                    <span title="Terkirim" className="flex items-center">
+                      <Check size={13} />
+                    </span>
+                  ))}
+              </div>
             </div>
           </div>
         );

@@ -33,6 +33,8 @@ export async function POST(_request: Request, context: RouteContext) {
       return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
+    const readAt = new Date();
+
     await prisma.supportMessage.updateMany({
       where: {
         ticketId: id,
@@ -40,7 +42,14 @@ export async function POST(_request: Request, context: RouteContext) {
         isInternalNote: false,
         readByCustomerAt: null,
       },
-      data: { readByCustomerAt: new Date() },
+      data: { readByCustomerAt: readAt },
+    });
+
+    // Beri tahu kanal tiket bahwa customer sudah membaca pesan agent
+    // (untuk tanda "Dibaca" di sisi agent yang sedang membuka tiket).
+    await publishSupport(supportChannels.ticket(id), "read", {
+      reader: "CUSTOMER",
+      at: readAt.toISOString(),
     });
 
     await publishSupport(supportChannels.customer(ticket.customerId), "notify", {
@@ -51,13 +60,22 @@ export async function POST(_request: Request, context: RouteContext) {
     const permission = await requireApiPermission("support.desk", "canView");
     if (!permission.allowed) return permission.response;
 
+    const readAt = new Date();
+
     await prisma.supportMessage.updateMany({
       where: {
         ticketId: id,
         senderRole: "CUSTOMER",
         readByAgentAt: null,
       },
-      data: { readByAgentAt: new Date() },
+      data: { readByAgentAt: readAt },
+    });
+
+    // Beri tahu kanal tiket bahwa agent sudah membaca pesan customer
+    // (untuk tanda "Dibaca" di sisi customer yang sedang membuka tiket).
+    await publishSupport(supportChannels.ticket(id), "read", {
+      reader: "AGENT",
+      at: readAt.toISOString(),
     });
 
     await publishSupport(supportChannels.desk(), "read", { ticketId: id });

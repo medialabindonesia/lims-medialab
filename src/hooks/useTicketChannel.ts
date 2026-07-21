@@ -6,6 +6,7 @@ import { getAblyClient, supportChannels } from "@/lib/ably-client";
 import type { SupportMessageDTO, SupportTicketDTO } from "@/lib/support";
 
 type TypingPayload = { name: string; role: string };
+type ReadPayload = { reader: "CUSTOMER" | "AGENT"; at: string };
 
 type Handlers = {
   onMessage?: (message: SupportMessageDTO) => void;
@@ -14,6 +15,7 @@ type Handlers = {
     message: SupportMessageDTO | null;
   }) => void;
   onTyping?: (payload: TypingPayload) => void;
+  onRead?: (payload: ReadPayload) => void;
 };
 
 /**
@@ -52,10 +54,14 @@ export function useTicketChannel(ticketId: string | null, handlers: Handlers) {
     const onTyping = (msg: AblyTypes.Message) => {
       handlersRef.current.onTyping?.(msg.data as TypingPayload);
     };
+    const onRead = (msg: AblyTypes.Message) => {
+      handlersRef.current.onRead?.(msg.data as ReadPayload);
+    };
 
     channel.subscribe("message", onMessage);
     channel.subscribe("ticket.update", onUpdate);
     channel.subscribe("typing", onTyping);
+    channel.subscribe("read", onRead);
 
     const onStateChange = (state: AblyTypes.ConnectionStateChange) => {
       if (!cancelled) setConnected(state.current === "connected");
@@ -68,6 +74,7 @@ export function useTicketChannel(ticketId: string | null, handlers: Handlers) {
       channel.unsubscribe("message", onMessage);
       channel.unsubscribe("ticket.update", onUpdate);
       channel.unsubscribe("typing", onTyping);
+      channel.unsubscribe("read", onRead);
       client.connection.off(onStateChange);
       channelRef.current = null;
     };

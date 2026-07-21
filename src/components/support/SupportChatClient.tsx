@@ -63,6 +63,17 @@ export default function SupportChatClient({
         typingTimer.current = setTimeout(() => setTypingName(null), 3000);
       }
     },
+    onRead: ({ reader, at }) => {
+      // Agent membaca pesan customer → tandai pesan customer sebagai dibaca.
+      if (reader !== "AGENT") return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.senderRole === "CUSTOMER" && !m.readByAgentAt
+            ? { ...m, readByAgentAt: at }
+            : m
+        )
+      );
+    },
   });
 
   useEffect(() => {
