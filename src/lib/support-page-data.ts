@@ -81,21 +81,33 @@ export async function getTicketDetail(
   };
 }
 
-/** Antrian tiket untuk agent (semua tiket). */
-export async function getAgentTickets() {
-  const tickets = await prisma.supportTicket.findMany({
-    include: ticketInclude,
-    orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
-  });
+/** Antrian tiket untuk agent, halaman pertama (paginated). */
+export async function getAgentTickets(pageSize = 15) {
+  const [tickets, total] = await Promise.all([
+    prisma.supportTicket.findMany({
+      include: ticketInclude,
+      orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
+      take: pageSize,
+    }),
+    prisma.supportTicket.count(),
+  ]);
 
   const unread = await computeUnreadMap(
     tickets.map((t) => t.id),
     false
   );
 
-  return tickets.map((t) =>
-    serializeTicket(t, { unreadForAgent: unread[t.id] ?? 0 })
-  );
+  return {
+    tickets: tickets.map((t) =>
+      serializeTicket(t, { unreadForAgent: unread[t.id] ?? 0 })
+    ),
+    pagination: {
+      page: 1,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    },
+  };
 }
 
 export async function getCannedReplies(): Promise<CannedReplyDTO[]> {

@@ -3,67 +3,124 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
-import { Headset, Inbox, Search, UserCheck } from "lucide-react";
+import { Headset, Inbox, Loader2, UserCheck } from "lucide-react";
 import { fadeUp } from "@/lib/motion";
 import {
   formatRelative,
+  formatShortDate,
   isOpenStatus,
+  DATE_PRESET_LABELS,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
+  type TicketPagination,
   type SupportTicketDTO,
 } from "@/lib/support";
 import { PriorityBadge, TicketStatusBadge } from "@/components/support/Badges";
 import { useSupportUnread } from "@/hooks/useSupportUnread";
+import Select from "@/components/ui/Select";
+import Skeleton from "@/components/ui/Skeleton";
+import TicketSearchBox from "@/components/support/TicketSearchBox";
+import DateRangePicker, {
+  type DateRangeValue,
+} from "@/components/support/DateRangePicker";
+import Pagination from "@/components/support/Pagination";
 
 type AssignedFilter = "all" | "me" | "unassigned";
 
+const STATUS_OPTIONS = [
+  { value: "ALL", label: "Semua Status" },
+  ...TICKET_STATUSES.map((s) => ({ value: s, label: s })),
+];
+
+const PRIORITY_OPTIONS = [
+  { value: "ALL", label: "Semua Prioritas" },
+  ...TICKET_PRIORITIES.map((p) => ({ value: p, label: p })),
+];
+
 export default function SupportDeskClient({
   initialTickets,
+  initialPagination,
   agentId,
 }: {
   initialTickets: SupportTicketDTO[];
+  initialPagination: TicketPagination;
   agentId: string;
 }) {
   const reduce = useReducedMotion();
   const [tickets, setTickets] = useState(initialTickets);
+  const [pagination, setPagination] = useState(initialPagination);
   const [status, setStatus] = useState("ALL");
   const [priority, setPriority] = useState("ALL");
   const [assigned, setAssigned] = useState<AssignedFilter>("all");
-  const [q, setQ] = useState("");
+  const [dateRange, setDateRange] = useState<DateRangeValue>({
+    preset: "ALL",
+    from: null,
+    to: null,
+  });
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [firstLoadDone, setFirstLoadDone] = useState(true); // data awal sudah dari server
 
-  const refetch = useCallback(async () => {
-    const params = new URLSearchParams();
-    if (status !== "ALL") params.set("status", status);
-    if (priority !== "ALL") params.set("priority", priority);
-    if (assigned !== "all") params.set("assigned", assigned);
-    if (q.trim()) params.set("q", q.trim());
+  const abortRef = useRef<AbortController | null>(null);
 
-    try {
-      const res = await fetch(`/api/support/tickets?${params.toString()}`, {
-        cache: "no-store",
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      setTickets(data.tickets ?? []);
-    } catch {
-      /* diamkan */
-    }
-  }, [status, priority, assigned, q]);
+  const refetch = useCallback(
+    async (targetPage: number) => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
 
-  // Refetch saat filter berubah (debounce ringan untuk search).
-  // Lewati eksekusi pertama: data awal sudah dikirim server (hindari query ganda).
+      const params = new URLSearchParams();
+      if (status !== "ALL") params.set("status", status);
+      if (priority !== "ALL") params.set("priority", priority);
+      if (assigned !== "all") params.set("assigned", assigned);
+      if (dateRange.from) params.set("dateFrom", dateRange.from);
+      if (dateRange.to) params.set("dateTo", dateRange.to);
+      params.set("page", String(targetPage));
+
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/support/tickets?${params.toString()}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        setTickets(data.tickets ?? []);
+        if (data.pagination) setPagination(data.pagination);
+      } catch (error) {
+        if ((error as Error).name !== "AbortError") {
+          /* diamkan — request lain yang lebih baru akan menggantikan */
+        }
+      } finally {
+        if (abortRef.current === controller) {
+          setLoading(false);
+          setFirstLoadDone(true);
+        }
+      }
+    },
+    [status, priority, assigned, dateRange]
+  );
+
+  // Filter berubah → kembali ke halaman 1 + refetch (debounce ringan).
   const didMount = useRef(false);
   useEffect(() => {
     if (!didMount.current) {
       didMount.current = true;
       return;
     }
-    const t = setTimeout(refetch, 250);
+    setPage(1);
+    const t = setTimeout(() => refetch(1), 250);
     return () => clearTimeout(t);
-  }, [refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, priority, assigned, dateRange]);
 
-  // Realtime: refetch daftar saat ada tiket baru / update dari kanal desk.
-  useSupportUnread({ isCustomer: false, onNotify: refetch });
+  function goToPage(nextPage: number) {
+    setPage(nextPage);
+    refetch(nextPage);
+  }
+
+  // Realtime: refetch halaman aktif saat ada tiket baru / update dari kanal desk.
+  useSupportUnread({ isCustomer: false, onNotify: () => refetch(page) });
 
   const openCount = tickets.filter((t) => isOpenStatus(t.status)).length;
   const mineCount = tickets.filter((t) => t.assignedToId === agentId).length;
@@ -91,7 +148,9 @@ export default function SupportDeskClient({
 
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold text-slate-400">Tiket Aktif</p>
+            <p className="text-xs font-semibold text-slate-400">
+              Tiket (halaman ini)
+            </p>
             <p className="mt-1 text-2xl font-black text-slate-900">{openCount}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -109,15 +168,7 @@ export default function SupportDeskClient({
 
       {/* Filters */}
       <div className="mb-5 flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-          <Search size={16} className="text-slate-400" />
-          <input
-            value={q}
-            onChange={(event) => setQ(event.target.value)}
-            placeholder="Cari subjek / no tiket / customer"
-            className="w-56 bg-transparent text-sm outline-none"
-          />
-        </div>
+        <TicketSearchBox />
 
         <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
           {(["all", "me", "unassigned"] as AssignedFilter[]).map((option) => (
@@ -140,35 +191,50 @@ export default function SupportDeskClient({
           ))}
         </div>
 
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
-        >
-          <option value="ALL">Semua Status</option>
-          {TICKET_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-
-        <select
+        <Select value={status} onChange={setStatus} options={STATUS_OPTIONS} />
+        <Select
           value={priority}
-          onChange={(event) => setPriority(event.target.value)}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none"
-        >
-          <option value="ALL">Semua Prioritas</option>
-          {TICKET_PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
-        </select>
+          onChange={setPriority}
+          options={PRIORITY_OPTIONS}
+        />
+        <DateRangePicker value={dateRange} onChange={setDateRange} />
+
+        {loading && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+            <Loader2 size={13} className="animate-spin" />
+            Memuat…
+          </span>
+        )}
       </div>
 
+      {dateRange.preset !== "ALL" && (
+        <p className="mb-3 text-xs text-slate-400">
+          Menampilkan tiket dibuat pada:{" "}
+          <span className="font-semibold text-slate-600">
+            {dateRange.preset === "CUSTOM"
+              ? `${dateRange.from} – ${dateRange.to}`
+              : DATE_PRESET_LABELS[dateRange.preset]}
+          </span>
+        </p>
+      )}
+
       {/* List */}
-      {tickets.length === 0 ? (
+      {!firstLoadDone ? (
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4"
+            >
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-1/4" />
+              </div>
+              <Skeleton className="h-7 w-20 rounded-full" />
+            </div>
+          ))}
+        </div>
+      ) : tickets.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center">
           <Inbox size={32} className="text-slate-300" />
           <p className="mt-3 text-sm text-slate-500">
@@ -176,7 +242,11 @@ export default function SupportDeskClient({
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div
+          className={`space-y-3 transition-opacity ${
+            loading ? "pointer-events-none opacity-60" : "opacity-100"
+          }`}
+        >
           {tickets.map((ticket) => (
             <Link
               key={ticket.id}
@@ -196,6 +266,7 @@ export default function SupportDeskClient({
                 </div>
                 <p className="mt-0.5 truncate text-xs text-slate-400">
                   {ticket.ticketNo} · {ticket.customerName || "-"} ·{" "}
+                  {formatShortDate(ticket.createdAt)} ·{" "}
                   {formatRelative(ticket.lastMessageAt)}
                 </p>
               </div>
@@ -219,6 +290,12 @@ export default function SupportDeskClient({
           ))}
         </div>
       )}
+
+      <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onChange={goToPage}
+      />
     </section>
   );
 }

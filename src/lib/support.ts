@@ -207,3 +207,90 @@ export function formatRelative(value: string | Date | null) {
     year: "numeric",
   });
 }
+
+/** Tanggal absolut ringkas, dipakai di daftar tiket (audit trail). */
+export function formatShortDate(value: string | Date) {
+  const date = typeof value === "string" ? new Date(value) : value;
+
+  return date.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export type TicketPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+};
+
+export type TicketIndexEntry = {
+  id: string;
+  ticketNo: string;
+  subject: string;
+  status: TicketStatus;
+  customerName: string | null;
+  createdAt: string;
+};
+
+/** Preset rentang tanggal untuk DateRangePicker (basis: createdAt tiket). */
+export type DatePresetKey =
+  | "TODAY"
+  | "THIS_WEEK"
+  | "THIS_MONTH"
+  | "YTD"
+  | "LAST_YEAR"
+  | "ALL"
+  | "CUSTOM";
+
+export const DATE_PRESET_LABELS: Record<DatePresetKey, string> = {
+  TODAY: "Hari Ini",
+  THIS_WEEK: "Minggu Ini",
+  THIS_MONTH: "Bulan Ini",
+  YTD: "Year to Date",
+  LAST_YEAR: "1 Tahun Terakhir",
+  ALL: "Semua Waktu",
+  CUSTOM: "Custom",
+};
+
+function toIsoDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+/** Hitung {from, to} (ISO date, lokal) untuk sebuah preset. null = tanpa batas. */
+export function resolveDatePreset(
+  preset: DatePresetKey
+): { from: string | null; to: string | null } {
+  const now = new Date();
+  const todayIso = toIsoDate(now);
+
+  switch (preset) {
+    case "TODAY":
+      return { from: todayIso, to: todayIso };
+    case "THIS_WEEK": {
+      const day = now.getDay(); // 0=Minggu
+      const diffToMonday = day === 0 ? 6 : day - 1;
+      const start = new Date(now);
+      start.setDate(now.getDate() - diffToMonday);
+      return { from: toIsoDate(start), to: todayIso };
+    }
+    case "THIS_MONTH": {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: toIsoDate(start), to: todayIso };
+    }
+    case "YTD": {
+      const start = new Date(now.getFullYear(), 0, 1);
+      return { from: toIsoDate(start), to: todayIso };
+    }
+    case "LAST_YEAR": {
+      const start = new Date(now);
+      start.setFullYear(now.getFullYear() - 1);
+      return { from: toIsoDate(start), to: todayIso };
+    }
+    case "ALL":
+    default:
+      return { from: null, to: null };
+  }
+}

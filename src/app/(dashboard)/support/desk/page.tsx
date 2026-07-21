@@ -12,7 +12,13 @@ export default async function SupportDeskPage() {
   const allowed = await canAccessMenu(session.roleId, "support.desk");
   if (!allowed) redirect("/dashboard");
 
-  const tickets = await getAgentTickets();
+  const { tickets, pagination } = await getAgentTickets();
 
-  return <SupportDeskClient initialTickets={tickets} agentId={session.userId} />;
+  return (
+    <SupportDeskClient
+      initialTickets={tickets}
+      initialPagination={pagination}
+      agentId={session.userId}
+    />
+  );
 }

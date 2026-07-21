@@ -595,6 +595,8 @@ model SupportTicket {
   @@index([customerId])
   @@index([assignedToId])
   @@index([status])
+  @@index([lastMessageAt])
+  @@index([createdAt])
 }
 
 model SupportMessage {

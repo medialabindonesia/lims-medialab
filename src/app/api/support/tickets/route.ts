@@ -57,7 +57,7 @@ export async function GET(request: Request) {
     });
   }
 
-  // ---- Agent: antrian dengan filter ----
+  // ---- Agent: antrian dengan filter + pagination ----
   const permission = await requireApiPermission("support.desk", "canView");
   if (!permission.allowed) return permission.response;
 
@@ -66,6 +66,14 @@ export async function GET(request: Request) {
   const priority = url.searchParams.get("priority");
   const assigned = url.searchParams.get("assigned"); // me | unassigned | all
   const q = url.searchParams.get("q")?.trim();
+  const dateFrom = url.searchParams.get("dateFrom");
+  const dateTo = url.searchParams.get("dateTo");
+
+  const page = Math.max(1, Number(url.searchParams.get("page")) || 1);
+  const pageSize = Math.min(
+    100,
+    Math.max(1, Number(url.searchParams.get("pageSize")) || 15)
+  );
 
   const where: Prisma.SupportTicketWhereInput = {};
 
@@ -87,12 +95,25 @@ export async function GET(request: Request) {
       { customer: { name: { contains: q } } },
     ];
   }
+  if (dateFrom || dateTo) {
+    where.createdAt = {
+      ...(dateFrom ? { gte: new Date(`${dateFrom}T00:00:00.000Z`) } : {}),
+      ...(dateTo ? { lte: new Date(`${dateTo}T23:59:59.999Z`) } : {}),
+    };
+  }
 
-  const tickets = await prisma.supportTicket.findMany({
-    where,
-    include: ticketInclude,
-    orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
-  });
+  // Jalankan paralel: memangkas satu round-trip penuh dibanding query berurutan
+  // (penting karena latensi DB remote bisa 1-2.5s+ per round trip).
+  const [tickets, total] = await Promise.all([
+    prisma.supportTicket.findMany({
+      where,
+      include: ticketInclude,
+      orderBy: [{ lastMessageAt: "desc" }, { createdAt: "desc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.supportTicket.count({ where }),
+  ]);
 
   const unread = await computeUnreadMap(
     tickets.map((t) => t.id),
@@ -103,6 +124,12 @@ export async function GET(request: Request) {
     tickets: tickets.map((t) =>
       serializeTicket(t, { unreadForAgent: unread[t.id] ?? 0 })
     ),
+    pagination: {
+      page,
+      pageSize,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / pageSize)),
+    },
   });
 }
 
