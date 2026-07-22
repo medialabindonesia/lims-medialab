@@ -265,7 +265,9 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
           <table className="w-full min-w-[1100px] border-collapse text-sm">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="border-b border-slate-200 text-left text-slate-600">
-                <th className="w-[280px] px-5 py-4">Menu</th>
+                <th className="sticky left-0 z-20 w-70 bg-white px-5 py-4">
+                  Menu
+                </th>
 
                 {permissions.map((permission) => (
                   <th key={permission.key} className="px-4 py-4 text-center">
@@ -306,9 +308,9 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
                     return (
                       <tr
                         key={menu.id}
-                        className="border-b border-slate-200 hover:bg-slate-50"
+                        className="group border-b border-slate-200 hover:bg-slate-50"
                       >
-                        <td className="px-5 py-4">
+                        <td className="sticky left-0 z-1 bg-white px-5 py-4 group-hover:bg-slate-50">
                           <p className="font-medium text-slate-900">{menu.name}</p>
                           <p className="mt-1 text-xs text-slate-500">
                             {menu.key} · {menu.href}
@@ -320,24 +322,28 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
                             key={`${menu.id}-${permission.key}`}
                             className="px-4 py-4 text-center"
                           >
-                            <input
-                              type="checkbox"
-                              checked={current[permission.key]}
-                              onChange={() =>
-                                togglePermission(menu.id, permission.key)
-                              }
-                              className="h-4 w-4 accent-emerald-500"
-                            />
+                            <label className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg hover:bg-slate-100">
+                              <input
+                                type="checkbox"
+                                checked={current[permission.key]}
+                                onChange={() =>
+                                  togglePermission(menu.id, permission.key)
+                                }
+                                className="h-4 w-4 accent-emerald-500"
+                              />
+                            </label>
                           </td>
                         ))}
 
                         <td className="px-4 py-4 text-center">
-                          <input
-                            type="checkbox"
-                            checked={allChecked}
-                            onChange={() => checkAllMenu(menu.id)}
-                            className="h-4 w-4 accent-emerald-500"
-                          />
+                          <label className="inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg hover:bg-slate-100">
+                            <input
+                              type="checkbox"
+                              checked={allChecked}
+                              onChange={() => checkAllMenu(menu.id)}
+                              className="h-4 w-4 accent-emerald-500"
+                            />
+                          </label>
                         </td>
                       </tr>
                     );

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { AnalysisParameter } from "@prisma/client";
-import { Plus, RefreshCcw, Save, Search, X } from "lucide-react";
+import { Ban, Pencil, Plus, RefreshCcw, Save, Search, X } from "lucide-react";
 
 type Props = {
   initialParameters: AnalysisParameter[];
@@ -230,19 +230,25 @@ export default function MasterParameterClient({ initialParameters }: Props) {
                       {parameter.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-5 py-4 text-right">
-                    <button
-                      onClick={() => handleEdit(parameter)}
-                      className="mr-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeactivate(parameter)}
-                      className="rounded-xl border border-red-200 px-3 py-2 text-xs text-red-600 transition hover:bg-red-400/10"
-                    >
-                      Nonaktifkan
-                    </button>
+                  <td className="px-5 py-4">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(parameter)}
+                        title="Edit"
+                        aria-label="Edit"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeactivate(parameter)}
+                        title="Nonaktifkan"
+                        aria-label="Nonaktifkan"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-red-200 text-red-600 transition hover:bg-red-400/10"
+                      >
+                        <Ban size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -281,7 +287,7 @@ export default function MasterParameterClient({ initialParameters }: Props) {
               <button
                 type="button"
                 onClick={() => setOpenForm(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-xl p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
               >
                 <X size={20} />
               </button>

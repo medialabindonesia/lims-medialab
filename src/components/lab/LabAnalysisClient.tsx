@@ -452,7 +452,9 @@ export default function LabAnalysisClient({
         )}
       </div>
 
-      <div className="grid gap-5">
+      {/* flex-col (bukan grid): grid item tanpa min-width:0 tumbuh mengikuti
+          tabel min-w-[1000px] di dalamnya, memaksa halaman melebar di HP. */}
+      <div className="flex flex-col gap-5">
         {visibleGroups.map((group) => (
           <div
             key={group.sample.id}

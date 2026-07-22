@@ -1002,7 +1002,7 @@ export default function QuotationFlowClient({
           <button
             type="button"
             onClick={() => setOpenForm(false)}
-            className="rounded-2xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            className="rounded-2xl p-2.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
           >
             <X size={22} />
           </button>

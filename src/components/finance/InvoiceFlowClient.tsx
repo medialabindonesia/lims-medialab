@@ -573,7 +573,9 @@ export default function InvoiceFlowClient({
         </motion.div>
       )}
 
-      <motion.div variants={fadeUpItem} className="grid gap-4">
+      {/* flex-col (bukan grid): grid item tanpa min-width:0 tumbuh mengikuti
+          tabel min-w-[900px] di dalamnya, memaksa halaman melebar di HP. */}
+      <motion.div variants={fadeUpItem} className="flex flex-col gap-4">
         {visibleInvoices.map((invoice) => {
           const quotation = invoice.quotation;
           const customer = quotation.customer;

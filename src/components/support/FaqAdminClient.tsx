@@ -82,7 +82,7 @@ function Modal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl bg-slate-100 p-1.5 text-slate-500 hover:bg-slate-200"
+            className="rounded-xl bg-slate-100 p-2.5 text-slate-500 hover:bg-slate-200"
           >
             <X size={18} />
           </button>
@@ -375,7 +375,7 @@ export default function FaqAdminClient({
                   type="button"
                   title={cat.isActive ? "Nonaktifkan" : "Aktifkan"}
                   onClick={() => toggleCategoryActive(cat)}
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                  className="rounded-lg p-2.5 text-slate-400 hover:bg-slate-100"
                 >
                   {cat.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
                 </button>
@@ -394,14 +394,14 @@ export default function FaqAdminClient({
                       },
                     })
                   }
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                  className="rounded-lg p-2.5 text-slate-400 hover:bg-slate-100"
                 >
                   <Pencil size={16} />
                 </button>
                 <button
                   type="button"
                   onClick={() => deleteCategory(cat.id)}
-                  className="rounded-lg p-2 text-red-400 hover:bg-red-50"
+                  className="rounded-lg p-2.5 text-red-400 hover:bg-red-50"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -444,14 +444,14 @@ export default function FaqAdminClient({
                                 },
                               })
                             }
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+                            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             type="button"
                             onClick={() => deleteItem(item.id)}
-                            className="rounded-lg p-1.5 text-red-400 hover:bg-red-50"
+                            className="rounded-lg p-2 text-red-400 hover:bg-red-50"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -531,14 +531,14 @@ export default function FaqAdminClient({
                       },
                     })
                   }
-                  className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"
+                  className="rounded-lg p-2.5 text-slate-400 hover:bg-slate-100"
                 >
                   <Pencil size={16} />
                 </button>
                 <button
                   type="button"
                   onClick={() => deleteCanned(reply.id)}
-                  className="rounded-lg p-2 text-red-400 hover:bg-red-50"
+                  className="rounded-lg p-2.5 text-red-400 hover:bg-red-50"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -589,7 +589,7 @@ export default function FaqAdminClient({
                 }
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Ikon (lucide)</label>
                 <input
@@ -685,7 +685,7 @@ export default function FaqAdminClient({
                 }
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Urutan</label>
                 <input
@@ -700,7 +700,7 @@ export default function FaqAdminClient({
                   }
                 />
               </div>
-              <label className="mt-7 flex items-center gap-2 text-sm font-medium text-slate-600">
+              <label className="flex items-center gap-2 text-sm font-medium text-slate-600 sm:mt-7">
                 <input
                   type="checkbox"
                   checked={itemModal.form.isActive}

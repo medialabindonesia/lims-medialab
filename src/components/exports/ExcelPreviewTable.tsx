@@ -49,7 +49,19 @@ export default function ExcelPreviewTable({
       <div className="flex-1 overflow-auto bg-white p-3">
         <table
           className="border-collapse text-sm"
-          style={{ tableLayout: "fixed" }}
+          style={{
+            tableLayout: "fixed",
+            // Lebar total EKSPLISIT — tanpa ini, table-layout:fixed tetap
+            // mengecilkan semua kolom secara proporsional supaya muat di
+            // container sempit (mis. modal di layar HP), mengalahkan lebar
+            // minimum per kolom dan memaksa teks label pecah per-karakter.
+            // Dengan lebar pasti, kelebihan lebar ditangani oleh scroll
+            // horizontal di container (div overflow-auto), bukan penyusutan.
+            width: sheet.colWidthsPx.reduce(
+              (sum, w) => sum + Math.max(w, 40),
+              0
+            ),
+          }}
         >
           <colgroup>
             {sheet.colWidthsPx.map((w, i) => (

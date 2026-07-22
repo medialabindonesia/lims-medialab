@@ -400,7 +400,7 @@ export default function MasterCoaTemplateClient({
               <button
                 type="button"
                 onClick={() => setOpenForm(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-xl p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
               >
                 <X size={20} />
               </button>

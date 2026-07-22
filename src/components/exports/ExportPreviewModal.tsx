@@ -20,9 +20,18 @@ function withPreviewMode(url: string) {
 }
 
 /**
- * Modal preview WYSIWYG. PDF: iframe menampilkan file identik yang
- * didownload (viewer native browser) — tanpa kemungkinan beda isi sama
- * sekali, karena satu file yang sama, cuma disposition header-nya beda.
+ * Modal preview WYSIWYG.
+ *
+ * PDF: di-fetch via JS lalu dijadikan Blob URL lokal (bukan langsung
+ * <iframe src="url-jaringan-asli">). Ini PENTING — kalau iframe menunjuk
+ * langsung ke URL jaringan yang "terlihat" seperti file downloadable,
+ * extension download-manager pihak ketiga (IDM dan sejenisnya, sangat
+ * umum dipakai) akan meng-intercept-nya dan memaksa munculkan dialog
+ * download — TERLEPAS dari header Content-Disposition: inline yang kita
+ * kirim. Blob URL (blob:...) bersifat lokal di browser, tidak ada request
+ * jaringan yang bisa di-hook oleh extension semacam itu. Byte-nya tetap
+ * identik dengan yang didownload (fetch dari endpoint yang sama).
+ *
  * Excel: dibaca ulang dari buffer .xlsx yang sama persis (lihat
  * src/lib/exports/excel-preview.ts), isi dijamin identik.
  */
@@ -37,6 +46,9 @@ export default function ExportPreviewModal({
   const [excelModel, setExcelModel] = useState<ExcelPreviewModel | null>(null);
   const [loadingExcel, setLoadingExcel] = useState(false);
   const [excelError, setExcelError] = useState<string | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [loadingPdf, setLoadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
 
   const downloadUrl = pdfUrl || excelUrl || "";
   const isPdf = Boolean(pdfUrl);
@@ -50,6 +62,43 @@ export default function ExportPreviewModal({
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open || !pdfUrl) {
+      setPdfBlobUrl(null);
+      setPdfError(null);
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setLoadingPdf(true);
+    setPdfError(null);
+
+    fetch(withPreviewMode(pdfUrl), { cache: "no-store" })
+      .then((res) => {
+        if (!res.ok) throw new Error("Gagal memuat preview PDF");
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPdfBlobUrl(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setPdfError("Gagal memuat preview. Coba unduh langsung.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingPdf(false);
+      });
+
+    // Bebaskan memori blob saat modal ditutup/tiket berganti — penting
+    // untuk PDF berukuran besar supaya tidak menumpuk di memori browser.
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [open, pdfUrl]);
 
   useEffect(() => {
     if (!open || !excelUrl) {
@@ -127,7 +176,7 @@ export default function ExportPreviewModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-xl bg-slate-100 p-2 text-slate-500 hover:bg-slate-200"
+                  className="rounded-xl bg-slate-100 p-2.5 text-slate-500 hover:bg-slate-200"
                 >
                   <X size={16} />
                 </button>
@@ -136,12 +185,27 @@ export default function ExportPreviewModal({
 
             {/* Body */}
             <div className="flex-1 overflow-hidden bg-slate-50">
-              {isPdf && pdfUrl && (
-                <iframe
-                  src={withPreviewMode(pdfUrl)}
-                  title={title || "Preview PDF"}
-                  className="h-full w-full border-0"
-                />
+              {isPdf && (
+                <>
+                  {loadingPdf && (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
+                      <Loader2 size={24} className="animate-spin" />
+                      <p className="text-sm">Memuat preview…</p>
+                    </div>
+                  )}
+                  {!loadingPdf && pdfError && (
+                    <div className="flex h-full flex-col items-center justify-center gap-2 text-slate-400">
+                      <p className="text-sm">{pdfError}</p>
+                    </div>
+                  )}
+                  {!loadingPdf && pdfBlobUrl && (
+                    <iframe
+                      src={pdfBlobUrl}
+                      title={title || "Preview PDF"}
+                      className="h-full w-full border-0"
+                    />
+                  )}
+                </>
               )}
 
               {!isPdf && excelUrl && (

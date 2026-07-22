@@ -2,7 +2,16 @@
 
 import { useMemo, useState } from "react";
 import type { Customer, Role, User } from "@prisma/client";
-import { KeyRound, Plus, RefreshCcw, Save, Search, X } from "lucide-react";
+import {
+  Ban,
+  KeyRound,
+  Pencil,
+  Plus,
+  RefreshCcw,
+  Save,
+  Search,
+  X,
+} from "lucide-react";
 
 type UserWithRelations = User & {
   role: Role;
@@ -253,28 +262,35 @@ export default function AdminUsersClient({
                     </span>
                   </td>
 
-                  <td className="px-5 py-4 text-right">
-                    <button
-                      onClick={() => handleResetPassword(user)}
-                      className="mr-2 inline-flex items-center gap-1 rounded-xl border border-emerald-200 px-3 py-2 text-xs text-emerald-600 transition hover:bg-emerald-50"
-                    >
-                      <KeyRound size={13} />
-                      Reset Password
-                    </button>
+                  <td className="px-5 py-4">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        onClick={() => handleResetPassword(user)}
+                        title="Reset Password"
+                        aria-label="Reset Password"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-200 text-emerald-600 transition hover:bg-emerald-50"
+                      >
+                        <KeyRound size={16} />
+                      </button>
 
-                    <button
-                      onClick={() => handleEdit(user)}
-                      className="mr-2 rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
-                    >
-                      Edit
-                    </button>
+                      <button
+                        onClick={() => handleEdit(user)}
+                        title="Edit"
+                        aria-label="Edit"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
+                      >
+                        <Pencil size={16} />
+                      </button>
 
-                    <button
-                      onClick={() => handleDeactivate(user)}
-                      className="rounded-xl border border-red-200 px-3 py-2 text-xs text-red-600 transition hover:bg-red-400/10"
-                    >
-                      Nonaktifkan
-                    </button>
+                      <button
+                        onClick={() => handleDeactivate(user)}
+                        title="Nonaktifkan"
+                        aria-label="Nonaktifkan"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-red-200 text-red-600 transition hover:bg-red-400/10"
+                      >
+                        <Ban size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -315,7 +331,7 @@ export default function AdminUsersClient({
               <button
                 type="button"
                 onClick={() => setOpenForm(false)}
-                className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-xl p-2.5 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
               >
                 <X size={20} />
               </button>

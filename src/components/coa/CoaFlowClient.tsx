@@ -340,7 +340,11 @@ export default function CoaFlowClient({
         )}
       </div>
 
-      <div className="grid gap-5">
+      {/* flex-col (bukan grid) sengaja dipilih: grid item tanpa min-width:0
+          tumbuh mengikuti konten (tabel min-w-[900px] di dalamnya), memaksa
+          SELURUH HALAMAN melebar horizontal di layar sempit. flex-col tidak
+          kena mekanisme "automatic minimum size" itu. */}
+      <div className="flex flex-col gap-5">
         {visibleSamples.map((sample) => {
           const preliminary = sample.coa.find(
             (item) => item.type === "PRELIMINARY"
@@ -497,7 +501,7 @@ export default function CoaFlowClient({
                 type="button"
                 onClick={() => setRejectTarget(null)}
                 disabled={rejecting}
-                className="rounded-xl bg-slate-100 p-1.5 text-slate-500 hover:bg-slate-200"
+                className="rounded-xl bg-slate-100 p-2.5 text-slate-500 hover:bg-slate-200"
               >
                 <X size={18} />
               </button>

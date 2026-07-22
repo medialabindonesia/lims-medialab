@@ -102,7 +102,7 @@ export default function TicketSearchBox() {
   }
 
   return (
-    <div ref={rootRef} className="relative">
+    <div ref={rootRef} className="relative w-full sm:w-72">
       <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
         {loadingIndex ? (
           <Loader2 size={16} className="animate-spin text-slate-400" />
@@ -121,7 +121,7 @@ export default function TicketSearchBox() {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Cari subjek / no tiket / customer"
-          className="w-56 bg-transparent text-sm outline-none"
+          className="w-full bg-transparent text-sm outline-none"
         />
       </div>
 
@@ -132,7 +132,7 @@ export default function TicketSearchBox() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? undefined : { opacity: 0, y: -6, scale: 0.98 }}
             transition={{ duration: 0.15, ease: EASE_OUT }}
-            className="absolute left-0 top-full z-30 mt-1.5 w-full min-w-[22rem] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl"
+            className="absolute left-0 top-full z-30 mt-1.5 w-[calc(100vw-2rem)] max-w-sm overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl sm:w-88"
           >
             {results.length === 0 ? (
               <p className="px-4 py-4 text-center text-sm text-slate-400">
