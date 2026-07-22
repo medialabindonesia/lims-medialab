@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Download, FileSpreadsheet, FileText, Loader2, X } from "lucide-react";
@@ -49,6 +50,7 @@ export default function ExportPreviewModal({
   title,
 }: Props) {
   const reduce = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
   const [excelModel, setExcelModel] = useState<ExcelPreviewModel | null>(null);
   const [loadingExcel, setLoadingExcel] = useState(false);
   const [excelError, setExcelError] = useState<string | null>(null);
@@ -58,6 +60,24 @@ export default function ExportPreviewModal({
 
   const downloadUrl = pdfUrl || excelUrl || "";
   const isPdf = Boolean(pdfUrl);
+
+  // Portal ke document.body butuh client-only render — di server, document
+  // tidak ada.
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Kunci scroll halaman di belakang modal selagi preview terbuka, supaya
+  // wheel/scroll dengan kursor di luar kotak modal tidak ikut menggerakkan
+  // konten di belakangnya.
+  useEffect(() => {
+    if (!open) return;
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -131,7 +151,12 @@ export default function ExportPreviewModal({
     };
   }, [open, excelUrl]);
 
-  return (
+  // Tidak render sama sekali sebelum mount di client (hindari akses
+  // document.body saat SSR) — aman karena `open` selalu false di render
+  // pertama, jadi tidak ada apapun yang seharusnya terlihat di sini.
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -141,7 +166,7 @@ export default function ExportPreviewModal({
           exit={reduce ? undefined : { opacity: 0 }}
           transition={{ duration: 0.2 }}
           onClick={onClose}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-9999 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm"
         >
           <motion.div
             initial={reduce ? undefined : { opacity: 0, y: 16, scale: 0.97 }}
@@ -226,6 +251,7 @@ export default function ExportPreviewModal({
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
