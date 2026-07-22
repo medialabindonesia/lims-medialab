@@ -25,7 +25,11 @@ export default async function FinalCoaPage() {
         </p>
       </div>
 
-      <CoaFlowClient mode="final" initialSamples={data.samples} />
+      <CoaFlowClient
+        mode="final"
+        initialSamples={data.samples}
+        viewerRole={session.roleCode}
+      />
     </section>
   );
 }

@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Award, CheckCircle2, FileBadge, RefreshCcw } from "lucide-react";
+import {
+  Award,
+  CheckCircle2,
+  FileBadge,
+  RefreshCcw,
+  ThumbsDown,
+  X,
+} from "lucide-react";
 import ExportButtons from "@/components/exports/ExportButtons";
 
 type CoaMode = "preliminary" | "final";
@@ -59,6 +66,7 @@ type Sample = {
 type Props = {
   mode: CoaMode;
   initialSamples: Sample[];
+  viewerRole?: string;
 };
 
 function getStatusStyle(status: string) {
@@ -84,10 +92,19 @@ async function safeReadJson(response: Response) {
   }
 }
 
-export default function CoaFlowClient({ mode, initialSamples }: Props) {
+export default function CoaFlowClient({
+  mode,
+  initialSamples,
+  viewerRole,
+}: Props) {
   const [samples, setSamples] = useState<Sample[]>(initialSamples);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [rejectTarget, setRejectTarget] = useState<Sample | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejecting, setRejecting] = useState(false);
+
+  const isCustomer = viewerRole === "CUSTOMER_ENGAGEMENT";
 
   const visibleSamples = useMemo(() => {
     if (mode === "preliminary") {
@@ -134,6 +151,33 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
     await refreshData();
   }
 
+  async function submitReject() {
+    if (!rejectTarget || !rejectReason.trim()) return;
+
+    setRejecting(true);
+    setMessage("");
+
+    const response = await fetch(`/api/coa/${rejectTarget.id}/reject`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason: rejectReason.trim() }),
+    });
+
+    const data = await safeReadJson(response);
+
+    setRejecting(false);
+
+    if (!response.ok) {
+      setMessage(data.message || "Gagal mengirim permintaan revisi");
+      return;
+    }
+
+    setMessage(data.message || "Permintaan revisi terkirim");
+    setRejectTarget(null);
+    setRejectReason("");
+    await refreshData();
+  }
+
   function renderAction(sample: Sample) {
     const preliminary = sample.coa.find((item) => item.type === "PRELIMINARY");
     const finalCoa = sample.coa.find((item) => item.type === "FINAL");
@@ -156,16 +200,32 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
 
       if (preliminary?.status === "SENT_TO_CUSTOMER") {
         return (
-          <button
-            disabled={loading}
-            onClick={() =>
-              runAction(`/api/coa/${sample.id}/customer-confirm`, "PATCH")
-            }
-            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <CheckCircle2 size={16} />
-            Confirm Preliminary
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {isCustomer && (
+              <button
+                disabled={loading}
+                onClick={() => {
+                  setRejectTarget(sample);
+                  setRejectReason("");
+                }}
+                className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <ThumbsDown size={16} />
+                Minta Revisi
+              </button>
+            )}
+
+            <button
+              disabled={loading}
+              onClick={() =>
+                runAction(`/api/coa/${sample.id}/customer-confirm`, "PATCH")
+              }
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <CheckCircle2 size={16} />
+              Confirm Preliminary
+            </button>
+          </div>
         );
       }
 
@@ -420,6 +480,64 @@ export default function CoaFlowClient({ mode, initialSamples }: Props) {
           </div>
         )}
       </div>
+
+      {rejectTarget && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-red-600">
+                  Minta Revisi
+                </p>
+                <h3 className="mt-1 text-xl font-black text-slate-900">
+                  {rejectTarget.sampleNo}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectTarget(null)}
+                disabled={rejecting}
+                className="rounded-xl bg-slate-100 p-1.5 text-slate-500 hover:bg-slate-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="mb-3 text-sm text-slate-500">
+              Jelaskan hasil apa yang menurut Anda perlu ditinjau ulang. Tim
+              lab akan menguji ulang parameter terkait sebelum Preliminary
+              COA diterbitkan kembali.
+            </p>
+
+            <textarea
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              rows={4}
+              placeholder="Contoh: Hasil parameter X terasa tidak sesuai dengan kondisi lapangan, mohon dicek ulang."
+              className="w-full resize-none rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-red-400"
+            />
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setRejectTarget(null)}
+                disabled={rejecting}
+                className="rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={submitReject}
+                disabled={rejecting || !rejectReason.trim()}
+                className="rounded-2xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {rejecting ? "Mengirim…" : "Kirim Permintaan Revisi"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

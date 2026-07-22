@@ -25,7 +25,11 @@ export default async function PreliminaryCoaPage() {
         </p>
       </div>
 
-      <CoaFlowClient mode="preliminary" initialSamples={data.samples} />
+      <CoaFlowClient
+        mode="preliminary"
+        initialSamples={data.samples}
+        viewerRole={session.roleCode}
+      />
     </section>
   );
 }
