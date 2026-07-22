@@ -4,16 +4,13 @@ export function downloadResponse(input: {
   buffer: Buffer;
   contentType: string;
   filename: string;
-  /** "inline" dipakai untuk preview (iframe render native browser); default "attachment" (download). */
-  disposition?: "inline" | "attachment";
 }) {
   const body = new Uint8Array(input.buffer);
-  const disposition = input.disposition ?? "attachment";
 
   return new NextResponse(body, {
     headers: {
       "Content-Type": input.contentType,
-      "Content-Disposition": `${disposition}; filename="${input.filename}"`,
+      "Content-Disposition": `attachment; filename="${input.filename}"`,
       "Cache-Control": "no-store",
     },
   });
@@ -22,4 +19,16 @@ export function downloadResponse(input: {
 /** Baca query param ?mode=preview dari URL request. */
 export function isPreviewMode(request: Request) {
   return new URL(request.url).searchParams.get("mode") === "preview";
+}
+
+/**
+ * Payload preview PDF: base64 dibungkus JSON (bukan `application/pdf` mentah).
+ * Ini sengaja — response dengan Content-Type application/pdf bisa di-intercept
+ * oleh extension download-manager pihak ketiga (IDM dkk) yang memonitor SEMUA
+ * response jaringan (bukan cuma navigasi/klik unduh), bahkan saat diambil via
+ * fetch() biasa. Membungkusnya sebagai JSON membuat response tidak lagi
+ * "terlihat" seperti file yang bisa diunduh di lapisan jaringan.
+ */
+export function pdfPreviewPayload(buffer: Buffer) {
+  return { pdfBase64: buffer.toString("base64") };
 }

@@ -14,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body>
+      <body suppressHydrationWarning>
         <MotionProvider>{children}</MotionProvider>
       </body>
     </html>

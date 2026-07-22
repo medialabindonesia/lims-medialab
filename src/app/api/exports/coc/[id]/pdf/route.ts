@@ -1,7 +1,12 @@
+import { NextResponse } from "next/server";
 import { getAuthorizedCocForExport } from "@/lib/exports/technical-data";
 import { renderCocPdfBuffer } from "@/lib/exports/pdf/render-technical-pdf";
 import { safeFileName } from "@/lib/exports/format";
-import { downloadResponse, isPreviewMode } from "@/lib/exports/download-response";
+import {
+  downloadResponse,
+  isPreviewMode,
+  pdfPreviewPayload,
+} from "@/lib/exports/download-response";
 
 export const runtime = "nodejs";
 
@@ -20,12 +25,15 @@ export async function GET(request: Request, context: RouteContext) {
 
   const buffer = await renderCocPdfBuffer(coc);
 
+  if (isPreviewMode(request)) {
+    return NextResponse.json(pdfPreviewPayload(buffer));
+  }
+
   const filename = `${safeFileName(coc!.cocNo)}-coc.pdf`;
 
   return downloadResponse({
     buffer,
     filename,
     contentType: "application/pdf",
-    disposition: isPreviewMode(request) ? "inline" : "attachment",
   });
 }

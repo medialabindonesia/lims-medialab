@@ -1,7 +1,12 @@
+import { NextResponse } from "next/server";
 import { getAuthorizedCoaForExport } from "@/lib/exports/lab-data";
 import { renderCoaPdfBuffer } from "@/lib/exports/pdf/render-lab-pdf";
 import { safeFileName } from "@/lib/exports/format";
-import { downloadResponse, isPreviewMode } from "@/lib/exports/download-response";
+import {
+  downloadResponse,
+  isPreviewMode,
+  pdfPreviewPayload,
+} from "@/lib/exports/download-response";
 
 export const runtime = "nodejs";
 
@@ -20,12 +25,15 @@ export async function GET(request: Request, context: RouteContext) {
 
   const buffer = await renderCoaPdfBuffer(coa);
 
+  if (isPreviewMode(request)) {
+    return NextResponse.json(pdfPreviewPayload(buffer));
+  }
+
   const filename = `${safeFileName(coa!.coaNo)}-${coa!.type.toLowerCase()}-coa.pdf`;
 
   return downloadResponse({
     buffer,
     filename,
     contentType: "application/pdf",
-    disposition: isPreviewMode(request) ? "inline" : "attachment",
   });
 }

@@ -1,11 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Download, FileSpreadsheet, FileText, Loader2, X } from "lucide-react";
 import { EASE_OUT } from "@/lib/motion";
 import type { ExcelPreviewModel } from "@/lib/exports/excel-preview";
 import ExcelPreviewTable from "./ExcelPreviewTable";
+
+// pdf.js menyentuh API browser (DOMMatrix dkk) saat modul di-load — harus
+// dimuat murni di client, tidak boleh ikut lewat SSR/prerender.
+const PdfCanvasViewer = dynamic(() => import("./PdfCanvasViewer"), {
+  ssr: false,
+});
 
 type Props = {
   open: boolean;
@@ -22,15 +29,14 @@ function withPreviewMode(url: string) {
 /**
  * Modal preview WYSIWYG.
  *
- * PDF: di-fetch via JS lalu dijadikan Blob URL lokal (bukan langsung
- * <iframe src="url-jaringan-asli">). Ini PENTING — kalau iframe menunjuk
- * langsung ke URL jaringan yang "terlihat" seperti file downloadable,
- * extension download-manager pihak ketiga (IDM dan sejenisnya, sangat
- * umum dipakai) akan meng-intercept-nya dan memaksa munculkan dialog
- * download — TERLEPAS dari header Content-Disposition: inline yang kita
- * kirim. Blob URL (blob:...) bersifat lokal di browser, tidak ada request
- * jaringan yang bisa di-hook oleh extension semacam itu. Byte-nya tetap
- * identik dengan yang didownload (fetch dari endpoint yang sama).
+ * PDF: di-fetch sebagai JSON berisi base64 (bukan `application/pdf` mentah),
+ * lalu dirender native ke canvas via pdf.js (lihat PdfCanvasViewer.tsx).
+ * Kombinasi ini PENTING — response dengan Content-Type application/pdf bisa
+ * di-intercept extension download-manager pihak ketiga (IDM dan sejenisnya)
+ * yang memonitor SEMUA response jaringan, bukan cuma navigasi/klik unduh.
+ * Dengan membungkusnya sebagai JSON, response tidak lagi "terlihat" seperti
+ * file yang bisa diunduh di lapisan jaringan sama sekali. Byte PDF-nya tetap
+ * identik dengan yang didownload (base64 dari buffer yang sama persis).
  *
  * Excel: dibaca ulang dari buffer .xlsx yang sama persis (lihat
  * src/lib/exports/excel-preview.ts), isi dijamin identik.
@@ -46,7 +52,7 @@ export default function ExportPreviewModal({
   const [excelModel, setExcelModel] = useState<ExcelPreviewModel | null>(null);
   const [loadingExcel, setLoadingExcel] = useState(false);
   const [excelError, setExcelError] = useState<string | null>(null);
-  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
@@ -65,25 +71,22 @@ export default function ExportPreviewModal({
 
   useEffect(() => {
     if (!open || !pdfUrl) {
-      setPdfBlobUrl(null);
+      setPdfBase64(null);
       setPdfError(null);
       return;
     }
 
     let cancelled = false;
-    let objectUrl: string | null = null;
     setLoadingPdf(true);
     setPdfError(null);
 
     fetch(withPreviewMode(pdfUrl), { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error("Gagal memuat preview PDF");
-        return res.blob();
+        return res.json();
       })
-      .then((blob) => {
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-        setPdfBlobUrl(objectUrl);
+      .then((data: { pdfBase64: string }) => {
+        if (!cancelled) setPdfBase64(data.pdfBase64);
       })
       .catch(() => {
         if (!cancelled) setPdfError("Gagal memuat preview. Coba unduh langsung.");
@@ -92,11 +95,8 @@ export default function ExportPreviewModal({
         if (!cancelled) setLoadingPdf(false);
       });
 
-    // Bebaskan memori blob saat modal ditutup/tiket berganti — penting
-    // untuk PDF berukuran besar supaya tidak menumpuk di memori browser.
     return () => {
       cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [open, pdfUrl]);
 
@@ -198,12 +198,8 @@ export default function ExportPreviewModal({
                       <p className="text-sm">{pdfError}</p>
                     </div>
                   )}
-                  {!loadingPdf && pdfBlobUrl && (
-                    <iframe
-                      src={pdfBlobUrl}
-                      title={title || "Preview PDF"}
-                      className="h-full w-full border-0"
-                    />
+                  {!loadingPdf && pdfBase64 && (
+                    <PdfCanvasViewer base64={pdfBase64} />
                   )}
                 </>
               )}
