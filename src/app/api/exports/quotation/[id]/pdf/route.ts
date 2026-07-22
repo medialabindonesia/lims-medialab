@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { getAuthorizedQuotationForExport } from "@/lib/exports/quotation-data";
 import { renderQuotationPdfBuffer } from "@/lib/exports/pdf/render-quotation-pdf";
 import { safeFileName } from "@/lib/exports/format";
+import { downloadResponse, isPreviewMode } from "@/lib/exports/download-response";
 
 export const runtime = "nodejs";
 
@@ -11,7 +11,7 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   const { quotation, response } = await getAuthorizedQuotationForExport(id);
@@ -22,11 +22,10 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const filename = `${safeFileName(quotation!.quotationNo)}-quotation.pdf`;
 
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
-    },
+  return downloadResponse({
+    buffer,
+    filename,
+    contentType: "application/pdf",
+    disposition: isPreviewMode(request) ? "inline" : "attachment",
   });
 }

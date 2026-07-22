@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAuthorizedInvoiceForExport } from "@/lib/exports/invoice-data";
 import { buildInvoiceExcel } from "@/lib/exports/excel/invoice-excel";
 import { safeFileName } from "@/lib/exports/format";
+import { downloadResponse, isPreviewMode } from "@/lib/exports/download-response";
+import { bufferToPreviewModel } from "@/lib/exports/excel-preview";
 
 export const runtime = "nodejs";
 
@@ -11,7 +13,7 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   const { invoice, response } = await getAuthorizedInvoiceForExport(id);
@@ -20,14 +22,16 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const buffer = await buildInvoiceExcel(invoice);
 
+  if (isPreviewMode(request)) {
+    return NextResponse.json(await bufferToPreviewModel(buffer));
+  }
+
   const filename = `${safeFileName(invoice!.invoiceNo)}-invoice.xlsx`;
 
-  return new NextResponse(buffer, {
-    headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-      "Cache-Control": "no-store",
-    },
+  return downloadResponse({
+    buffer,
+    filename,
+    contentType:
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
 }

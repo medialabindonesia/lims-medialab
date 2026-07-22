@@ -1,7 +1,7 @@
 import { getAuthorizedSampleForResultExport } from "@/lib/exports/lab-data";
 import { renderLabResultPdfBuffer } from "@/lib/exports/pdf/render-lab-pdf";
 import { safeFileName } from "@/lib/exports/format";
-import { downloadResponse } from "@/lib/exports/download-response";
+import { downloadResponse, isPreviewMode } from "@/lib/exports/download-response";
 
 export const runtime = "nodejs";
 
@@ -11,7 +11,7 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   const { sample, response } = await getAuthorizedSampleForResultExport(id);
@@ -26,5 +26,6 @@ export async function GET(_request: Request, context: RouteContext) {
     buffer,
     filename,
     contentType: "application/pdf",
+    disposition: isPreviewMode(request) ? "inline" : "attachment",
   });
 }

@@ -1,7 +1,9 @@
+import { NextResponse } from "next/server";
 import { getAuthorizedCoaForExport } from "@/lib/exports/lab-data";
 import { buildCoaExcel } from "@/lib/exports/excel/coa-excel";
 import { safeFileName } from "@/lib/exports/format";
-import { downloadResponse } from "@/lib/exports/download-response";
+import { downloadResponse, isPreviewMode } from "@/lib/exports/download-response";
+import { bufferToPreviewModel } from "@/lib/exports/excel-preview";
 
 export const runtime = "nodejs";
 
@@ -11,7 +13,7 @@ type RouteContext = {
   }>;
 };
 
-export async function GET(_request: Request, context: RouteContext) {
+export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
 
   const { coa, response } = await getAuthorizedCoaForExport(id);
@@ -19,6 +21,10 @@ export async function GET(_request: Request, context: RouteContext) {
   if (response) return response;
 
   const buffer = await buildCoaExcel(coa);
+
+  if (isPreviewMode(request)) {
+    return NextResponse.json(await bufferToPreviewModel(buffer));
+  }
 
   const filename = `${safeFileName(coa!.coaNo)}-${coa!.type.toLowerCase()}-coa.xlsx`;
 
