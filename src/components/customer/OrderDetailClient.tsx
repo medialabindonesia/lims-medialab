@@ -266,8 +266,11 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
 
       {/* Two-column body */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        {/* LEFT: timeline + parameters */}
-        <div className="flex flex-col gap-6 lg:col-span-2">
+        {/* LEFT: timeline + parameters.
+            min-w-0 wajib: tanpa ini grid item memakai min-width:auto sehingga
+            melebar mengikuti konten (tabel/teks) dan membocorkan overflow ke
+            body di layar sempit. */}
+        <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
           {/* Timeline */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-5 text-lg font-black text-slate-900">
@@ -401,7 +404,7 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
         </div>
 
         {/* RIGHT: summary + documents + cost */}
-        <div className="flex flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6">
           {/* Ringkasan */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="mb-3 text-lg font-black text-slate-900">Ringkasan</h2>
