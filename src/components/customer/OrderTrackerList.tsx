@@ -3,15 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
-import { Loader2, PackageSearch, RefreshCcw } from "lucide-react";
+import { Loader2, PackageSearch, RefreshCcw, X } from "lucide-react";
 import { staggerContainer } from "@/lib/motion";
 import type { OrderSummary } from "@/lib/order-tracking";
 import OrderTrackerCard from "./OrderTrackerCard";
 
 export default function OrderTrackerList({
   orders,
+  activeFilterLabel = null,
+  onClearFilter,
 }: {
   orders: OrderSummary[];
+  activeFilterLabel?: string | null;
+  onClearFilter?: () => void;
 }) {
   const reduce = useReducedMotion();
   const router = useRouter();
@@ -28,8 +32,20 @@ export default function OrderTrackerList({
 
   return (
     <section>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-xl font-black text-slate-900">Pesanan Saya</h2>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <h2 className="text-xl font-black text-slate-900">Pesanan Saya</h2>
+          {activeFilterLabel && (
+            <button
+              type="button"
+              onClick={onClearFilter}
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 transition hover:bg-emerald-200"
+            >
+              {activeFilterLabel}
+              <X size={13} />
+            </button>
+          )}
+        </div>
         <button
           type="button"
           onClick={handleRefresh}
@@ -45,7 +61,21 @@ export default function OrderTrackerList({
         </button>
       </div>
 
-      {orders.length === 0 ? (
+      {orders.length === 0 && activeFilterLabel ? (
+        <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">
+          <PackageSearch size={32} className="text-slate-300" />
+          <p className="mt-3 font-semibold text-slate-600">
+            Tidak ada pesanan pada filter ini
+          </p>
+          <button
+            type="button"
+            onClick={onClearFilter}
+            className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+          >
+            Tampilkan semua pesanan
+          </button>
+        </div>
+      ) : orders.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-white p-12 text-center">
           <PackageSearch size={32} className="text-slate-300" />
           <p className="mt-3 font-semibold text-slate-600">

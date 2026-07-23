@@ -7,6 +7,7 @@ import {
   Award,
   CheckCheck,
   Check,
+  ChevronRight,
   Clock,
   FileBadge,
   FileCheck,
@@ -94,13 +95,21 @@ export default function OrderTrackerCard({
     <motion.div
       variants={reduce ? undefined : fadeUpItem}
       custom={index}
-      className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-emerald-200"
+      className="group relative rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all hover:border-emerald-200 hover:shadow-md"
     >
+      {/* Overlay link — seluruh kartu clickable menuju detail. Elemen aksi di
+          bawah diberi z-10 supaya tetap bisa diklik di atas overlay ini. */}
+      <Link
+        href={`/customer/orders/${order.id}`}
+        aria-label={`Lihat detail pesanan ${order.quotationNo}`}
+        className="absolute inset-0 z-0 rounded-3xl"
+      />
+
       {/* Header */}
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-black text-slate-900">
+            <h3 className="text-lg font-black text-slate-900 transition-colors group-hover:text-emerald-700">
               {order.quotationNo}
             </h3>
             {isUrgent && (
@@ -115,15 +124,24 @@ export default function OrderTrackerCard({
           </p>
         </div>
 
-        {order.estimatedCoaDate && (
-          <div className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs">
-            <Clock size={14} className="text-slate-400" />
-            <span className="text-slate-500">Estimasi selesai</span>
-            <span className="font-bold text-slate-800">
-              {formatDate(order.estimatedCoaDate)}
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          {order.estimatedCoaDate && (
+            <div className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs">
+              <Clock size={14} className="text-slate-400" />
+              <span className="text-slate-500">Estimasi selesai</span>
+              <span className="font-bold text-slate-800">
+                {formatDate(order.estimatedCoaDate)}
+              </span>
+            </div>
+          )}
+          <span className="hidden shrink-0 items-center gap-1 text-sm font-semibold text-slate-400 transition-colors group-hover:text-emerald-600 sm:inline-flex">
+            Detail
+            <ChevronRight
+              size={16}
+              className="transition-transform group-hover:translate-x-0.5"
+            />
+          </span>
+        </div>
       </div>
 
       {/* Stepper */}
@@ -227,7 +245,7 @@ export default function OrderTrackerCard({
         order.stage === 5 ||
         order.stage === 6 ||
         order.invoiceStatus) && (
-        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
+        <div className="relative z-10 mt-5 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-4">
           {order.stage === 4 && (
             <Link
               href="/coa/preliminary"
