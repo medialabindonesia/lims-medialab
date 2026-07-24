@@ -198,8 +198,8 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
                       completed
                         ? "bg-emerald-500 text-white"
                         : current
-                        ? "bg-emerald-500 text-white ring-4 ring-emerald-100"
-                        : "bg-slate-100 text-slate-400"
+                          ? "bg-emerald-500 text-white ring-4 ring-emerald-100"
+                          : "bg-slate-100 text-slate-400"
                     }`}
                   >
                     {completed ? <Check size={17} /> : <Icon size={16} />}
@@ -209,8 +209,8 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
                       current
                         ? "text-emerald-700"
                         : completed
-                        ? "text-slate-600"
-                        : "text-slate-400"
+                          ? "text-slate-600"
+                          : "text-slate-400"
                     }`}
                   >
                     {STAGE_LABELS[stage]}
@@ -228,7 +228,9 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
           })}
         </div>
 
-        <p className="mt-5 text-sm text-slate-600">{summary.stageDescription}</p>
+        <p className="mt-5 text-sm text-slate-600">
+          {summary.stageDescription}
+        </p>
 
         {/* Contextual CTAs */}
         {(needsConfirm || needsPayment || hasFinalCert) && (
@@ -385,10 +387,10 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
                               p.status === "VALIDATED"
                                 ? "bg-emerald-100 text-emerald-700"
                                 : p.status === "RETEST"
-                                ? "bg-amber-100 text-amber-700"
-                                : p.status === "WAITING"
-                                ? "bg-slate-100 text-slate-500"
-                                : "bg-sky-100 text-sky-700"
+                                  ? "bg-amber-100 text-amber-700"
+                                  : p.status === "WAITING"
+                                    ? "bg-slate-100 text-slate-500"
+                                    : "bg-sky-100 text-sky-700"
                             }`}
                           >
                             {p.statusLabel}
@@ -403,19 +405,30 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
           </div>
         </div>
 
-        {/* RIGHT: summary + documents + cost */}
+        {/* RIGHT: summary + documents + costt */}
         <div className="flex min-w-0 flex-col gap-6">
           {/* Ringkasan */}
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-3 text-lg font-black text-slate-900">Ringkasan</h2>
+            <h2 className="mb-3 text-lg font-black text-slate-900">
+              Ringkasan
+            </h2>
             <div className="divide-y divide-slate-100">
-              <InfoRow label="Customer" value={detail.company || detail.customerName} />
+              <InfoRow
+                label="Customer"
+                value={detail.company || detail.customerName}
+              />
               {detail.sampleNo && (
                 <InfoRow label="No. Sample" value={detail.sampleNo} />
               )}
-              <InfoRow label="Tanggal Pesan" value={formatDate(detail.quotationDate)} />
+              <InfoRow
+                label="Tanggal Pesan"
+                value={formatDate(detail.quotationDate)}
+              />
               {detail.samplingByLabel && (
-                <InfoRow label="Metode Sampling" value={detail.samplingByLabel} />
+                <InfoRow
+                  label="Metode Sampling"
+                  value={detail.samplingByLabel}
+                />
               )}
               {detail.objectiveLabel && (
                 <InfoRow label="Tujuan Uji" value={detail.objectiveLabel} />
@@ -486,13 +499,13 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
 
             <div className="space-y-2.5">
               {detail.cost.items.map((it, idx) => (
-                <div key={idx} className="flex items-start justify-between gap-3 text-sm">
+                <div
+                  key={idx}
+                  className="flex items-start justify-between gap-3 text-sm"
+                >
                   <span className="min-w-0 text-slate-600">
                     {it.description}
-                    <span className="text-slate-400">
-                      {" "}
-                      × {it.qty}
-                    </span>
+                    <span className="text-slate-400"> × {it.qty}</span>
                   </span>
                   <span className="shrink-0 font-semibold text-slate-700">
                     {formatRupiah(it.subtotal)}
@@ -536,8 +549,8 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
                       detail.cost.invoice.status === "PAID"
                         ? "bg-emerald-100 text-emerald-700"
                         : detail.cost.invoice.status === "SENT"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-sky-100 text-sky-700"
+                          ? "bg-amber-100 text-amber-700"
+                          : "bg-sky-100 text-sky-700"
                     }`}
                   >
                     {detail.cost.invoice.statusLabel}
