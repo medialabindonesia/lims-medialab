@@ -1,33 +1,24 @@
 "use client";
 
-import Sidebar from "@/components/layout/Sidebar";
+import Sidebar, {
+  type DashboardMenuItem,
+  type DashboardSession,
+} from "@/components/layout/Sidebar";
 import PageTransition from "@/components/layout/PageTransition";
 
-type MenuItem = {
-  id: string;
-  name: string;
-  key: string;
-  href: string;
-  icon?: string | null;
-};
-
 type AppShellProps = {
-  user: {
-    name: string;
-    email: string;
-    roleName: string;
-  };
-  menus: MenuItem[];
+  session: DashboardSession;
+  menus: DashboardMenuItem[];
   children: React.ReactNode;
 };
 
-export default function AppShell({ user, menus, children }: AppShellProps) {
+export default function AppShell({ session, menus, children }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <Sidebar user={user} menus={menus} />
+    <div className="dashboard-canvas min-h-screen bg-slate-50 text-slate-900">
+      <Sidebar session={session} menus={menus} />
 
-      <main className="min-h-screen pl-72">
-        <div className="mx-auto max-w-7xl px-8 py-8">
+      <main className="min-h-screen px-4 pb-8 pt-1 lg:ml-80 lg:px-8 lg:py-8">
+        <div className="mx-auto max-w-[90rem]">
           <PageTransition>{children}</PageTransition>
         </div>
       </main>

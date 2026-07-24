@@ -24,7 +24,7 @@ export default function StatCardShell({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.42, ease: EASE_OUT, delay: index * 0.07 }}
       whileHover={reduce ? undefined : { y: -6, transition: SPRING_SOFT }}
-      className="group rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 transition-colors hover:border-emerald-200 hover:bg-slate-50"
+      className="group relative overflow-hidden rounded-3xl border border-blue-100 bg-gradient-to-br from-white to-blue-50/35 p-6 shadow-[0_16px_45px_rgba(7,43,107,0.08)] transition-colors after:absolute after:inset-x-0 after:top-0 after:h-0.5 after:bg-gradient-to-r after:from-brand-blue after:via-brand-sky after:to-brand-lime hover:border-blue-200"
     >
       {children}
     </motion.div>

@@ -1,10 +1,11 @@
 "use client";
 
 import type { ElementType } from "react";
-import { useMemo, useState } from "react";
+import Image from "next/image";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Award,
   BadgeCheck,
@@ -103,57 +104,18 @@ const iconMap: Record<string, ElementType> = {
   Wallet,
 };
 
-const groupConfig: Record<
-  string,
-  {
-    label: string;
-    sort: number;
-  }
-> = {
-  dashboard: {
-    label: "Dashboard",
-    sort: 1,
-  },
-  admin: {
-    label: "Administration",
-    sort: 2,
-  },
-  master: {
-    label: "Master Data",
-    sort: 3,
-  },
-  quotation: {
-    label: "Quotation",
-    sort: 4,
-  },
-  sales: {
-    label: "Sales",
-    sort: 5,
-  },
-  technical: {
-    label: "Technical",
-    sort: 6,
-  },
-  lab: {
-    label: "Laboratory",
-    sort: 7,
-  },
-  coa: {
-    label: "Certificate / COA",
-    sort: 8,
-  },
-  finance: {
-    label: "Finance",
-    sort: 9,
-  },
-  support: {
-    label: "Support",
-    sort: 10,
-  },
-  customer: {
-    label: "Customer Area",
-    sort: 11,
-  },
+const groupConfig: Record<string, { label: string; sort: number }> = {
+  dashboard: { label: "Dashboard", sort: 1 },
+  admin: { label: "Administration", sort: 2 },
+  master: { label: "Master Data", sort: 3 },
+  quotation: { label: "Quotation", sort: 4 },
+  sales: { label: "Sales", sort: 5 },
+  technical: { label: "Technical", sort: 6 },
+  lab: { label: "Laboratory", sort: 7 },
+  coa: { label: "Certificate / COA", sort: 8 },
+  finance: { label: "Finance", sort: 9 },
+  support: { label: "Support", sort: 10 },
+  customer: { label: "Customer Area", sort: 11 },
 };
 
 function getMenuGroupKey(menuKey: string) {
@@ -161,12 +123,14 @@ function getMenuGroupKey(menuKey: string) {
 }
 
 function getInitials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((item) => item[0]?.toUpperCase())
-    .join("");
+  return (
+    name
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((item) => item[0]?.toUpperCase())
+      .join("") || "ML"
+  );
 }
 
 function isActivePath(pathname: string, href: string) {
@@ -198,7 +162,6 @@ function SidebarContent({
         label: "Other",
         sort: 99,
       };
-
       const current = map.get(groupKey);
 
       if (current) {
@@ -222,68 +185,76 @@ function SidebarContent({
   }, [menus]);
 
   async function handleLogout() {
-    await fetch("/api/auth/logout", {
-      method: "POST",
-    });
-
+    await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   }
 
   return (
-    <div className="flex h-full flex-col bg-white">
-      <div className="shrink-0 border-b border-slate-200 px-5 py-5">
+    <div className="flex h-full flex-col bg-brand-navy text-white">
+      <div className="shrink-0 border-b border-white/10 px-5 py-5">
         <Link
           href="/dashboard"
           onClick={onClose}
-          className="group flex items-center gap-3"
+          className="group block rounded-2xl"
         >
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-500 text-white shadow-sm">
-            <FlaskConical size={25} />
+          <div className="rounded-2xl border border-white/20 bg-white px-3.5 py-2.5 shadow-[0_16px_40px_rgba(2,17,47,0.25)] transition-transform duration-300 group-hover:-translate-y-0.5">
+            <Image
+              src="/images/logo-medialab.png"
+              alt="Medialab Indonesia"
+              width={220}
+              height={66}
+              priority
+              className="h-auto w-[12rem]"
+            />
           </div>
 
-          <div>
-            <p className="text-lg font-black tracking-tight text-slate-900">
-              LIMS-Medialab
+          <div className="mt-3 flex items-center justify-between px-1">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-sky">
+              LIMS Workspace
             </p>
-            <p className="text-xs font-medium text-slate-500">
-              Laboratory Workflow
-            </p>
+            <span className="flex items-center gap-1.5 text-[10px] font-bold text-white/60">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-lime shadow-[0_0_10px_rgba(111,188,29,0.8)]" />
+              Online
+            </span>
           </div>
         </Link>
       </div>
 
       <div className="shrink-0 px-5 py-4">
-        <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
+        <div className="rounded-[1.5rem] border border-white/12 bg-white/[0.07] p-4 shadow-inner shadow-white/[0.03]">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500 text-sm font-black text-white">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-lime text-sm font-black text-brand-navy shadow-[0_10px_25px_rgba(2,17,47,0.25)]">
               {getInitials(session.name)}
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-black text-slate-900">
+              <p className="truncate text-sm font-extrabold text-white">
                 {session.name}
               </p>
-              <p className="truncate text-xs text-slate-500">
+              <p className="mt-0.5 truncate text-xs font-medium text-brand-sky">
                 {session.roleName}
               </p>
             </div>
           </div>
 
           {session.customerName && (
-            <p className="mt-3 rounded-2xl bg-white px-3 py-2 text-xs font-medium text-slate-500">
+            <p className="mt-3 truncate rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2 text-xs font-medium text-white/70">
               Customer: {session.customerName}
             </p>
           )}
         </div>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-4 pb-4 pr-3">
+      <nav
+        aria-label="Navigasi utama"
+        className="flex-1 overflow-y-auto px-4 pb-4 pr-3"
+      >
         <div className="space-y-5">
           {groups.map((group) => (
             <div key={group.key} className="space-y-2">
-              <div className="sticky top-0 z-10 bg-white/95 px-3 py-2 backdrop-blur">
-                <p className="text-xs font-black uppercase tracking-wider text-slate-400">
+              <div className="sticky top-0 z-10 bg-brand-navy/95 px-3 py-2 backdrop-blur">
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-sky/75">
                   {group.label}
                 </p>
               </div>
@@ -292,7 +263,6 @@ function SidebarContent({
                 {group.items.map((item) => {
                   const Icon =
                     item.icon && iconMap[item.icon] ? iconMap[item.icon] : Home;
-
                   const active = isActivePath(pathname, item.href);
 
                   return (
@@ -300,20 +270,25 @@ function SidebarContent({
                       key={item.id}
                       href={item.href}
                       onClick={onClose}
+                      aria-current={active ? "page" : undefined}
                       className={[
-                        "group flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold transition-all",
+                        "group relative flex min-h-11 items-center gap-3 overflow-hidden rounded-2xl px-3.5 py-3 text-sm font-semibold transition-all",
                         active
-                          ? "bg-emerald-500 text-white shadow-sm shadow-emerald-500/20"
-                          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
+                          ? "bg-gradient-to-r from-brand-blue to-brand-deep text-white shadow-[0_12px_28px_rgba(2,17,47,0.25)]"
+                          : "text-white/70 hover:bg-white/10 hover:text-white",
                       ].join(" ")}
                     >
+                      {active && (
+                        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand-lime shadow-[0_0_12px_rgba(111,188,29,0.65)]" />
+                      )}
+
                       <Icon
                         size={18}
                         className={[
                           "shrink-0",
                           active
-                            ? "text-white"
-                            : "text-slate-400 group-hover:text-slate-700",
+                            ? "text-brand-sky"
+                            : "text-white/45 group-hover:text-brand-sky",
                         ].join(" ")}
                       />
 
@@ -326,8 +301,8 @@ function SidebarContent({
                             className={[
                               "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
                               active
-                                ? "bg-white/25 text-white"
-                                : "bg-red-500 text-white",
+                                ? "bg-brand-lime text-brand-navy"
+                                : "bg-red-500 text-white shadow-sm",
                             ].join(" ")}
                           >
                             {supportBadge.count}
@@ -342,18 +317,18 @@ function SidebarContent({
         </div>
       </nav>
 
-      <div className="shrink-0 border-t border-slate-200 p-4">
+      <div className="shrink-0 border-t border-white/10 bg-[#062660] p-4">
         <button
           type="button"
           onClick={handleLogout}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 transition-colors hover:bg-red-100"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-bold text-red-100 transition-colors hover:border-red-200/30 hover:bg-red-400/20 hover:text-white"
         >
           <LogOut size={17} />
-          Logout
+          Keluar
         </button>
 
-        <p className="mt-3 text-center text-[11px] text-slate-400">
-          © 2026 LIMS-Medialab
+        <p className="mt-3 text-center text-[11px] font-medium text-white/60">
+          &copy; 2026 Medialab Indonesia
         </p>
       </div>
     </div>
@@ -369,10 +344,12 @@ export default function Sidebar({
 }) {
   const reduce = useReducedMotion();
   const [openMobile, setOpenMobile] = useState(false);
+  const openButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const isCustomer = session.roleCode === "CUSTOMER_ENGAGEMENT";
   const supportKey = menus.find(
-    (menu) => menu.key === "support.center" || menu.key === "support.desk"
+    (menu) => menu.key === "support.center" || menu.key === "support.desk",
   )?.key;
 
   const { count: supportUnread } = useSupportUnread({
@@ -385,9 +362,30 @@ export default function Sidebar({
     ? { key: supportKey, count: supportUnread }
     : undefined;
 
+  useEffect(() => {
+    if (!openMobile) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const openButton = openButtonRef.current;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpenMobile(false);
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+      openButton?.focus();
+    };
+  }, [openMobile]);
+
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 border-r border-slate-200 bg-white shadow-sm lg:block">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 overflow-hidden bg-brand-navy shadow-[16px_0_45px_rgba(7,43,107,0.12)] lg:block">
         <SidebarContent
           menus={menus}
           session={session}
@@ -395,22 +393,40 @@ export default function Sidebar({
         />
       </aside>
 
-      <div className="sticky top-0 z-30 mb-4 flex items-center justify-between rounded-[1.5rem] border border-slate-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur lg:hidden">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-500 text-white">
-            <FlaskConical size={22} />
+      <div className="sticky top-0 z-30 mb-4 flex items-center justify-between border-b border-blue-100 bg-white/92 px-4 py-3 shadow-[0_8px_28px_rgba(7,43,107,0.08)] backdrop-blur-xl lg:hidden">
+        <Link
+          href="/dashboard"
+          className="flex min-w-0 items-center gap-3 rounded-xl"
+        >
+          <div className="rounded-xl border border-blue-100 bg-white px-2 py-1.5">
+            <Image
+              src="/images/logo-medialab.png"
+              alt="Medialab Indonesia"
+              width={142}
+              height={43}
+              priority
+              className="h-auto w-[7.6rem] sm:w-[8.8rem]"
+            />
           </div>
 
-          <div>
-            <p className="text-sm font-black text-slate-900">LIMS-Medialab</p>
-            <p className="text-xs text-slate-500">{session.roleName}</p>
+          <div className="hidden min-w-0 sm:block">
+            <p className="truncate text-xs font-extrabold uppercase tracking-[0.12em] text-blue-700">
+              LIMS Workspace
+            </p>
+            <p className="truncate text-[11px] font-medium text-slate-500">
+              {session.roleName}
+            </p>
           </div>
         </Link>
 
         <button
+          ref={openButtonRef}
           type="button"
           onClick={() => setOpenMobile(true)}
-          className="rounded-2xl border border-slate-200 p-2 text-slate-600"
+          aria-label="Buka navigasi"
+          aria-expanded={openMobile}
+          aria-controls="mobile-navigation"
+          className="grid h-11 w-11 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-800 transition hover:bg-blue-100"
         >
           <MenuIcon size={22} />
         </button>
@@ -422,19 +438,28 @@ export default function Sidebar({
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={reduce ? undefined : { opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-slate-900/50 p-4 backdrop-blur-md lg:hidden"
+            onMouseDown={(event) => {
+              if (event.currentTarget === event.target) setOpenMobile(false);
+            }}
+            className="fixed inset-0 z-[9999] bg-brand-navy/65 p-3 backdrop-blur-md sm:p-4 lg:hidden"
           >
             <motion.div
+              id="mobile-navigation"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigasi LIMS"
               initial={reduce ? false : { x: -24, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={reduce ? undefined : { x: -24, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="relative h-full w-full max-w-sm overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl"
+              className="relative h-full w-full max-w-sm overflow-hidden rounded-[2rem] border border-white/15 bg-brand-navy shadow-2xl"
             >
               <button
+                ref={closeButtonRef}
                 type="button"
                 onClick={() => setOpenMobile(false)}
-                className="absolute right-4 top-4 z-10 rounded-2xl bg-slate-100 p-2 text-slate-600"
+                aria-label="Tutup navigasi"
+                className="absolute right-4 top-4 z-20 grid h-10 w-10 place-items-center rounded-2xl border border-white/15 bg-brand-navy/80 text-white transition hover:bg-white/15"
               >
                 <X size={20} />
               </button>

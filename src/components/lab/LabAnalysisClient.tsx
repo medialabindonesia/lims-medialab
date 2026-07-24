@@ -131,7 +131,7 @@ function getStatusStyle(status: string) {
     IN_PROGRESS: "bg-sky-100 text-sky-600",
     ENTERED: "bg-sky-100 text-sky-600",
     REVIEWED: "bg-amber-100 text-amber-600",
-    VERIFIED: "bg-purple-400/15 text-purple-300",
+    VERIFIED: "bg-purple-100 text-purple-700",
     VALIDATED: "bg-emerald-100 text-emerald-600",
     RETEST: "bg-red-100 text-red-600",
   };
