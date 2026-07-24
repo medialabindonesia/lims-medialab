@@ -198,14 +198,22 @@ function SidebarContent({
           onClick={onClose}
           className="group block rounded-2xl"
         >
-          <div className="rounded-2xl border border-white/20 bg-white px-3.5 py-2.5 shadow-[0_16px_40px_rgba(2,17,47,0.25)] transition-transform duration-300 group-hover:-translate-y-0.5">
+          <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-white px-3.5 py-2.5 shadow-[0_16px_40px_rgba(2,17,47,0.25)] transition duration-300 group-hover:-translate-y-0.5 lg:rounded-[1.4rem] lg:border-white/15 lg:bg-[linear-gradient(135deg,#ffffff_0%,#edf7ff_68%,#f3fae8_100%)] lg:px-4 lg:py-3 lg:shadow-[0_18px_48px_rgba(2,17,47,0.32)] lg:ring-1 lg:ring-white/10">
+            <span
+              className="pointer-events-none absolute inset-y-3 left-0 hidden w-1 rounded-r-full bg-gradient-to-b from-brand-sky via-blue-500 to-brand-lime lg:block"
+              aria-hidden="true"
+            />
+            <span
+              className="pointer-events-none absolute -right-8 -top-10 hidden h-24 w-24 rounded-full bg-brand-sky/15 lg:block"
+              aria-hidden="true"
+            />
             <Image
               src="/images/logo-medialab.png"
               alt="Medialab Indonesia"
               width={220}
               height={66}
               priority
-              className="h-auto w-[12rem]"
+              className="relative z-10 h-auto w-[12rem]"
             />
           </div>
 

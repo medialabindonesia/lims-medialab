@@ -45,7 +45,8 @@ const DEMO_ACCOUNTS = [
   },
 ] as const;
 
-const IS_DEMO_MODE = process.env.NODE_ENV !== "production";
+const IS_DEMO_MODE =
+  process.env.NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS !== "false";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -135,15 +136,29 @@ export default function LoginPage() {
               transition={{ duration: 0.55, ease: EASE_OUT }}
               className="flex items-center justify-between gap-6"
             >
-              <div className="rounded-2xl border border-white/25 bg-white px-4 py-2.5 shadow-2xl shadow-slate-950/15">
-                <Image
-                  src="/images/logo-medialab.png"
-                  alt="Medialab Indonesia"
-                  width={210}
-                  height={64}
-                  priority
-                  className="h-auto w-[11.5rem] xl:w-[13rem]"
+              <div className="relative isolate">
+                <div
+                  className="pointer-events-none absolute -inset-2 rounded-[1.75rem] bg-gradient-to-r from-brand-sky/15 via-white/5 to-brand-lime/15 blur-xl"
+                  aria-hidden="true"
                 />
+                <div className="relative overflow-hidden rounded-[1.4rem] border border-white/25 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(232,245,255,0.94)_68%,rgba(242,249,232,0.96))] px-5 py-3 shadow-[0_20px_52px_rgba(1,13,38,0.3)] ring-1 ring-white/10 backdrop-blur-xl">
+                  <span
+                    className="pointer-events-none absolute inset-y-3 left-0 w-1 rounded-r-full bg-gradient-to-b from-brand-sky via-blue-500 to-brand-lime"
+                    aria-hidden="true"
+                  />
+                  <span
+                    className="pointer-events-none absolute -right-7 -top-9 h-20 w-20 rounded-full bg-brand-sky/15"
+                    aria-hidden="true"
+                  />
+                  <Image
+                    src="/images/logo-medialab.png"
+                    alt="Medialab Indonesia"
+                    width={210}
+                    height={64}
+                    priority
+                    className="relative z-10 h-auto w-[11.5rem] xl:w-[13rem]"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75 backdrop-blur">
