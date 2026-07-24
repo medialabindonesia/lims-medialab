@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     if (!user || !user.isActive) {
       return NextResponse.json(
-        { message: "Akun tidak ditemukan atau tidak aktif" },
+        { message: "Email atau kata sandi tidak sesuai" },
         { status: 401 }
       );
     }
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     if (!isValidPassword) {
       return NextResponse.json(
-        { message: "Password salah" },
+        { message: "Email atau kata sandi tidak sesuai" },
         { status: 401 }
       );
     }
@@ -75,11 +75,24 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error(error);
+    console.error("[auth/login] Authentication service error", error);
+
+    const errorMessage =
+      error instanceof Error
+        ? `${error.message} ${String(error.cause || "")}`
+        : String(error);
+    const databaseUnavailable =
+      /pool timeout|connect (?:EACCES|ETIMEDOUT|ECONNREFUSED)|P1001/i.test(
+        errorMessage
+      );
 
     return NextResponse.json(
-      { message: "Terjadi kesalahan server" },
-      { status: 500 }
+      {
+        message: databaseUnavailable
+          ? "Layanan autentikasi sedang tidak tersedia. Silakan coba beberapa saat lagi."
+          : "Login belum dapat diproses. Silakan coba kembali.",
+      },
+      { status: databaseUnavailable ? 503 : 500 }
     );
   }
 }

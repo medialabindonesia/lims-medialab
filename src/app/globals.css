@@ -1,38 +1,494 @@
 @import "tailwindcss";
 
 :root {
-  /* Light theme: light emerald green + light blue */
-  --background: #f8fafc; /* slate-50 */
-  --foreground: #0f172a; /* slate-900 */
+  color-scheme: light;
+
+  /* Medialab brand palette */
+  --brand-navy: #072b6b;
+  --brand-deep-blue: #143b90;
+  --brand-blue: #114da5;
+  --brand-sky: #69cbf7;
+  --brand-lime: #6fbc1d;
+
+  /* Accessible UI neutrals derived from the brand blues */
+  --background: #f5f8fc;
+  --foreground: #0a2148;
+  --surface: #ffffff;
+  --surface-subtle: #edf3fa;
+  --border: #d8e3f0;
+  --muted: #526783;
+  --focus: #114da5;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  /* Helvetica family — fallback bertingkat agar tetap manis di OS tanpa Helvetica. */
-  --font-sans: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-deep: var(--brand-deep-blue);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-sky: var(--brand-sky);
+  --color-brand-lime: var(--brand-lime);
+
+  /*
+   * Existing screens already use Tailwind's slate/blue/sky/emerald scales.
+   * Remapping those semantic scales makes the whole product adopt the
+   * Medialab system without sacrificing status colours or readable contrast.
+   */
+  --color-slate-50: #f5f8fc;
+  --color-slate-100: #edf3fa;
+  --color-slate-200: #d8e3f0;
+  --color-slate-300: #bdccdf;
+  --color-slate-400: #60738d;
+  --color-slate-500: #526783;
+  --color-slate-600: #405570;
+  --color-slate-700: #2c415e;
+  --color-slate-800: #182f50;
+  --color-slate-900: #0a2148;
+  --color-slate-950: #061735;
+
+  --color-blue-50: #edf5ff;
+  --color-blue-100: #dceaff;
+  --color-blue-200: #bed8ff;
+  --color-blue-300: #91bdff;
+  --color-blue-400: #5592e5;
+  --color-blue-500: #114da5;
+  --color-blue-600: #143b90;
+  --color-blue-700: #0d337e;
+  --color-blue-800: #072b6b;
+  --color-blue-900: #061f50;
+  --color-blue-950: #04142f;
+
+  --color-sky-50: #eefaff;
+  --color-sky-100: #d9f3fe;
+  --color-sky-200: #afe7fb;
+  --color-sky-300: #69cbf7;
+  --color-sky-400: #36b5eb;
+  --color-sky-500: #0b6b9c;
+  --color-sky-600: #0b608d;
+  --color-sky-700: #0b5278;
+  --color-sky-800: #0a4564;
+  --color-sky-900: #093851;
+  --color-sky-950: #062536;
+
+  --color-emerald-50: #f5fbef;
+  --color-emerald-100: #e7f5d5;
+  --color-emerald-200: #cdeaa8;
+  --color-emerald-300: #aadb70;
+  --color-emerald-400: #6fbc1d;
+  /* Legacy primary actions use emerald-500/600; route them to brand blue. */
+  --color-emerald-500: #114da5;
+  --color-emerald-600: #143b90;
+  --color-emerald-700: #315a09;
+  --color-emerald-800: #29470d;
+  --color-emerald-900: #243d11;
+  --color-emerald-950: #102207;
+
+  /* Semantic action shades are intentionally dark enough for white labels. */
+  --color-red-500: #c81e36;
+  --color-red-600: #aa182e;
+  --color-amber-500: #875500;
+  --color-amber-600: #714600;
+  --color-orange-500: #b43b0b;
+  --color-orange-600: #96320a;
+  --color-purple-500: #6d28d9;
+  --color-purple-600: #5b21b6;
+  --color-teal-500: #0f766e;
+  --color-teal-600: #0d665f;
+  --color-cyan-500: #0e7490;
+  --color-cyan-600: #0d637b;
+  --color-green-500: #16763b;
+  --color-green-600: #126331;
+
+  --font-sans:
+    "Segoe UI Variable", "Aptos", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
-body {
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
   background: var(--background);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 88% -8%, rgb(105 203 247 / 18%), transparent 30rem),
+    linear-gradient(180deg, #f8fbff 0%, var(--background) 28rem);
   color: var(--foreground);
-  font-family: "Helvetica Neue", Helvetica, Arial, "Segoe UI", sans-serif;
+  font-family:
+    "Segoe UI Variable", "Aptos", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  font-feature-settings:
+    "kern" 1,
+    "liga" 1,
+    "calt" 1;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* ── Skeleton loading yang "breathing" ──
-   Gabungan: napas halus (opacity) + kilau sweep (shimmer).
-   Dipakai lewat class .skeleton (lihat src/components/ui/Skeleton.tsx). */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:not(:disabled),
+a[href],
+summary {
+  cursor: pointer;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:where(a, button, input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgb(105 203 247 / 30%);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #60738d;
+  opacity: 0.85;
+}
+
+:where(input, select, textarea).border-slate-200 {
+  border-color: #8097b2;
+}
+
+::selection {
+  background: rgb(105 203 247 / 52%);
+  color: var(--brand-navy);
+}
+
+* {
+  scrollbar-color: #91b6dd #edf3fa;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #edf3fa;
+}
+
+*::-webkit-scrollbar-thumb {
+  border: 2px solid #edf3fa;
+  border-radius: 999px;
+  background: #91b6dd;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #5f89ba;
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Shared application canvas */
+.dashboard-canvas {
+  position: relative;
+  isolation: isolate;
+}
+
+.dashboard-canvas::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0 0 0 20rem;
+  background-image:
+    linear-gradient(rgb(17 77 165 / 3.5%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(17 77 165 / 3.5%) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(to bottom, black, transparent 70%);
+  content: "";
+  pointer-events: none;
+}
+
+.dashboard-canvas :where(input, select, textarea) {
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.dashboard-canvas :where(input, select, textarea):focus {
+  border-color: var(--brand-blue);
+  box-shadow: 0 0 0 4px rgb(105 203 247 / 22%);
+}
+
+.dashboard-canvas :where(input, select, textarea):disabled {
+  cursor: not-allowed;
+}
+
+.dashboard-canvas table thead {
+  background: #edf5ff;
+}
+
+.dashboard-canvas table thead th {
+  color: #2c415e;
+  font-weight: 750;
+}
+
+.dashboard-canvas table tbody tr {
+  transition:
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.dashboard-canvas table tbody tr:hover {
+  background-color: #f6faff;
+}
+
+.dashboard-canvas :where(div, section, article).rounded-3xl.border.bg-white {
+  box-shadow: 0 12px 34px rgb(7 43 107 / 6%);
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 11000;
+  top: 0.75rem;
+  left: 0.75rem;
+  translate: 0 -160%;
+  border-radius: 0.75rem;
+  background: var(--brand-navy);
+  padding: 0.75rem 1rem;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 700;
+  box-shadow: 0 12px 30px rgb(7 43 107 / 25%);
+  transition: translate 160ms ease;
+}
+
+.skip-link:focus {
+  translate: 0;
+}
+
+/* Login visual system */
+.login-stage {
+  position: relative;
+  isolation: isolate;
+  min-height: 100svh;
+  overflow: hidden;
+  background: #f5f8fc;
+}
+
+.login-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 72% 18%, rgb(105 203 247 / 26%), transparent 23rem),
+    radial-gradient(circle at 12% 82%, rgb(111 188 29 / 18%), transparent 21rem),
+    linear-gradient(145deg, #061f50 0%, #072b6b 44%, #143b90 100%);
+}
+
+.login-hero::before {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(255 255 255 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 7%) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at 50% 46%, black 12%, transparent 72%);
+  content: "";
+  pointer-events: none;
+}
+
+.login-hero::after {
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    from 120deg at 50% 50%,
+    transparent 0 24%,
+    rgb(105 203 247 / 10%) 30%,
+    transparent 38% 64%,
+    rgb(111 188 29 / 8%) 72%,
+    transparent 80%
+  );
+  animation: login-aurora-spin 24s linear infinite;
+  content: "";
+  pointer-events: none;
+}
+
+.login-vignette {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 68%, rgb(4 20 47 / 32%));
+  pointer-events: none;
+}
+
+.login-orbit {
+  position: absolute;
+  border: 1px solid rgb(105 203 247 / 28%);
+  border-radius: 999px;
+  box-shadow:
+    inset 0 0 35px rgb(105 203 247 / 4%),
+    0 0 30px rgb(105 203 247 / 5%);
+}
+
+.login-orbit::after {
+  position: absolute;
+  top: 50%;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  translate: 0 -50%;
+  border-radius: 999px;
+  background: var(--brand-sky);
+  box-shadow:
+    0 0 0 5px rgb(105 203 247 / 10%),
+    0 0 22px rgb(105 203 247 / 80%);
+  content: "";
+}
+
+.login-core {
+  position: relative;
+  display: grid;
+  width: 8.5rem;
+  height: 8.5rem;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 2.4rem;
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 20%), rgb(255 255 255 / 7%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 25%),
+    0 30px 90px rgb(2 17 47 / 45%),
+    0 0 0 12px rgb(105 203 247 / 5%);
+  backdrop-filter: blur(18px);
+}
+
+.login-core::before {
+  position: absolute;
+  inset: -1.1rem;
+  border: 1px solid rgb(111 188 29 / 22%);
+  border-radius: 3.1rem;
+  animation: login-core-pulse 3.6s ease-in-out infinite;
+  content: "";
+}
+
+.login-core::after {
+  position: absolute;
+  right: -10%;
+  bottom: -12%;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 5px solid #072b6b;
+  border-radius: 999px;
+  background: var(--brand-lime);
+  box-shadow: 0 0 24px rgb(111 188 29 / 64%);
+  content: "";
+}
+
+.login-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgb(20 59 144 / 13%);
+  background: rgb(255 255 255 / 94%);
+  box-shadow:
+    0 32px 80px rgb(7 43 107 / 14%),
+    0 2px 8px rgb(7 43 107 / 6%);
+  backdrop-filter: blur(24px);
+}
+
+.login-card::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--brand-navy),
+    var(--brand-blue) 46%,
+    var(--brand-sky) 72%,
+    var(--brand-lime)
+  );
+  content: "";
+}
+
+.login-card::after {
+  position: absolute;
+  top: -8rem;
+  right: -7rem;
+  width: 15rem;
+  height: 15rem;
+  border-radius: 999px;
+  background: rgb(105 203 247 / 11%);
+  content: "";
+  pointer-events: none;
+}
+
+.login-input {
+  border-color: #8097b2;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
+}
+
+.login-input:focus-within {
+  border-color: rgb(17 77 165 / 70%);
+  background: white;
+  box-shadow:
+    0 0 0 4px rgb(105 203 247 / 20%),
+    0 8px 24px rgb(17 77 165 / 7%);
+}
+
+.login-beam {
+  position: absolute;
+  z-index: 1;
+  top: -20%;
+  bottom: -20%;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgb(105 203 247 / 65%),
+    transparent
+  );
+  box-shadow: 0 0 28px 5px rgb(105 203 247 / 16%);
+  animation: login-beam-scan 8s ease-in-out infinite;
+}
+
+.login-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--brand-sky);
+  box-shadow: 0 0 14px rgb(105 203 247 / 90%);
+  animation: login-particle-rise 7s ease-in-out infinite;
+}
+
+/* Skeleton loading: subtle breathing + shimmer */
 @keyframes skeleton-breathe {
   0%,
   100% {
     opacity: 1;
   }
   50% {
-    opacity: 0.55;
+    opacity: 0.62;
   }
 }
 
@@ -48,37 +504,25 @@ body {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background-color: #e2e8f0; /* slate-200 */
   border-radius: 0.75rem;
+  background-color: #d8e3f0;
   animation: skeleton-breathe 2s ease-in-out infinite;
 }
 
 .skeleton::after {
-  content: "";
   position: absolute;
   inset: 0;
   background-image: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.65),
+    rgb(255 255 255 / 72%),
     transparent
   );
   animation: skeleton-shimmer 1.8s ease-in-out infinite;
+  content: "";
 }
 
-/* Hormati preferensi reduced-motion: diam, tidak bernapas. */
-@media (prefers-reduced-motion: reduce) {
-  .skeleton {
-    animation: none;
-  }
-  .skeleton::after {
-    display: none;
-  }
-}
-
-/* ── Login loading overlay: cincin gradient berputar ──
-   CSS-driven (bukan JS/framer) supaya putaran kontinu tetap mulus di
-   compositor thread, walau main thread sibuk menunggu request login. */
+/* Login loading ring stays on the compositor thread. */
 @keyframes login-ring-spin {
   to {
     transform: rotate(360deg);
@@ -88,16 +532,94 @@ body {
 .login-ring {
   background: conic-gradient(
     from 0deg,
-    #10b981,
-    #38bdf8,
-    #10b981 100%
+    var(--brand-lime),
+    var(--brand-sky),
+    var(--brand-blue),
+    var(--brand-lime) 100%
   );
-  animation: login-ring-spin 1.4s linear infinite;
+  animation: login-ring-spin 1.5s linear infinite;
+}
+
+@keyframes login-aurora-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes login-core-pulse {
+  0%,
+  100% {
+    scale: 0.96;
+    opacity: 0.3;
+  }
+  50% {
+    scale: 1.05;
+    opacity: 0.85;
+  }
+}
+
+@keyframes login-beam-scan {
+  0%,
+  100% {
+    left: 8%;
+    opacity: 0;
+  }
+  18%,
+  82% {
+    opacity: 1;
+  }
+  50% {
+    left: 92%;
+  }
+}
+
+@keyframes login-particle-rise {
+  0% {
+    translate: 0 24px;
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 0.45;
+  }
+  100% {
+    translate: 16px -100px;
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .dashboard-canvas::before {
+    inset: 0;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .skeleton {
+    animation: none;
+  }
+
+  .skeleton::after {
+    display: none;
+  }
+
   .login-ring {
     animation: none;
-    background: linear-gradient(135deg, #10b981, #38bdf8);
+    background: linear-gradient(135deg, var(--brand-lime), var(--brand-sky));
   }
 }
