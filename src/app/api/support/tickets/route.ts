@@ -21,6 +21,10 @@ const createTicketSchema = z.object({
     .optional()
     .nullable()
     .transform((value) => (value ? value : null)),
+  contextType: z
+    .enum(["GENERAL", "QUOTATION", "ORDER_SAMPLE", "RESULT_REVISION"])
+    .default("GENERAL"),
+  contextId: z.string().optional().nullable(),
 });
 
 export async function GET(request: Request) {
@@ -165,6 +169,70 @@ export async function POST(request: Request) {
   }
 
   const now = new Date();
+  let quotationId: string | null = null;
+  let sampleId: string | null = null;
+  let revisionId: string | null = null;
+  let contextLabel: string | null = "Pertanyaan umum";
+
+  if (parsed.data.contextType === "QUOTATION") {
+    const quotation = await prisma.quotation.findFirst({
+      where: { id: parsed.data.contextId || "", customerId: session.customerId },
+      select: { id: true, quotationNo: true },
+    });
+    if (!quotation) {
+      return NextResponse.json(
+        { message: "Quotation tidak ditemukan atau bukan milik customer" },
+        { status: 400 }
+      );
+    }
+    quotationId = quotation.id;
+    contextLabel = quotation.quotationNo;
+  }
+
+  if (parsed.data.contextType === "ORDER_SAMPLE") {
+    const sample = await prisma.sample.findFirst({
+      where: { id: parsed.data.contextId || "", customerId: session.customerId },
+      select: { id: true, sampleNo: true, quotationId: true },
+    });
+    if (!sample) {
+      return NextResponse.json(
+        { message: "Pesanan/sample tidak ditemukan atau bukan milik customer" },
+        { status: 400 }
+      );
+    }
+    sampleId = sample.id;
+    quotationId = sample.quotationId;
+    contextLabel = sample.sampleNo;
+  }
+
+  if (parsed.data.contextType === "RESULT_REVISION") {
+    const revision = await prisma.auditRevision.findFirst({
+      where: {
+        id: parsed.data.contextId || "",
+        entityType: "LAB_RESULT",
+      },
+    });
+    if (!revision) {
+      return NextResponse.json(
+        { message: "Revisi hasil tidak ditemukan" },
+        { status: 400 }
+      );
+    }
+    const sample = await prisma.sample.findFirst({
+      where: { id: revision.entityId, customerId: session.customerId },
+      select: { id: true, sampleNo: true, quotationId: true },
+    });
+    if (!sample) {
+      return NextResponse.json(
+        { message: "Revisi hasil bukan milik customer" },
+        { status: 403 }
+      );
+    }
+    revisionId = revision.id;
+    sampleId = sample.id;
+    quotationId = sample.quotationId;
+    contextLabel = `${sample.sampleNo} · Revisi ${revision.revisionNo}`;
+  }
 
   const ticket = await prisma.supportTicket.create({
     data: {
@@ -175,6 +243,11 @@ export async function POST(request: Request) {
       subject: parsed.data.subject,
       status: "OPEN",
       priority: "NORMAL",
+      contextType: parsed.data.contextType,
+      contextLabel,
+      quotationId,
+      sampleId,
+      revisionId,
       lastMessageAt: now,
       messages: {
         create: {

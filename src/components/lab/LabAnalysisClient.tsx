@@ -32,6 +32,11 @@ type SampleParameter = {
   resultValue?: string | null;
   resultNote?: string | null;
   retestReason?: string | null;
+  displayNameSnapshot?: string | null;
+  unitSnapshot?: string | null;
+  methodSnapshot?: string | null;
+  standardSnapshot?: string | null;
+  limitSnapshot?: string | null;
   parameter: {
     id: string;
     name: string;
@@ -76,6 +81,11 @@ type Props = {
 type ResultDraft = {
   resultValue: string;
   resultNote: string;
+};
+
+type MetadataDraft = {
+  standard: string;
+  limit: string;
 };
 
 type SampleGroup = {
@@ -140,15 +150,15 @@ function getStatusStyle(status: string) {
 }
 
 function getDisplayName(item: SampleParameter) {
-  return item.templateParameter?.displayName || item.parameter.name;
+  return item.displayNameSnapshot || item.templateParameter?.displayName || item.parameter.name;
 }
 
 function getUnit(item: SampleParameter) {
-  return item.templateParameter?.unit || item.parameter.unit || "";
+  return item.unitSnapshot || item.templateParameter?.unit || item.parameter.unit || "";
 }
 
 function getMethod(item: SampleParameter) {
-  return item.templateParameter?.method || item.parameter.method || "-";
+  return item.methodSnapshot || item.templateParameter?.method || item.parameter.method || "-";
 }
 
 function getVisibleParams(mode: LabMode, parameters: SampleParameter[]) {
@@ -194,6 +204,9 @@ export default function LabAnalysisClient({
     initialSampleParameters
   );
   const [drafts, setDrafts] = useState<Record<string, ResultDraft>>({});
+  const [metadataDrafts, setMetadataDrafts] = useState<
+    Record<string, MetadataDraft>
+  >({});
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -333,6 +346,44 @@ export default function LabAnalysisClient({
     await runAction(`/api/lab/samples/${group.sample.id}/retest`, "PATCH", {
       reason,
     });
+  }
+
+  async function submitMetadataRevision(
+    group: SampleGroup,
+    parameters: SampleParameter[]
+  ) {
+    const changed = parameters.filter((item) => metadataDrafts[item.id]);
+    if (changed.length === 0) {
+      setMessage("Ubah Standard atau Limit terlebih dahulu.");
+      return;
+    }
+    const reason = window.prompt(
+      `Alasan revisi Standard / Limit untuk ${group.sample.sampleNo}`
+    );
+    if (!reason || reason.trim().length < 8) {
+      setMessage("Alasan revisi minimal 8 karakter.");
+      return;
+    }
+    await runAction(`/api/lab/samples/${group.sample.id}/revision`, "PATCH", {
+      reason,
+      parameters: changed.map((item) => ({
+        id: item.id,
+        displayName: getDisplayName(item),
+        unit: getUnit(item),
+        method: getMethod(item),
+        standard:
+          metadataDrafts[item.id]?.standard ??
+          item.standardSnapshot ??
+          item.templateParameter?.standard ??
+          "",
+        limit:
+          metadataDrafts[item.id]?.limit ??
+          item.limitSnapshot ??
+          item.templateParameter?.limitValue ??
+          "",
+      })),
+    });
+    setMetadataDrafts({});
   }
 
   function renderAction(group: SampleGroup, visible: SampleParameter[]) {
@@ -489,7 +540,19 @@ export default function LabAnalysisClient({
                 </p>
               </div>
 
-              <div className="flex justify-end">
+              <div className="flex flex-wrap justify-end gap-2">
+                {!["conduct", "enter"].includes(mode) && (
+                  <button
+                    disabled={loading}
+                    onClick={() =>
+                      submitMetadataRevision(group, group.visibleParameters)
+                    }
+                    className="inline-flex items-center gap-2 rounded-xl border border-[#114DA5] px-4 py-3 text-sm font-semibold text-[#114DA5] hover:bg-blue-50 disabled:opacity-60"
+                  >
+                    <Save size={16} />
+                    Simpan Revisi Standard / Limit
+                  </button>
+                )}
                 {renderAction(group, group.visibleParameters)}
               </div>
             </div>
@@ -544,10 +607,71 @@ export default function LabAnalysisClient({
                           </td>
 
                           <td className="px-4 py-3 text-slate-600">
-                            <p>{item.templateParameter?.standard || "-"}</p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {item.templateParameter?.limitValue || "-"}
-                            </p>
+                            {!["conduct", "enter"].includes(mode) ? (
+                              <div className="grid gap-1.5">
+                                <input
+                                  value={
+                                    metadataDrafts[item.id]?.standard ??
+                                    item.standardSnapshot ??
+                                    item.templateParameter?.standard ??
+                                    ""
+                                  }
+                                  onChange={(event) =>
+                                    setMetadataDrafts((current) => ({
+                                      ...current,
+                                      [item.id]: {
+                                        standard: event.target.value,
+                                        limit:
+                                          current[item.id]?.limit ??
+                                          item.limitSnapshot ??
+                                          item.templateParameter?.limitValue ??
+                                          "",
+                                      },
+                                    }))
+                                  }
+                                  aria-label={`Standard ${getDisplayName(item)}`}
+                                  className="w-52 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs outline-none focus:border-[#114DA5]"
+                                  placeholder="Standard / regulasi"
+                                />
+                                <input
+                                  value={
+                                    metadataDrafts[item.id]?.limit ??
+                                    item.limitSnapshot ??
+                                    item.templateParameter?.limitValue ??
+                                    ""
+                                  }
+                                  onChange={(event) =>
+                                    setMetadataDrafts((current) => ({
+                                      ...current,
+                                      [item.id]: {
+                                        standard:
+                                          current[item.id]?.standard ??
+                                          item.standardSnapshot ??
+                                          item.templateParameter?.standard ??
+                                          "",
+                                        limit: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  aria-label={`Limit ${getDisplayName(item)}`}
+                                  className="w-52 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs outline-none focus:border-[#114DA5]"
+                                  placeholder="Limit"
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                <p>
+                                  {item.standardSnapshot ||
+                                    item.templateParameter?.standard ||
+                                    "-"}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {item.limitSnapshot ||
+                                    item.templateParameter?.limitValue ||
+                                    "-"}
+                                </p>
+                              </>
+                            )}
                           </td>
 
                           <td className="px-4 py-3 text-slate-600">

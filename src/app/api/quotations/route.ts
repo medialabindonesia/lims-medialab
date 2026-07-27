@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { QuotationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 import { generateDocumentNo } from "@/lib/document-number";
+import { captureQuotationRevision } from "@/lib/revision-audit";
 
 const nullableString = z.preprocess(
   (value) => (value === "" ? null : value),
@@ -106,17 +108,22 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
+  const validStatus =
+    status &&
+    Object.values(QuotationStatus).includes(status as QuotationStatus)
+      ? (status as QuotationStatus)
+      : undefined;
 
   const where =
     permission.session?.roleCode === "CUSTOMER_ENGAGEMENT" &&
     permission.session.customerId
       ? {
           customerId: permission.session.customerId,
-          ...(status ? { status: status as any } : {}),
+          ...(validStatus ? { status: validStatus } : {}),
         }
-      : status
+      : validStatus
         ? {
-            status: status as any,
+            status: validStatus,
           }
         : undefined;
 
@@ -340,6 +347,15 @@ export async function POST(request: Request) {
       note: `Quotation ${quotation.quotationNo} created with template ${coaTemplate.code}`,
     },
   });
+  await prisma.$transaction((tx) =>
+    captureQuotationRevision(tx, {
+      entityId: quotation.id,
+      action: "CREATED",
+      session: permission.session!,
+      request,
+      changeSummary: "Quotation pertama dibuat",
+    })
+  );
 
   return NextResponse.json({
     message: "Quotation berhasil dibuat",

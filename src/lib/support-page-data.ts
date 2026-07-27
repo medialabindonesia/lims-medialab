@@ -71,7 +71,7 @@ export async function getTicketDetail(
       ticketId,
       ...(isCustomer ? { isInternalNote: false } : {}),
     },
-    include: { sender: true },
+    include: { sender: true, attachments: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -117,4 +117,57 @@ export async function getCannedReplies(): Promise<CannedReplyDTO[]> {
   });
 
   return replies.map((r) => ({ id: r.id, title: r.title, body: r.body }));
+}
+
+export async function getCustomerSupportContexts(customerId: string) {
+  const [quotations, samples] = await Promise.all([
+    prisma.quotation.findMany({
+      where: { customerId },
+      select: { id: true, quotationNo: true, status: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    prisma.sample.findMany({
+      where: { customerId },
+      select: {
+        id: true,
+        sampleNo: true,
+        status: true,
+        quotation: { select: { quotationNo: true } },
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+  ]);
+  const revisions =
+    samples.length === 0
+      ? []
+      : await prisma.auditRevision.findMany({
+          where: {
+            entityType: "LAB_RESULT",
+            entityId: { in: samples.map((item) => item.id) },
+          },
+          select: {
+            id: true,
+            entityId: true,
+            revisionNo: true,
+            action: true,
+            changeSummary: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        });
+  const sampleLabel = new Map(samples.map((item) => [item.id, item.sampleNo]));
+  return JSON.parse(
+    JSON.stringify({
+      quotations,
+      samples,
+      revisions: revisions.map((item) => ({
+        ...item,
+        sampleNo: sampleLabel.get(item.entityId) || item.entityId,
+      })),
+    })
+  );
 }

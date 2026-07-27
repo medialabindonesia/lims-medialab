@@ -50,7 +50,7 @@ const menus = [
   { name: "Finance Dashboard", key: "dashboard.finance", href: "/dashboard/finance", icon: "Wallet", sort: 4 },
   { name: "Lab Dashboard", key: "dashboard.lab", href: "/dashboard/lab", icon: "FlaskConical", sort: 5 },
 
-  { name: "RBAC Role & Menu", keysa: "admin.rbac", href: "/admin/rbac", icon: "KeyRound", sort: 10 },
+  { name: "RBAC Role & Menu", key: "admin.rbac", href: "/admin/rbac", icon: "KeyRound", sort: 10 },
   { name: "Users", key: "admin.users", href: "/admin/users", icon: "UserCog", sort: 11 },
 
   { name: "Master Customer", key: "master.customers", href: "/master/customers", icon: "Building2", sort: 20 },
@@ -75,6 +75,7 @@ const menus = [
   { name: "Verify Results", key: "lab.verify_results", href: "/lab/verify-results", icon: "CheckCheck", sort: 65 },
   { name: "Validate Results", key: "lab.validate_results", href: "/lab/validate-results", icon: "ShieldCheck", sort: 66 },
   { name: "Ask Retest", key: "lab.ask_retest", href: "/lab/retest", icon: "RefreshCcw", sort: 67 },
+  { name: "Revision Audit Trail", key: "audit.revisions", href: "/audit/revisions", icon: "History", sort: 68 },
 
   { name: "Preliminary COA", key: "coa.preliminary", href: "/coa/preliminary", icon: "FileBadge", sort: 70 },
   { name: "Final COA", key: "coa.final", href: "/coa/final", icon: "Award", sort: 71 },
@@ -106,6 +107,7 @@ const roleAccess: Record<string, string[]> = {
     "lab.review_results",
     "lab.verify_results",
     "lab.ask_retest",
+    "audit.revisions",
   ],
 
   LAB_ANALYST: [
@@ -118,6 +120,7 @@ const roleAccess: Record<string, string[]> = {
     "dashboard.lab",
     "lab.validate_results",
     "lab.ask_retest",
+    "audit.revisions",
     "coa.preliminary",
     "coa.final",
   ],
@@ -139,6 +142,7 @@ const roleAccess: Record<string, string[]> = {
     "quotation.verify",
     "quotation.revise",
     "sales.ltr",
+    "audit.revisions",
   ],
 
   SALES_MANAGER_DIRECTOR: [
@@ -191,6 +195,18 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
   }
 
   if (!canView) return base;
+
+  if (menuKey === "audit.revisions") {
+    return {
+      ...base,
+      canUpdate: [
+        "SALES_STAFF",
+        "LAB_SUPERVISOR",
+        "LAB_MANAGER",
+      ].includes(roleCode),
+      canExport: true,
+    };
+  }
 
   if (menuKey.startsWith("dashboard.")) {
     return {

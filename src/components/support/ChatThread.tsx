@@ -2,7 +2,15 @@
 
 import { useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, CheckCheck, Clock, Lock, RotateCw } from "lucide-react";
+import {
+  Check,
+  CheckCheck,
+  Clock,
+  Download,
+  FileText,
+  Lock,
+  RotateCw,
+} from "lucide-react";
 import { EASE_OUT } from "@/lib/motion";
 import { formatChatTime, type ChatMessage } from "@/lib/support";
 
@@ -22,6 +30,11 @@ function initials(name?: string | null) {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase())
     .join("");
+}
+
+function fileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.ceil(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export default function ChatThread({
@@ -133,9 +146,106 @@ export default function ChatThread({
                 )}
               </div>
 
-              <p className="whitespace-pre-wrap break-words leading-relaxed">
-                {message.body}
-              </p>
+              {message.attachments.length > 0 && (
+                <div className="mb-2 grid gap-2">
+                  {message.attachments.map((attachment, index) => {
+                    if (attachment.kind === "IMAGE") {
+                      return (
+                        <a
+                          key={attachment.id || `${attachment.url}-${index}`}
+                          href={attachment.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block overflow-hidden rounded-xl bg-slate-900/10"
+                        >
+                          {/* Blob URL dinamis; native img menjaga preview tanpa allowlist host. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={attachment.url}
+                            alt={attachment.fileName}
+                            className="max-h-72 w-full object-cover"
+                            loading="lazy"
+                          />
+                          <span className="block truncate px-2 py-1.5 text-[11px] opacity-80">
+                            {attachment.fileName} · {fileSize(attachment.sizeBytes)}
+                            {attachment.isCompressed ? " · HD optimized" : ""}
+                          </span>
+                        </a>
+                      );
+                    }
+                    if (attachment.kind === "VIDEO") {
+                      return (
+                        <div
+                          key={attachment.id || `${attachment.url}-${index}`}
+                          className="overflow-hidden rounded-xl bg-slate-950"
+                        >
+                          <video
+                            controls
+                            preload="metadata"
+                            className="max-h-72 w-full"
+                          >
+                            <source
+                              src={attachment.url}
+                              type={attachment.mimeType}
+                            />
+                          </video>
+                          <p className="truncate px-2 py-1.5 text-[11px] text-white/75">
+                            {attachment.fileName} · {fileSize(attachment.sizeBytes)}
+                          </p>
+                        </div>
+                      );
+                    }
+                    if (attachment.kind === "AUDIO") {
+                      return (
+                        <div
+                          key={attachment.id || `${attachment.url}-${index}`}
+                          className="rounded-xl bg-slate-950/10 p-2"
+                        >
+                          <audio controls preload="metadata" className="w-full">
+                            <source
+                              src={attachment.url}
+                              type={attachment.mimeType}
+                            />
+                          </audio>
+                          <p className="mt-1 truncate text-[11px] opacity-75">
+                            {attachment.fileName} · {fileSize(attachment.sizeBytes)}
+                          </p>
+                        </div>
+                      );
+                    }
+                    return (
+                      <a
+                        key={attachment.id || `${attachment.url}-${index}`}
+                        href={attachment.downloadUrl || attachment.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={`flex items-center gap-3 rounded-xl border p-3 ${
+                          isOwn
+                            ? "border-white/20 bg-white/10"
+                            : "border-slate-200 bg-slate-50"
+                        }`}
+                      >
+                        <FileText size={22} className="shrink-0" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-xs font-bold">
+                            {attachment.fileName}
+                          </span>
+                          <span className="text-[10px] opacity-70">
+                            {fileSize(attachment.sizeBytes)}
+                          </span>
+                        </span>
+                        <Download size={16} />
+                      </a>
+                    );
+                  })}
+                </div>
+              )}
+
+              {message.body && (
+                <p className="whitespace-pre-wrap break-words leading-relaxed">
+                  {message.body}
+                </p>
+              )}
 
               <div
                 className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${

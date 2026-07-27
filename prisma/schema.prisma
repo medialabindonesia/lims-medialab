@@ -117,6 +117,32 @@ enum SupportSenderRole {
   SYSTEM
 }
 
+enum SupportContextType {
+  GENERAL
+  QUOTATION
+  ORDER_SAMPLE
+  RESULT_REVISION
+}
+
+enum SupportAttachmentKind {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+enum RevisionEntityType {
+  QUOTATION
+  LAB_RESULT
+}
+
+enum RevisionAction {
+  CREATED
+  UPDATED
+  STATUS_TRANSITION
+  RESTORED
+}
+
 model Role {
   id        String     @id @default(cuid())
   name      String
@@ -128,48 +154,49 @@ model Role {
 }
 
 model User {
-  id         String    @id @default(cuid())
+  id         String  @id @default(cuid())
   name       String
-  email      String    @unique
+  email      String  @unique
   password   String
   roleId     String
   customerId String?
-  isActive   Boolean   @default(true)
+  isActive   Boolean @default(true)
 
-  role       Role      @relation(fields: [roleId], references: [id])
-  customer   Customer? @relation(fields: [customerId], references: [id])
+  role     Role      @relation(fields: [roleId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
 
   supportTicketsCreated  SupportTicket[]  @relation("TicketCreatedBy")
   supportTicketsAssigned SupportTicket[]  @relation("TicketAssignedTo")
   supportMessages        SupportMessage[]
   cannedReplies          CannedReply[]
+  auditRevisions         AuditRevision[]  @relation("RevisionActor")
 
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Menu {
-  id        String     @id @default(cuid())
-  name      String
-  key       String     @unique
-  href      String
-  icon      String?
-  parentId  String?
-  sort      Int        @default(0)
-  isActive  Boolean    @default(true)
+  id       String  @id @default(cuid())
+  name     String
+  key      String  @unique
+  href     String
+  icon     String?
+  parentId String?
+  sort     Int     @default(0)
+  isActive Boolean @default(true)
 
   parent    Menu?      @relation("MenuChildren", fields: [parentId], references: [id])
   children  Menu[]     @relation("MenuChildren")
   roleMenus RoleMenu[]
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model RoleMenu {
-  id          String  @id @default(cuid())
-  roleId      String
-  menuId      String
+  id     String @id @default(cuid())
+  roleId String
+  menuId String
 
   canView     Boolean @default(false)
   canCreate   Boolean @default(false)
@@ -179,19 +206,19 @@ model RoleMenu {
   canValidate Boolean @default(false)
   canExport   Boolean @default(false)
 
-  role        Role    @relation(fields: [roleId], references: [id])
-  menu        Menu    @relation(fields: [menuId], references: [id])
+  role Role @relation(fields: [roleId], references: [id])
+  menu Menu @relation(fields: [menuId], references: [id])
 
   @@unique([roleId, menuId])
 }
 
 model Customer {
-  id         String      @id @default(cuid())
-  name       String
-  company    String?
-  email      String?
-  phone      String?
-  isActive   Boolean     @default(true)
+  id       String  @id @default(cuid())
+  name     String
+  company  String?
+  email    String?
+  phone    String?
+  isActive Boolean @default(true)
 
   contactPerson String?
   addressLine1  String?
@@ -225,48 +252,48 @@ model Customer {
   recipientEmail3 String?
   recipientEmail4 String?
 
-  users      User[]
-  quotations Quotation[]
-  samples    Sample[]
+  users          User[]
+  quotations     Quotation[]
+  samples        Sample[]
   supportTickets SupportTicket[]
 
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AnalysisParameter {
-  id          String                 @id @default(cuid())
-  name        String
-  unit        String?
-  method      String?
-  price       Float                  @default(0)
-  isActive    Boolean                @default(true)
+  id       String  @id @default(cuid())
+  name     String
+  unit     String?
+  method   String?
+  price    Float   @default(0)
+  isActive Boolean @default(true)
 
   quotationItems     QuotationItem[]
   sampleParams       SampleParameter[]
   templateParameters CoaTemplateParameter[]
 
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CoaTemplate {
-  id          String                 @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  code        String                 @unique
+  code        String  @unique
   description String?
-  isActive    Boolean                @default(true)
+  isActive    Boolean @default(true)
 
-  parameters  CoaTemplateParameter[]
-  quotations  Quotation[]
-  samples     Sample[]
+  parameters CoaTemplateParameter[]
+  quotations Quotation[]
+  samples    Sample[]
 
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CoaTemplateParameter {
-  id          String            @id @default(cuid())
+  id          String @id @default(cuid())
   templateId  String
   parameterId String
 
@@ -275,30 +302,30 @@ model CoaTemplateParameter {
   method      String?
   standard    String?
   limitValue  String?
-  sort        Int               @default(0)
-  isRequired  Boolean           @default(true)
-  isActive    Boolean           @default(true)
+  sort        Int     @default(0)
+  isRequired  Boolean @default(true)
+  isActive    Boolean @default(true)
 
-  template    CoaTemplate       @relation(fields: [templateId], references: [id])
-  parameter   AnalysisParameter @relation(fields: [parameterId], references: [id])
+  template     CoaTemplate       @relation(fields: [templateId], references: [id])
+  parameter    AnalysisParameter @relation(fields: [parameterId], references: [id])
   sampleParams SampleParameter[]
 
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([templateId, parameterId])
 }
 
 model Quotation {
-  id            String           @id @default(cuid())
-  quotationNo   String           @unique
+  id            String          @id @default(cuid())
+  quotationNo   String          @unique
   customerId    String
   coaTemplateId String?
-  status        QuotationStatus  @default(REQUESTED)
-  totalAmount   Float            @default(0)
+  status        QuotationStatus @default(REQUESTED)
+  totalAmount   Float           @default(0)
   note          String?
 
-  quotationDate DateTime         @default(now())
+  quotationDate DateTime  @default(now())
   validUntil    DateTime?
 
   samplingBy       SamplingBy?
@@ -317,67 +344,68 @@ model Quotation {
   verifiedById  String?
   approvedById  String?
 
-  customer      Customer         @relation(fields: [customerId], references: [id])
-  coaTemplate   CoaTemplate?     @relation(fields: [coaTemplateId], references: [id])
-  items         QuotationItem[]
-  purchaseOrder PurchaseOrder?
-  ltr           Ltr?
-  coc           Coc?
-  invoice       Invoice?
-  samples       Sample[]
-  stps          Stps[]
+  customer       Customer        @relation(fields: [customerId], references: [id])
+  coaTemplate    CoaTemplate?    @relation(fields: [coaTemplateId], references: [id])
+  items          QuotationItem[]
+  purchaseOrder  PurchaseOrder?
+  ltr            Ltr?
+  coc            Coc?
+  invoice        Invoice?
+  samples        Sample[]
+  stps           Stps[]
+  supportTickets SupportTicket[]
 
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model QuotationItem {
-  id          String            @id @default(cuid())
+  id          String @id @default(cuid())
   quotationId String
   parameterId String
-  qty         Int               @default(1)
-  price       Float             @default(0)
+  qty         Int    @default(1)
+  price       Float  @default(0)
 
-  description       String?
-  customerSampleId  String?
-  samplingLocation  String?
-  regulationMatrix  String?
-  durationSampling  String?
-  method            String?
+  description      String?
+  customerSampleId String?
+  samplingLocation String?
+  regulationMatrix String?
+  durationSampling String?
+  method           String?
 
-  quotation   Quotation         @relation(fields: [quotationId], references: [id])
-  parameter   AnalysisParameter @relation(fields: [parameterId], references: [id])
+  quotation Quotation         @relation(fields: [quotationId], references: [id])
+  parameter AnalysisParameter @relation(fields: [parameterId], references: [id])
 }
 
 model PurchaseOrder {
-  id          String    @id @default(cuid())
+  id          String  @id @default(cuid())
   poNumber    String
   fileUrl     String?
-  quotationId String    @unique
+  quotationId String  @unique
   customerId  String
 
-  quotation   Quotation @relation(fields: [quotationId], references: [id])
+  quotation Quotation @relation(fields: [quotationId], references: [id])
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Ltr {
-  id          String    @id @default(cuid())
-  ltrNo       String    @unique
-  quotationId String    @unique
+  id          String  @id @default(cuid())
+  ltrNo       String  @unique
+  quotationId String  @unique
   createdById String?
 
-  quotation   Quotation @relation(fields: [quotationId], references: [id])
+  quotation Quotation @relation(fields: [quotationId], references: [id])
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Coc {
-  id          String    @id @default(cuid())
-  cocNo       String    @unique
-  quotationId String    @unique
+  id          String  @id @default(cuid())
+  cocNo       String  @unique
+  quotationId String  @unique
   sampleId    String?
   createdById String?
 
@@ -386,23 +414,23 @@ model Coc {
   samplerName      String?
   samplingLocation String? @db.Text
 
-  tatRequested TatRequest?
+  tatRequested         TatRequest?
   plannedSamplingStart DateTime?
   plannedSamplingEnd   DateTime?
   estimatedCoaDate     DateTime?
 
-  sampleConditionSamplingInfo   String?
-  sampleConditionMethod         String?
-  sampleConditionReceived       String?
-  abnormalCondition             String?
-  specialInstruction            String?
-  deliveryMethod                DeliveryMethod?
+  sampleConditionSamplingInfo String?
+  sampleConditionMethod       String?
+  sampleConditionReceived     String?
+  abnormalCondition           String?
+  specialInstruction          String?
+  deliveryMethod              DeliveryMethod?
 
-  quotation   Quotation @relation(fields: [quotationId], references: [id])
-  sample      Sample?   @relation(fields: [sampleId], references: [id])
+  quotation Quotation @relation(fields: [quotationId], references: [id])
+  sample    Sample?   @relation(fields: [sampleId], references: [id])
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Stps {
@@ -427,74 +455,82 @@ model Stps {
 
   createdById String?
 
-  quotation   Quotation @relation(fields: [quotationId], references: [id])
+  quotation Quotation @relation(fields: [quotationId], references: [id])
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Sample {
-  id           String            @id @default(cuid())
-  sampleNo     String            @unique
-  quotationId  String?
-  customerId   String
+  id            String       @id @default(cuid())
+  sampleNo      String       @unique
+  quotationId   String?
+  customerId    String
   coaTemplateId String?
-  status       SampleStatus      @default(WAITING_SAMPLE)
+  status        SampleStatus @default(WAITING_SAMPLE)
 
   sentByCustomerAt DateTime?
   receivedAt       DateTime?
   receivedById     String?
 
-  quotation    Quotation?        @relation(fields: [quotationId], references: [id])
-  customer     Customer          @relation(fields: [customerId], references: [id])
-  coaTemplate  CoaTemplate?      @relation(fields: [coaTemplateId], references: [id])
-  parameters   SampleParameter[]
-  coa          Coa[]
-  coc          Coc[]
+  quotation      Quotation?        @relation(fields: [quotationId], references: [id])
+  customer       Customer          @relation(fields: [customerId], references: [id])
+  coaTemplate    CoaTemplate?      @relation(fields: [coaTemplateId], references: [id])
+  parameters     SampleParameter[]
+  coa            Coa[]
+  coc            Coc[]
+  supportTickets SupportTicket[]
 
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SampleParameter {
-  id           String            @id @default(cuid())
-  sampleId     String
-  parameterId  String
+  id                  String       @id @default(cuid())
+  sampleId            String
+  parameterId         String
   templateParameterId String?
-  analystId    String?
-  status       ResultStatus      @default(WAITING)
+  analystId           String?
+  status              ResultStatus @default(WAITING)
 
   resultValue  String?
   resultNote   String?
   retestReason String?
 
+  // Snapshot dokumen: perubahan master/template tidak boleh mengubah laporan lama.
+  displayNameSnapshot String?
+  unitSnapshot        String?
+  methodSnapshot      String?
+  standardSnapshot    String?
+  limitSnapshot       String?
+
   reviewedById  String?
   verifiedById  String?
   validatedById String?
 
-  sample       Sample            @relation(fields: [sampleId], references: [id])
-  parameter    AnalysisParameter @relation(fields: [parameterId], references: [id])
+  sample            Sample                @relation(fields: [sampleId], references: [id])
+  parameter         AnalysisParameter     @relation(fields: [parameterId], references: [id])
   templateParameter CoaTemplateParameter? @relation(fields: [templateParameterId], references: [id])
 
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Coa {
-  id          String    @id @default(cuid())
-  coaNo       String    @unique
-  sampleId    String
-  type        CoaType
-  status      CoaStatus @default(DRAFT)
-  fileUrl     String?
+  id       String    @id @default(cuid())
+  coaNo    String    @unique
+  sampleId String
+  type     CoaType
+  status   CoaStatus @default(DRAFT)
+  fileUrl  String?
 
   createdById  String?
   approvedById String?
 
-  sample      Sample    @relation(fields: [sampleId], references: [id])
+  sample Sample @relation(fields: [sampleId], references: [id])
 
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Invoice {
@@ -507,7 +543,7 @@ model Invoice {
   createdById  String?
   approvedById String?
 
-  quotation   Quotation     @relation(fields: [quotationId], references: [id])
+  quotation              Quotation @relation(fields: [quotationId], references: [id])
   paymentProofUrl        String?
   paymentProofFileName   String?
   paymentProofUploadedAt DateTime?
@@ -515,28 +551,65 @@ model Invoice {
   paidAt                 DateTime?
   paymentConfirmedById   String?
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model WorkflowLog {
-  id        String   @id @default(cuid())
-  actorId   String?
-  sampleId  String?
-  action    String
-  note      String?
+  id       String  @id @default(cuid())
+  actorId  String?
+  sampleId String?
+  action   String
+  note     String?
 
   createdAt DateTime @default(now())
 }
 
+model AuditRevision {
+  id         String             @id @default(cuid())
+  entityType RevisionEntityType
+  entityId   String
+  revisionNo Int
+  action     RevisionAction
+  snapshot   Json
+  checksum   String             @db.Char(64)
+
+  changeSummary String? @db.Text
+  reason        String? @db.Text
+
+  actorId           String?
+  actorNameSnapshot String?
+  actorRoleSnapshot String?
+  requestIp         String?
+  userAgent         String? @db.Text
+  sourceTicketId    String?
+
+  parentRevisionId       String?
+  restoredFromRevisionId String?
+
+  actor          User?           @relation("RevisionActor", fields: [actorId], references: [id])
+  parent         AuditRevision?  @relation("RevisionParent", fields: [parentRevisionId], references: [id])
+  childRevisions AuditRevision[] @relation("RevisionParent")
+  restoredFrom   AuditRevision?  @relation("RevisionRestore", fields: [restoredFromRevisionId], references: [id])
+  restoreEvents  AuditRevision[] @relation("RevisionRestore")
+  supportTickets SupportTicket[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([entityType, entityId, revisionNo])
+  @@index([entityType, entityId, createdAt])
+  @@index([checksum])
+  @@index([actorId])
+}
+
 model FaqCategory {
-  id          String    @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  slug        String    @unique
-  description String?   @db.Text
+  slug        String  @unique
+  description String? @db.Text
   icon        String?
-  sort        Int       @default(0)
-  isActive    Boolean   @default(true)
+  sort        Int     @default(0)
+  isActive    Boolean @default(true)
 
   items   FaqItem[]
   tickets SupportTicket[]
@@ -565,14 +638,19 @@ model FaqItem {
 }
 
 model SupportTicket {
-  id         String              @id @default(cuid())
-  ticketNo   String              @unique
-  customerId String
-  categoryId String?
-  createdById String
-  subject    String
-  status     SupportTicketStatus @default(OPEN)
-  priority   SupportPriority     @default(NORMAL)
+  id           String              @id @default(cuid())
+  ticketNo     String              @unique
+  customerId   String
+  categoryId   String?
+  createdById  String
+  subject      String
+  status       SupportTicketStatus @default(OPEN)
+  priority     SupportPriority     @default(NORMAL)
+  contextType  SupportContextType  @default(GENERAL)
+  contextLabel String?
+  quotationId  String?
+  sampleId     String?
+  revisionId   String?
 
   assignedToId    String?
   firstResponseAt DateTime?
@@ -583,10 +661,13 @@ model SupportTicket {
   rating        Int?
   ratingComment String? @db.Text
 
-  customer   Customer     @relation(fields: [customerId], references: [id])
-  category   FaqCategory? @relation(fields: [categoryId], references: [id])
-  createdBy  User         @relation("TicketCreatedBy", fields: [createdById], references: [id])
-  assignedTo User?        @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  customer   Customer         @relation(fields: [customerId], references: [id])
+  category   FaqCategory?     @relation(fields: [categoryId], references: [id])
+  createdBy  User             @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  assignedTo User?            @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  quotation  Quotation?       @relation(fields: [quotationId], references: [id])
+  sample     Sample?          @relation(fields: [sampleId], references: [id])
+  revision   AuditRevision?   @relation(fields: [revisionId], references: [id])
   messages   SupportMessage[]
 
   createdAt DateTime @default(now())
@@ -595,27 +676,57 @@ model SupportTicket {
   @@index([customerId])
   @@index([assignedToId])
   @@index([status])
+  @@index([contextType])
+  @@index([quotationId])
+  @@index([sampleId])
+  @@index([revisionId])
   @@index([lastMessageAt])
   @@index([createdAt])
 }
 
 model SupportMessage {
-  id       String            @id @default(cuid())
-  ticketId String
-  senderId String?
-  senderRole SupportSenderRole
-  body     String            @db.Text
-  isInternalNote Boolean     @default(false)
+  id             String            @id @default(cuid())
+  ticketId       String
+  senderId       String?
+  senderRole     SupportSenderRole
+  body           String            @db.Text
+  isInternalNote Boolean           @default(false)
 
   readByCustomerAt DateTime?
   readByAgentAt    DateTime?
 
-  ticket SupportTicket @relation(fields: [ticketId], references: [id])
-  sender User?         @relation(fields: [senderId], references: [id])
+  ticket      SupportTicket       @relation(fields: [ticketId], references: [id])
+  sender      User?               @relation(fields: [senderId], references: [id])
+  attachments SupportAttachment[]
 
   createdAt DateTime @default(now())
 
   @@index([ticketId])
+}
+
+model SupportAttachment {
+  id          String                @id @default(cuid())
+  messageId   String
+  kind        SupportAttachmentKind
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  url         String                @db.Text
+  downloadUrl String?               @db.Text
+
+  width             Int?
+  height            Int?
+  durationSeconds   Float?
+  originalSizeBytes Int?
+  isCompressed      Boolean @default(false)
+  checksum          String? @db.Char(64)
+
+  message SupportMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([messageId])
+  @@index([kind])
 }
 
 model CannedReply {

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
+import { captureQuotationRevision } from "@/lib/revision-audit";
 
 const revisionSchema = z.object({
   note: z.string().min(1, "Catatan revisi wajib diisi"),
@@ -63,20 +64,37 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const updated = await prisma.quotation.update({
-    where: { id },
-    data: {
-      status: "REVISION",
-      note: parsed.data.note,
-    },
-  });
-
-  await prisma.workflowLog.create({
-    data: {
-      actorId: permission.session?.userId,
-      action: "CUSTOMER_REQUEST_QUOTATION_REVISION",
-      note: parsed.data.note,
-    },
+  const updated = await prisma.$transaction(async (tx) => {
+    await captureQuotationRevision(tx, {
+      entityId: id,
+      action: "CREATED",
+      session: permission.session!,
+      request,
+      changeSummary: "Baseline sebelum permintaan revisi customer",
+    });
+    const result = await tx.quotation.update({
+      where: { id },
+      data: {
+        status: "REVISION",
+        note: parsed.data.note,
+      },
+    });
+    await tx.workflowLog.create({
+      data: {
+        actorId: permission.session?.userId,
+        action: "CUSTOMER_REQUEST_QUOTATION_REVISION",
+        note: parsed.data.note,
+      },
+    });
+    await captureQuotationRevision(tx, {
+      entityId: id,
+      action: "STATUS_TRANSITION",
+      session: permission.session!,
+      request,
+      reason: parsed.data.note,
+      changeSummary: "Customer meminta revisi quotation",
+    });
+    return result;
   });
 
   return NextResponse.json({

@@ -17,6 +17,7 @@ import {
   Receipt,
   Search,
   Send,
+  ShoppingBag,
   ThumbsDown,
   ThumbsUp,
   UserCog,
@@ -128,10 +129,31 @@ export default function SupportCenterClient({
   faq,
   initialTickets,
   customerId,
+  contexts,
 }: {
   faq: FaqCategoryDTO[];
   initialTickets: SupportTicketDTO[];
   customerId: string;
+  contexts: {
+    quotations: Array<{
+      id: string;
+      quotationNo: string;
+      status: string;
+    }>;
+    samples: Array<{
+      id: string;
+      sampleNo: string;
+      status: string;
+      quotation?: { quotationNo: string } | null;
+    }>;
+    revisions: Array<{
+      id: string;
+      sampleNo: string;
+      revisionNo: number;
+      action: string;
+      changeSummary?: string | null;
+    }>;
+  };
 }) {
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -146,6 +168,10 @@ export default function SupportCenterClient({
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [contextType, setContextType] = useState<
+    "GENERAL" | "QUOTATION" | "ORDER_SAMPLE" | "RESULT_REVISION"
+  >("GENERAL");
+  const [contextId, setContextId] = useState("");
 
   async function refetchTickets() {
     try {
@@ -186,6 +212,8 @@ export default function SupportCenterClient({
     setComposing(true);
     setSubject(category ? `Bantuan: ${category.name}` : "");
     setMessage("");
+    setContextType("GENERAL");
+    setContextId("");
     setError(null);
   }
 
@@ -211,6 +239,8 @@ export default function SupportCenterClient({
           subject: trimmedSubject,
           message: trimmedMessage,
           categoryId: activeCategory?.id ?? null,
+          contextType,
+          contextId: contextType === "GENERAL" ? null : contextId,
         }),
       });
       const data = await res.json();
@@ -290,6 +320,102 @@ export default function SupportCenterClient({
 
           <div className="mt-5 space-y-4">
             <div>
+              <label className="mb-2 block text-sm font-bold text-slate-700">
+                Konteks percakapan
+              </label>
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  {
+                    value: "GENERAL" as const,
+                    label: "Pertanyaan umum",
+                    hint: "Konsultasi sebelum order",
+                    icon: MessageCircle,
+                  },
+                  {
+                    value: "QUOTATION" as const,
+                    label: "Quotation",
+                    hint: "Bahas penawaran tertentu",
+                    icon: FileBadge,
+                  },
+                  {
+                    value: "ORDER_SAMPLE" as const,
+                    label: "Pesanan / sample",
+                    hint: "Komplain atau hasil uji",
+                    icon: ShoppingBag,
+                  },
+                  {
+                    value: "RESULT_REVISION" as const,
+                    label: "Revisi hasil",
+                    hint: "Bahas versi hasil tertentu",
+                    icon: FileBadge,
+                  },
+                ].map((option) => {
+                  const Icon = option.icon;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => {
+                        setContextType(option.value);
+                        setContextId("");
+                      }}
+                      className={`rounded-xl border p-3 text-left transition ${
+                        contextType === option.value
+                          ? "border-[#114DA5] bg-blue-50 ring-1 ring-[#114DA5]"
+                          : "border-slate-200 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Icon size={17} className="text-[#114DA5]" />
+                      <p className="mt-2 text-xs font-black text-slate-800">
+                        {option.label}
+                      </p>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        {option.hint}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+              {contextType !== "GENERAL" && (
+                <select
+                  value={contextId}
+                  onChange={(event) => setContextId(event.target.value)}
+                  className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#114DA5]"
+                >
+                  <option value="">
+                    {contextType === "QUOTATION"
+                      ? "Pilih quotation..."
+                      : contextType === "RESULT_REVISION"
+                        ? "Pilih revisi hasil..."
+                        : "Pilih pesanan / sample..."}
+                  </option>
+                  {contextType === "QUOTATION"
+                    ? contexts.quotations.map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.quotationNo} · {item.status}
+                        </option>
+                      ))
+                    : contextType === "RESULT_REVISION"
+                      ? contexts.revisions.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.sampleNo} · Revisi {item.revisionNo} ·{" "}
+                            {item.action}
+                          </option>
+                        ))
+                      : contexts.samples.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.sampleNo}
+                            {item.quotation
+                              ? ` · ${item.quotation.quotationNo}`
+                              : ""}{" "}
+                            · {item.status}
+                          </option>
+                        ))}
+                </select>
+              )}
+            </div>
+
+            <div>
               <label className="mb-1.5 block text-sm font-bold text-slate-700">
                 Subjek
               </label>
@@ -323,7 +449,9 @@ export default function SupportCenterClient({
             <button
               type="button"
               onClick={submitTicket}
-              disabled={submitting}
+              disabled={
+                submitting || (contextType !== "GENERAL" && !contextId)
+              }
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60"
             >
               <Send size={16} />

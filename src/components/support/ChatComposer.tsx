@@ -1,11 +1,37 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Lock, MessageSquareText, Send } from "lucide-react";
-import type { CannedReplyDTO } from "@/lib/support";
+import { upload } from "@vercel/blob/client";
+import {
+  Camera,
+  FileAudio,
+  FileUp,
+  ImagePlus,
+  Lock,
+  MessageSquareText,
+  Paperclip,
+  Send,
+  X,
+} from "lucide-react";
+import type { CannedReplyDTO, SupportAttachmentDTO } from "@/lib/support";
+import {
+  isAllowedSupportFile,
+  safeSupportFileName,
+  SUPPORT_ACCEPT,
+} from "@/lib/support-attachments";
+import {
+  attachmentDraft,
+  optimizeSupportImage,
+  readMediaMetadata,
+} from "@/lib/support-media-client";
 
 type Props = {
-  onSend: (body: string, isInternalNote: boolean) => Promise<void> | void;
+  ticketId: string;
+  onSend: (
+    body: string,
+    isInternalNote: boolean,
+    attachments: SupportAttachmentDTO[]
+  ) => Promise<void> | void;
   onTyping?: () => void;
   disabled?: boolean;
   /** Agent-only: izinkan internal note + canned replies. */
@@ -15,6 +41,7 @@ type Props = {
 };
 
 export default function ChatComposer({
+  ticketId,
   onSend,
   onTyping,
   disabled,
@@ -25,19 +52,92 @@ export default function ChatComposer({
   const [value, setValue] = useState("");
   const [internal, setInternal] = useState(false);
   const [showCanned, setShowCanned] = useState(false);
+  const [attachments, setAttachments] = useState<SupportAttachmentDTO[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const cameraRef = useRef<HTMLInputElement | null>(null);
+  const galleryRef = useRef<HTMLInputElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const audioRef = useRef<HTMLInputElement | null>(null);
 
   // Optimistic: bersihkan input SEKARANG, kirim di latar (jangan tunggu server).
   // Tombol/textarea tak pernah nge-freeze — terasa snappy seperti WhatsApp.
   function submit() {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
+    if ((!trimmed && attachments.length === 0) || disabled || uploading) return;
 
     const noteFlag = internal;
+    const selectedAttachments = attachments;
     setValue("");
     setInternal(false);
-    onSend(trimmed, noteFlag);
+    setAttachments([]);
+    onSend(trimmed, noteFlag, selectedAttachments);
     requestAnimationFrame(() => textareaRef.current?.focus());
+  }
+
+  async function addFiles(list: FileList | null) {
+    const files = Array.from(list || []).slice(0, 8 - attachments.length);
+    if (files.length === 0) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      for (const original of files) {
+        if (!isAllowedSupportFile(original)) {
+          throw new Error(
+            `${original.name}: format tidak didukung atau ukuran melebihi 250 MB`
+          );
+        }
+        const optimized = original.type.startsWith("image/")
+          ? await optimizeSupportImage(original)
+          : {
+              file: original,
+              originalSizeBytes: original.size,
+              isCompressed: false,
+            };
+        const media = await readMediaMetadata(optimized.file);
+        if (
+          optimized.file.type.startsWith("video/") &&
+          media.height &&
+          media.height > 1080
+        ) {
+          throw new Error(
+            `${original.name}: video maksimal 1080p agar ukuran dan kualitas konsisten`
+          );
+        }
+        const pathname = `support/${ticketId}/${Date.now()}-${safeSupportFileName(
+          optimized.file.name
+        )}`;
+        const blob = await upload(pathname, optimized.file, {
+          access: "public",
+          handleUploadUrl: "/api/support/upload",
+          clientPayload: JSON.stringify({ ticketId }),
+          contentType: optimized.file.type,
+          multipart: optimized.file.size > 100 * 1024 * 1024,
+          onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
+        });
+        setAttachments((current) => [
+          ...current,
+          attachmentDraft(
+            optimized.file,
+            { url: blob.url, downloadUrl: blob.downloadUrl },
+            {
+              ...media,
+              originalSizeBytes: optimized.originalSizeBytes,
+              isCompressed: optimized.isCompressed,
+            }
+          ),
+        ]);
+      }
+    } catch (error) {
+      setUploadError(
+        error instanceof Error ? error.message : "Lampiran gagal diunggah"
+      );
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
   }
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -92,6 +192,133 @@ export default function ChatComposer({
         </div>
       )}
 
+      <input
+        ref={cameraRef}
+        type="file"
+        accept="image/*,video/mp4,video/webm,video/quicktime"
+        capture="environment"
+        className="hidden"
+        onChange={(event) => {
+          void addFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={galleryRef}
+        type="file"
+        accept="image/*,video/mp4,video/webm,video/quicktime"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void addFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={fileRef}
+        type="file"
+        accept={SUPPORT_ACCEPT}
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void addFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={audioRef}
+        type="file"
+        accept="audio/*"
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void addFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className="mr-1 inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">
+          <Paperclip size={13} /> Lampiran
+        </span>
+        <button
+          type="button"
+          onClick={() => cameraRef.current?.click()}
+          disabled={disabled || uploading}
+          className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-blue-50 hover:text-[#114DA5] disabled:opacity-50"
+          title="Buka kamera"
+        >
+          <Camera size={17} />
+        </button>
+        <button
+          type="button"
+          onClick={() => galleryRef.current?.click()}
+          disabled={disabled || uploading}
+          className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-blue-50 hover:text-[#114DA5] disabled:opacity-50"
+          title="Foto / video dari galeri"
+        >
+          <ImagePlus size={17} />
+        </button>
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={disabled || uploading}
+          className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-blue-50 hover:text-[#114DA5] disabled:opacity-50"
+          title="Upload dokumen"
+        >
+          <FileUp size={17} />
+        </button>
+        <button
+          type="button"
+          onClick={() => audioRef.current?.click()}
+          disabled={disabled || uploading}
+          className="rounded-lg border border-slate-200 p-2 text-slate-500 hover:bg-blue-50 hover:text-[#114DA5] disabled:opacity-50"
+          title="Upload audio"
+        >
+          <FileAudio size={17} />
+        </button>
+        <span className="text-[11px] text-slate-400">
+          Foto dioptimasi HD · video maks. 1080p · maks. 250 MB
+        </span>
+      </div>
+
+      {uploading && (
+        <div className="mb-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-1.5 bg-gradient-to-r from-[#114DA5] to-[#6FBC1D] transition-all"
+            style={{ width: `${uploadProgress}%` }}
+          />
+        </div>
+      )}
+      {uploadError && (
+        <p className="mb-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
+          {uploadError}
+        </p>
+      )}
+      {attachments.length > 0 && (
+        <div className="mb-2 flex flex-wrap gap-2">
+          {attachments.map((item, index) => (
+            <span
+              key={`${item.url}-${index}`}
+              className="inline-flex max-w-52 items-center gap-2 rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-[#072B6B]"
+            >
+              <span className="truncate">{item.fileName}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setAttachments((current) =>
+                    current.filter((_, itemIndex) => itemIndex !== index)
+                  )
+                }
+                className="shrink-0"
+              >
+                <X size={13} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-end gap-2">
         <textarea
           ref={textareaRef}
@@ -113,7 +340,9 @@ export default function ChatComposer({
         <button
           type="button"
           onClick={submit}
-          disabled={disabled || !value.trim()}
+          disabled={
+            disabled || uploading || (!value.trim() && attachments.length === 0)
+          }
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-sm transition hover:bg-emerald-600 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Send size={18} />

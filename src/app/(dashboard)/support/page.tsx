@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { isCustomerSession } from "@/lib/support-server";
-import { getActiveFaq, getCustomerTickets } from "@/lib/support-page-data";
+import {
+  getActiveFaq,
+  getCustomerSupportContexts,
+  getCustomerTickets,
+} from "@/lib/support-page-data";
 import SupportCenterClient from "@/components/support/SupportCenterClient";
 
 export default async function SupportCenterPage() {
@@ -25,9 +29,10 @@ export default async function SupportCenterPage() {
     );
   }
 
-  const [faq, tickets] = await Promise.all([
+  const [faq, tickets, contexts] = await Promise.all([
     getActiveFaq(),
     getCustomerTickets(session.customerId),
+    getCustomerSupportContexts(session.customerId),
   ]);
 
   return (
@@ -35,6 +40,7 @@ export default async function SupportCenterPage() {
       faq={faq}
       initialTickets={tickets}
       customerId={session.customerId}
+      contexts={contexts}
     />
   );
 }

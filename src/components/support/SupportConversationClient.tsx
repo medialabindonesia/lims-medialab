@@ -18,6 +18,7 @@ import {
   type CannedReplyDTO,
   type ChatMessage,
   type SupportMessageDTO,
+  type SupportAttachmentDTO,
   type SupportTicketDTO,
   type TicketPriority,
   type TicketStatus,
@@ -100,13 +101,18 @@ export default function SupportConversationClient({
 
   // Optimistic: pesan/catatan langsung tampil, dikirim di latar belakang.
   const sendMessage = useCallback(
-    (body: string, isInternalNote: boolean) => {
+    (
+      body: string,
+      isInternalNote: boolean,
+      attachments: SupportAttachmentDTO[] = []
+    ) => {
       const optimistic = makeOptimistic({
         ticketId: ticket.id,
         senderRole: "AGENT",
         senderName: viewerName,
         body,
         isInternalNote,
+        attachments,
       });
       setMessages((prev) => [...prev, optimistic]);
 
@@ -117,7 +123,7 @@ export default function SupportConversationClient({
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ body, isInternalNote }),
+              body: JSON.stringify({ body, isInternalNote, attachments }),
             }
           );
           const data = await res.json();
@@ -137,7 +143,7 @@ export default function SupportConversationClient({
 
   function handleRetry(message: ChatMessage) {
     setMessages((prev) => removeByKey(prev, message.clientKey ?? message.id));
-    sendMessage(message.body, message.isInternalNote);
+    sendMessage(message.body, message.isInternalNote, message.attachments);
   }
 
   async function patchTicket(payload: Record<string, unknown>) {
@@ -188,6 +194,15 @@ export default function SupportConversationClient({
                 {ticket.ticketNo}
                 {ticket.categoryName ? ` · ${ticket.categoryName}` : ""}
               </p>
+              <p className="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-[#114DA5]">
+                {ticket.contextType === "GENERAL"
+                  ? "Umum · pra-pemesanan"
+                  : ticket.contextType === "QUOTATION"
+                    ? `Quotation · ${ticket.quotationNo || ticket.contextLabel}`
+                    : ticket.contextType === "RESULT_REVISION"
+                      ? `Revisi hasil · #${ticket.revisionNo || "-"}`
+                      : `Pesanan / sample · ${ticket.sampleNo || ticket.contextLabel}`}
+              </p>
             </div>
             <span
               title={connected ? "Realtime aktif" : "Realtime offline"}
@@ -214,6 +229,7 @@ export default function SupportConversationClient({
               </div>
             ) : (
               <ChatComposer
+                ticketId={ticket.id}
                 onSend={sendMessage}
                 allowInternalNote
                 cannedReplies={cannedReplies}

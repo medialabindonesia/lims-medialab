@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiPermission } from "@/lib/api-permission";
+import { captureLabResultRevision } from "@/lib/revision-audit";
 
 type RouteContext = {
   params: Promise<{
@@ -8,7 +9,7 @@ type RouteContext = {
   }>;
 };
 
-export async function PATCH(_request: Request, context: RouteContext) {
+export async function PATCH(request: Request, context: RouteContext) {
   const permission = await requireApiPermission(
     "lab.conduct_analysis",
     "canUpdate"
@@ -50,6 +51,13 @@ export async function PATCH(_request: Request, context: RouteContext) {
   }
 
   await prisma.$transaction(async (tx) => {
+    await captureLabResultRevision(tx, {
+      entityId: sample.id,
+      action: "CREATED",
+      session: permission.session!,
+      request,
+      changeSummary: "Baseline sebelum analisis dimulai",
+    });
     await tx.sampleParameter.updateMany({
       where: {
         id: {
@@ -75,6 +83,13 @@ export async function PATCH(_request: Request, context: RouteContext) {
         action: "BULK_START_ANALYSIS",
         note: `Started ${eligible.length} parameter(s)`,
       },
+    });
+    await captureLabResultRevision(tx, {
+      entityId: sample.id,
+      action: "STATUS_TRANSITION",
+      session: permission.session!,
+      request,
+      changeSummary: `${eligible.length} parameter mulai dianalisis`,
     });
   });
 

@@ -6,6 +6,7 @@ import { ArrowLeft, CheckCircle2, Wifi, WifiOff } from "lucide-react";
 import {
   type ChatMessage,
   type SupportMessageDTO,
+  type SupportAttachmentDTO,
   type SupportTicketDTO,
 } from "@/lib/support";
 import {
@@ -80,13 +81,14 @@ export default function SupportChatClient({
 
   // Optimistic: pesan langsung tampil, dikirim di latar belakang.
   const sendMessage = useCallback(
-    (body: string) => {
+    (body: string, attachments: SupportAttachmentDTO[] = []) => {
       const optimistic = makeOptimistic({
         ticketId: ticket.id,
         senderRole: "CUSTOMER",
         senderName: ticket.customerName || "Anda",
         body,
         isInternalNote: false,
+        attachments,
       });
       setMessages((prev) => [...prev, optimistic]);
 
@@ -97,7 +99,7 @@ export default function SupportChatClient({
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ body }),
+              body: JSON.stringify({ body, attachments }),
             }
           );
           const data = await res.json();
@@ -117,7 +119,7 @@ export default function SupportChatClient({
 
   function handleRetry(message: ChatMessage) {
     setMessages((prev) => removeByKey(prev, message.clientKey ?? message.id));
-    sendMessage(message.body);
+    sendMessage(message.body, message.attachments);
   }
 
   async function submitRating() {
@@ -162,6 +164,15 @@ export default function SupportChatClient({
             <p className="text-xs text-slate-400">
               {ticket.ticketNo}
               {ticket.categoryName ? ` · ${ticket.categoryName}` : ""}
+            </p>
+            <p className="mt-1 inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-[#114DA5]">
+              {ticket.contextType === "GENERAL"
+                ? "Umum · pra-pemesanan"
+                : ticket.contextType === "QUOTATION"
+                  ? `Quotation · ${ticket.quotationNo || ticket.contextLabel}`
+                  : ticket.contextType === "RESULT_REVISION"
+                    ? `Revisi hasil · #${ticket.revisionNo || "-"}`
+                    : `Pesanan / sample · ${ticket.sampleNo || ticket.contextLabel}`}
             </p>
           </div>
         </div>
@@ -238,7 +249,10 @@ export default function SupportChatClient({
           </div>
         ) : (
           <ChatComposer
-            onSend={(body) => sendMessage(body)}
+            ticketId={ticket.id}
+            onSend={(body, _internal, attachments) =>
+              sendMessage(body, attachments)
+            }
             onTyping={() =>
               publishTyping({
                 name: ticket.customerName || "Customer",

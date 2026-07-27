@@ -13,6 +13,27 @@ export type TicketStatus =
 export type TicketPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 
 export type SenderRole = "CUSTOMER" | "AGENT" | "SYSTEM";
+export type SupportContextType =
+  | "GENERAL"
+  | "QUOTATION"
+  | "ORDER_SAMPLE"
+  | "RESULT_REVISION";
+export type AttachmentKind = "IMAGE" | "VIDEO" | "AUDIO" | "DOCUMENT";
+
+export type SupportAttachmentDTO = {
+  id?: string;
+  kind: AttachmentKind;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  url: string;
+  downloadUrl?: string | null;
+  width?: number | null;
+  height?: number | null;
+  durationSeconds?: number | null;
+  originalSizeBytes?: number | null;
+  isCompressed?: boolean;
+};
 
 export type SupportMessageDTO = {
   id: string;
@@ -21,6 +42,7 @@ export type SupportMessageDTO = {
   senderRole: SenderRole;
   senderName?: string | null;
   body: string;
+  attachments: SupportAttachmentDTO[];
   isInternalNote: boolean;
   readByCustomerAt: string | null;
   readByAgentAt: string | null;
@@ -44,6 +66,14 @@ export type SupportTicketDTO = {
   subject: string;
   status: TicketStatus;
   priority: TicketPriority;
+  contextType: SupportContextType;
+  contextLabel: string | null;
+  quotationId: string | null;
+  quotationNo?: string | null;
+  sampleId: string | null;
+  sampleNo?: string | null;
+  revisionId: string | null;
+  revisionNo?: number | null;
   categoryId: string | null;
   categoryName?: string | null;
   customerId: string;

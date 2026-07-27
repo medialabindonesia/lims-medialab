@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiPermission } from "@/lib/api-permission";
+import { captureLabResultRevision } from "@/lib/revision-audit";
 
 const resultSchema = z.object({
   results: z
@@ -78,6 +79,14 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   await prisma.$transaction(async (tx) => {
+    await captureLabResultRevision(tx, {
+      entityId: sample.id,
+      action: "CREATED",
+      session: permission.session!,
+      request,
+      changeSummary: "Baseline sebelum input hasil laboratorium",
+    });
+
     for (const item of eligible) {
       const result = resultMap.get(item.id);
 
@@ -110,6 +119,14 @@ export async function PATCH(request: Request, context: RouteContext) {
         action: "BULK_ENTER_RESULT",
         note: `Entered ${eligible.length} result(s)`,
       },
+    });
+
+    await captureLabResultRevision(tx, {
+      entityId: sample.id,
+      action: "UPDATED",
+      session: permission.session!,
+      request,
+      changeSummary: `${eligible.length} hasil laboratorium diinput`,
     });
   });
 

@@ -67,7 +67,7 @@ export async function GET(_request: Request, context: RouteContext) {
       // Internal note tidak boleh terlihat customer.
       ...(isCustomer ? { isInternalNote: false } : {}),
     },
-    include: { sender: true },
+    include: { sender: true, attachments: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -161,7 +161,7 @@ export async function PATCH(request: Request, context: RouteContext) {
             senderRole: "SYSTEM",
             body: systemNotes.join(" "),
           },
-          include: { sender: true },
+          include: { sender: true, attachments: true },
         })
       : null;
 

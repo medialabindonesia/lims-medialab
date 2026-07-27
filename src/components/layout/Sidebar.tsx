@@ -24,6 +24,7 @@ import {
   FlaskConical,
   Headset,
   HelpCircle,
+  History,
   Home,
   KeyRound,
   LifeBuoy,
@@ -89,6 +90,7 @@ const iconMap: Record<string, ElementType> = {
   FlaskConical,
   Headset,
   HelpCircle,
+  History,
   KeyRound,
   LifeBuoy,
   ListChecks,
@@ -112,10 +114,11 @@ const groupConfig: Record<string, { label: string; sort: number }> = {
   sales: { label: "Sales", sort: 5 },
   technical: { label: "Technical", sort: 6 },
   lab: { label: "Laboratory", sort: 7 },
-  coa: { label: "Certificate / COA", sort: 8 },
-  finance: { label: "Finance", sort: 9 },
-  support: { label: "Support", sort: 10 },
-  customer: { label: "Customer Area", sort: 11 },
+  audit: { label: "Quality & Audit", sort: 8 },
+  coa: { label: "Certificate / COA", sort: 9 },
+  finance: { label: "Finance", sort: 10 },
+  support: { label: "Support", sort: 11 },
+  customer: { label: "Customer Area", sort: 12 },
 };
 
 function getMenuGroupKey(menuKey: string) {

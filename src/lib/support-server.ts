@@ -18,6 +18,9 @@ export const ticketInclude = {
   category: true,
   customer: true,
   assignedTo: true,
+  quotation: true,
+  sample: true,
+  revision: true,
 } satisfies Prisma.SupportTicketInclude;
 
 type TicketWithRelations = Prisma.SupportTicketGetPayload<{
@@ -25,7 +28,7 @@ type TicketWithRelations = Prisma.SupportTicketGetPayload<{
 }>;
 
 type MessageWithSender = Prisma.SupportMessageGetPayload<{
-  include: { sender: true };
+  include: { sender: true; attachments: true };
 }>;
 
 export function serializeTicket(
@@ -38,6 +41,14 @@ export function serializeTicket(
     subject: ticket.subject,
     status: ticket.status,
     priority: ticket.priority,
+    contextType: ticket.contextType,
+    contextLabel: ticket.contextLabel,
+    quotationId: ticket.quotationId,
+    quotationNo: ticket.quotation?.quotationNo ?? null,
+    sampleId: ticket.sampleId,
+    sampleNo: ticket.sample?.sampleNo ?? null,
+    revisionId: ticket.revisionId,
+    revisionNo: ticket.revision?.revisionNo ?? null,
     categoryId: ticket.categoryId,
     categoryName: ticket.category?.name ?? null,
     customerId: ticket.customerId,
@@ -67,6 +78,20 @@ export function serializeMessage(
     senderRole: message.senderRole as SenderRole,
     senderName: message.sender?.name ?? null,
     body: message.body,
+    attachments: message.attachments.map((item) => ({
+      id: item.id,
+      kind: item.kind,
+      fileName: item.fileName,
+      mimeType: item.mimeType,
+      sizeBytes: item.sizeBytes,
+      url: item.url,
+      downloadUrl: item.downloadUrl,
+      width: item.width,
+      height: item.height,
+      durationSeconds: item.durationSeconds,
+      originalSizeBytes: item.originalSizeBytes,
+      isCompressed: item.isCompressed,
+    })),
     isInternalNote: message.isInternalNote,
     readByCustomerAt: message.readByCustomerAt?.toISOString() ?? null,
     readByAgentAt: message.readByAgentAt?.toISOString() ?? null,

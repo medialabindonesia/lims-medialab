@@ -70,8 +70,10 @@ function getMethod(item: any) {
 
 function getStandard(item: any) {
   return (
+    item.standardSnapshot ||
     item.standard ||
     item.templateParameter?.standard ||
+    item.limitSnapshot ||
     item.templateParameter?.limitValue ||
     "-"
   );

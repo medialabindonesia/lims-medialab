@@ -73,10 +73,6 @@ export default function TicketSearchBox() {
       .slice(0, MAX_RESULTS);
   }, [index, query]);
 
-  useEffect(() => {
-    setActiveIdx(0);
-  }, [query]);
-
   function openTicket(id: string) {
     setOpen(false);
     setQuery("");
@@ -117,6 +113,7 @@ export default function TicketSearchBox() {
           }}
           onChange={(event) => {
             setQuery(event.target.value);
+            setActiveIdx(0);
             setOpen(true);
           }}
           onKeyDown={handleKeyDown}

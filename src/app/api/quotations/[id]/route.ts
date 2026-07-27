@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 import { generateRevisionQuotationNo } from "@/lib/document-number";
+import { captureQuotationRevision } from "@/lib/revision-audit";
 
 const nullableString = z.preprocess(
   (value) => (value === "" ? null : value),
@@ -280,6 +281,14 @@ export async function PATCH(request: Request, context: RouteContext) {
   );
 
   const quotation = await prisma.$transaction(async (tx) => {
+    await captureQuotationRevision(tx, {
+      entityId: id,
+      action: "CREATED",
+      session: permission.session!,
+      request,
+      changeSummary: "Baseline sebelum staff merevisi quotation",
+    });
+
     await tx.quotationItem.deleteMany({
       where: {
         quotationId: id,
@@ -369,6 +378,15 @@ export async function PATCH(request: Request, context: RouteContext) {
         action: "STAFF_REVISE_QUOTATION",
         note: `Quotation revised from ${existingQuotation.quotationNo} to ${nextQuotationNo}`,
       },
+    });
+
+    await captureQuotationRevision(tx, {
+      entityId: id,
+      action: "UPDATED",
+      session: permission.session!,
+      request,
+      reason: parsed.data.note || null,
+      changeSummary: `Quotation direvisi menjadi ${nextQuotationNo}`,
     });
 
     return updated;

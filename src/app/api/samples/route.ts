@@ -132,7 +132,7 @@ export async function POST(request: Request) {
   }
 
   const templateParameterMap = new Map(
-    quotation.coaTemplate.parameters.map((item) => [item.parameterId, item.id])
+    quotation.coaTemplate.parameters.map((item) => [item.parameterId, item])
   );
 
   const sample = await prisma.sample.create({
@@ -144,11 +144,20 @@ export async function POST(request: Request) {
       status: "SAMPLE_SENT",
       sentByCustomerAt: new Date(),
       parameters: {
-        create: quotation.items.map((item) => ({
-          parameterId: item.parameterId,
-          templateParameterId: templateParameterMap.get(item.parameterId) || null,
-          status: "WAITING",
-        })),
+        create: quotation.items.map((item) => {
+          const templateParameter = templateParameterMap.get(item.parameterId);
+          return {
+            parameterId: item.parameterId,
+            templateParameterId: templateParameter?.id || null,
+            status: "WAITING",
+            displayNameSnapshot: templateParameter?.displayName || null,
+            unitSnapshot: templateParameter?.unit || null,
+            methodSnapshot: item.method || templateParameter?.method || null,
+            standardSnapshot:
+              item.regulationMatrix || templateParameter?.standard || null,
+            limitSnapshot: templateParameter?.limitValue || null,
+          };
+        }),
       },
     },
     include: {

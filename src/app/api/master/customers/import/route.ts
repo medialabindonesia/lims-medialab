@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import bcrypt from "bcryptjs";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 
@@ -14,7 +15,7 @@ function clean(value: unknown) {
   }
 
   if (typeof value === "object") {
-    const objectValue = value as any;
+    const objectValue = value as Record<string, unknown>;
 
     if (typeof objectValue.text === "string") {
       return objectValue.text.trim() || null;
@@ -22,7 +23,11 @@ function clean(value: unknown) {
 
     if (Array.isArray(objectValue.richText)) {
       const text = objectValue.richText
-        .map((item: any) => item.text || "")
+        .map((item) => {
+          if (!item || typeof item !== "object") return "";
+          const textValue = (item as Record<string, unknown>).text;
+          return typeof textValue === "string" ? textValue : "";
+        })
         .join("")
         .trim();
 
@@ -77,7 +82,9 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
 
     const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
+    await workbook.xlsx.load(
+      buffer as unknown as Parameters<typeof workbook.xlsx.load>[0]
+    );
 
     const sheet = workbook.worksheets[0];
 
@@ -236,7 +243,7 @@ export async function POST(request: Request) {
             data: {
               name,
               email: loginEmail,
-              passwordHash,
+              password: passwordHash,
               roleId: customerRole.id,
               customerId: customer.id,
               isActive: true,
@@ -245,7 +252,7 @@ export async function POST(request: Request) {
 
           userCreated++;
         } else {
-          const updateData: any = {
+          const updateData: Prisma.UserUncheckedUpdateInput = {
             name: existingUser.name || name,
             customerId: customer.id,
             roleId: customerRole.id,
@@ -253,7 +260,7 @@ export async function POST(request: Request) {
           };
 
           if (loginPassword) {
-            updateData.passwordHash = await bcrypt.hash(loginPassword, 10);
+            updateData.password = await bcrypt.hash(loginPassword, 10);
           }
 
           await prisma.user.update({

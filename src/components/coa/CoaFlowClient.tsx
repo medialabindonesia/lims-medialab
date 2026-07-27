@@ -25,6 +25,11 @@ type SampleParameter = {
   status: string;
   resultValue?: string | null;
   resultNote?: string | null;
+  displayNameSnapshot?: string | null;
+  unitSnapshot?: string | null;
+  methodSnapshot?: string | null;
+  standardSnapshot?: string | null;
+  limitSnapshot?: string | null;
   parameter: {
     id: string;
     name: string;
@@ -422,15 +427,18 @@ export default function CoaFlowClient({
                     <tbody>
                       {sample.parameters.map((item) => {
                         const displayName =
+                          item.displayNameSnapshot ||
                           item.templateParameter?.displayName ||
                           item.parameter.name;
 
                         const method =
+                          item.methodSnapshot ||
                           item.templateParameter?.method ||
                           item.parameter.method ||
                           "-";
 
                         const unit =
+                          item.unitSnapshot ||
                           item.templateParameter?.unit ||
                           item.parameter.unit ||
                           "-";
@@ -457,11 +465,15 @@ export default function CoaFlowClient({
                             </td>
 
                             <td className="px-4 py-3 text-slate-600">
-                              {item.templateParameter?.standard || "-"}
+                              {item.standardSnapshot ||
+                                item.templateParameter?.standard ||
+                                "-"}
                             </td>
 
                             <td className="px-4 py-3 text-slate-600">
-                              {item.templateParameter?.limitValue || "-"}
+                              {item.limitSnapshot ||
+                                item.templateParameter?.limitValue ||
+                                "-"}
                             </td>
 
                             <td className="px-4 py-3 text-slate-600">

@@ -47,3 +47,13 @@ export async function canAccessMenu(roleId: string, menuKey: string) {
 
   return Boolean(access);
 }
+
+export async function getMenuPermission(roleId: string, menuKey: string) {
+  return prisma.roleMenu.findFirst({
+    where: {
+      roleId,
+      menu: { key: menuKey, isActive: true },
+      canView: true,
+    },
+  });
+}

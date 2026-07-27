@@ -10,14 +10,37 @@ import {
   serializeTicket,
   ticketInclude,
 } from "@/lib/support-server";
+import {
+  attachmentKind,
+  isAllowedSupportFile,
+} from "@/lib/support-attachments";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
 const messageSchema = z.object({
-  body: z.string().trim().min(1, "Pesan tidak boleh kosong").max(4000),
+  body: z.string().trim().max(4000).default(""),
   isInternalNote: z.boolean().optional(),
+  attachments: z
+    .array(
+      z.object({
+        fileName: z.string().trim().min(1).max(255),
+        mimeType: z.string().trim().min(1).max(150),
+        sizeBytes: z.number().int().positive(),
+        url: z.string().url(),
+        downloadUrl: z.string().url().optional().nullable(),
+        width: z.number().int().positive().optional().nullable(),
+        height: z.number().int().positive().optional().nullable(),
+        durationSeconds: z.number().positive().optional().nullable(),
+        originalSizeBytes: z.number().int().positive().optional().nullable(),
+        isCompressed: z.boolean().optional(),
+      })
+    )
+    .max(8)
+    .default([]),
+}).refine((value) => value.body.length > 0 || value.attachments.length > 0, {
+  message: "Pesan atau lampiran wajib diisi",
 });
 
 export async function POST(request: Request, context: RouteContext) {
@@ -67,6 +90,29 @@ export async function POST(request: Request, context: RouteContext) {
 
   const now = new Date();
   const isInternalNote = !isCustomer && parsed.data.isInternalNote === true;
+  for (const attachment of parsed.data.attachments) {
+    if (
+      !isAllowedSupportFile({
+        type: attachment.mimeType,
+        size: attachment.sizeBytes,
+      })
+    ) {
+      return NextResponse.json(
+        { message: `Lampiran ${attachment.fileName} tidak diizinkan` },
+        { status: 400 }
+      );
+    }
+    const url = new URL(attachment.url);
+    if (
+      !url.hostname.endsWith(".blob.vercel-storage.com") ||
+      !decodeURIComponent(url.pathname).includes(`/support/${id}/`)
+    ) {
+      return NextResponse.json(
+        { message: "Lokasi lampiran tidak valid" },
+        { status: 400 }
+      );
+    }
+  }
 
   const message = await prisma.supportMessage.create({
     data: {
@@ -75,11 +121,26 @@ export async function POST(request: Request, context: RouteContext) {
       senderRole: isCustomer ? "CUSTOMER" : "AGENT",
       body: parsed.data.body,
       isInternalNote,
+      attachments: {
+        create: parsed.data.attachments.map((item) => ({
+          kind: attachmentKind(item.mimeType),
+          fileName: item.fileName,
+          mimeType: item.mimeType,
+          sizeBytes: item.sizeBytes,
+          url: item.url,
+          downloadUrl: item.downloadUrl || null,
+          width: item.width || null,
+          height: item.height || null,
+          durationSeconds: item.durationSeconds || null,
+          originalSizeBytes: item.originalSizeBytes || null,
+          isCompressed: item.isCompressed || false,
+        })),
+      },
       // Pengirim otomatis dianggap sudah membaca pesannya sendiri.
       readByCustomerAt: isCustomer ? now : null,
       readByAgentAt: !isCustomer ? now : null,
     },
-    include: { sender: true },
+    include: { sender: true, attachments: true },
   });
 
   // Update meta ticket (kecuali internal note tidak menggeser alur customer).

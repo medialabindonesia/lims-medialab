@@ -88,7 +88,7 @@ export async function POST(request: Request, context: RouteContext) {
       senderRole: "SYSTEM",
       body: `Customer memberi rating ${parsed.data.rating}/5. Tiket ditutup.`,
     },
-    include: { sender: true },
+    include: { sender: true, attachments: true },
   });
 
   const dto = serializeTicket(updated);

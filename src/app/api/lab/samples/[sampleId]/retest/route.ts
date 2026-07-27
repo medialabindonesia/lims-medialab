@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireApiPermission } from "@/lib/api-permission";
+import { captureLabResultRevision } from "@/lib/revision-audit";
 
 const retestSchema = z.object({
   reason: z.string().min(1, "Alasan retest wajib diisi"),
@@ -56,6 +57,13 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   await prisma.$transaction(async (tx) => {
+    await captureLabResultRevision(tx, {
+      entityId: sample.id,
+      action: "CREATED",
+      session: permission.session!,
+      request,
+      changeSummary: "Baseline sebelum retest",
+    });
     await tx.sampleParameter.updateMany({
       where: {
         id: {
@@ -85,6 +93,14 @@ export async function PATCH(request: Request, context: RouteContext) {
         action: "BULK_ASK_RETEST",
         note: parsed.data.reason,
       },
+    });
+    await captureLabResultRevision(tx, {
+      entityId: sample.id,
+      action: "STATUS_TRANSITION",
+      session: permission.session!,
+      request,
+      reason: parsed.data.reason,
+      changeSummary: `${eligible.length} parameter diminta retest`,
     });
   });
 

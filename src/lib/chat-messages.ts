@@ -1,4 +1,9 @@
-import type { ChatMessage, SupportMessageDTO, SenderRole } from "@/lib/support";
+import type {
+  ChatMessage,
+  SupportAttachmentDTO,
+  SupportMessageDTO,
+  SenderRole,
+} from "@/lib/support";
 
 function newClientKey() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -14,6 +19,7 @@ export function makeOptimistic(params: {
   senderName: string;
   body: string;
   isInternalNote: boolean;
+  attachments?: SupportAttachmentDTO[];
 }): ChatMessage {
   const clientKey = newClientKey();
   return {
@@ -24,6 +30,7 @@ export function makeOptimistic(params: {
     senderRole: params.senderRole,
     senderName: params.senderName,
     body: params.body,
+    attachments: params.attachments || [],
     isInternalNote: params.isInternalNote,
     readByCustomerAt: null,
     readByAgentAt: null,
