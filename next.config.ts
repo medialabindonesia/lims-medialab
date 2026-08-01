@@ -9,7 +9,20 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  
+
+  // Jangan bocorkan versi framework lewat response header.
+  poweredByHeader: false,
+
+  // Di produksi nginx yang melayani /uploads/ langsung dari disk. Rewrite ini
+  // dipakai saat `next dev` (tanpa nginx) supaya lampiran tetap tampil.
+  async rewrites() {
+    return [
+      {
+        source: "/uploads/:path*",
+        destination: "/api/support/files/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

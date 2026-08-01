@@ -13,6 +13,7 @@ import {
 import {
   attachmentKind,
   isAllowedSupportFile,
+  safeSupportFileName,
 } from "@/lib/support-attachments";
 
 type RouteContext = {
@@ -102,10 +103,15 @@ export async function POST(request: Request, context: RouteContext) {
         { status: 400 }
       );
     }
-    const url = new URL(attachment.url);
+    // Lampiran disimpan lokal di VPS, jadi URL-nya path relatif `/uploads/...`.
+    // Pastikan klien tidak menyisipkan URL eksternal atau lampiran milik
+    // ticket lain.
+    const expectedPrefix = `/uploads/${encodeURIComponent(
+      safeSupportFileName(id)
+    )}/`;
     if (
-      !url.hostname.endsWith(".blob.vercel-storage.com") ||
-      !decodeURIComponent(url.pathname).includes(`/support/${id}/`)
+      !attachment.url.startsWith(expectedPrefix) ||
+      decodeURIComponent(attachment.url).includes("..")
     ) {
       return NextResponse.json(
         { message: "Lokasi lampiran tidak valid" },

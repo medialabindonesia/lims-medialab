@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { upload } from "@vercel/blob/client";
 import {
   Camera,
   FileAudio,
@@ -16,9 +15,9 @@ import {
 import type { CannedReplyDTO, SupportAttachmentDTO } from "@/lib/support";
 import {
   isAllowedSupportFile,
-  safeSupportFileName,
   SUPPORT_ACCEPT,
 } from "@/lib/support-attachments";
+import { uploadToServer } from "@/lib/support-upload-client";
 import {
   attachmentDraft,
   optimizeSupportImage,
@@ -106,17 +105,9 @@ export default function ChatComposer({
             `${original.name}: video maksimal 1080p agar ukuran dan kualitas konsisten`
           );
         }
-        const pathname = `support/${ticketId}/${Date.now()}-${safeSupportFileName(
-          optimized.file.name
-        )}`;
-        const blob = await upload(pathname, optimized.file, {
-          access: "public",
-          handleUploadUrl: "/api/support/upload",
-          clientPayload: JSON.stringify({ ticketId }),
-          contentType: optimized.file.type,
-          multipart: optimized.file.size > 100 * 1024 * 1024,
-          onUploadProgress: ({ percentage }) => setUploadProgress(percentage),
-        });
+        const blob = await uploadToServer(ticketId, optimized.file, (percentage) =>
+          setUploadProgress(percentage)
+        );
         setAttachments((current) => [
           ...current,
           attachmentDraft(
