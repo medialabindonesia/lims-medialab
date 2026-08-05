@@ -1,10 +1,13 @@
 // Konfigurasi PM2 untuk LIMS Medialab di VPS.
-// Jalankan: pm2 start ecosystem.config.js && pm2 save
+// APP_ROOT dapat dioverride jika aplikasi tidak dipasang di /opt/apps.
+const appRoot = process.env.APP_ROOT || "/opt/apps/lims-medialab";
+const currentPath = `${appRoot}/current`;
+
 module.exports = {
   apps: [
     {
       name: "lims-medialab",
-      cwd: "/opt/apps/lims-medialab",
+      cwd: currentPath,
       script: "node_modules/next/dist/bin/next",
       args: "start",
       exec_mode: "fork",
@@ -12,6 +15,7 @@ module.exports = {
       env: {
         NODE_ENV: "production",
         PORT: "3001",
+        APP_VERSION: process.env.APP_VERSION || "unknown",
         // Next.js jalan di belakang nginx; heap 2 GB cukup untuk render PDF/Excel.
         NODE_OPTIONS: "--max-old-space-size=2048",
       },
@@ -20,8 +24,8 @@ module.exports = {
       // Jangan restart-loop kalau app crash saat boot.
       min_uptime: "30s",
       max_restarts: 10,
-      error_file: "/www/wwwlogs/lims-medialab.error.log",
-      out_file: "/www/wwwlogs/lims-medialab.out.log",
+      error_file: `${appRoot}/shared/logs/lims-medialab.error.log`,
+      out_file: `${appRoot}/shared/logs/lims-medialab.out.log`,
       merge_logs: true,
       time: true,
     },

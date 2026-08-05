@@ -1,0 +1,31 @@
+# Ganti YOUR_DOMAIN, lalu simpan sebagai /etc/nginx/sites-available/lims-medialab.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name YOUR_DOMAIN;
+
+    client_max_body_size 260M;
+
+    # Lampiran support persisten dan dilayani langsung oleh Nginx.
+    location /uploads/ {
+        alias /opt/apps/lims-medialab/shared/uploads/;
+        autoindex off;
+        add_header X-Content-Type-Options nosniff always;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Upload di-stream ke Next.js tanpa dibuffer ke disk sementara Nginx.
+        proxy_request_buffering off;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 300s;
+    }
+}

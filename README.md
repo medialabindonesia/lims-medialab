@@ -1,3 +1,10 @@
+# LIMS Medialab
+
+Aplikasi LIMS berbasis Next.js, Prisma, dan MariaDB/MySQL.
+
+Panduan deployment produksi ke Ubuntu 24.04 menggunakan GitHub Actions, PM2,
+dan Nginx tersedia di [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

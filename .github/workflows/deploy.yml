@@ -1,0 +1,127 @@
+name: CI/CD Production
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  quality:
+    name: Lint, migrate, and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_ROOT_PASSWORD: ci_root_password
+          MARIADB_DATABASE: lims_ci
+          MARIADB_USER: lims_ci
+          MARIADB_PASSWORD: ci_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DATABASE_URL: mysql://lims_ci:ci_password@127.0.0.1:3306/lims_ci
+      JWT_SECRET: ci-only-secret-not-used-in-production
+      NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS: "false"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.0 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Validate migrations
+        run: pnpm exec prisma migrate deploy
+
+      - name: Build
+        run: pnpm build
+
+  deploy:
+    name: Deploy to production VPS
+    needs: quality
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: production
+      url: ${{ vars.APP_URL }}
+    env:
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/apps/lims-medialab' }}
+      VPS_HOST: ${{ secrets.VPS_HOST }}
+      VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
+      VPS_USER: ${{ secrets.VPS_USER }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          test -n "$VPS_HOST"
+          test -n "$VPS_USER"
+          test -n "$VPS_SSH_KEY"
+          test -n "$VPS_KNOWN_HOSTS"
+          [[ "$VPS_PORT" =~ ^[0-9]+$ ]]
+          [[ "$DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]]
+
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/deploy_key"
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/deploy_key" "$HOME/.ssh/known_hosts"
+
+      - name: Create release directory
+        run: |
+          ssh -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "mkdir -p '$DEPLOY_PATH/releases/$GITHUB_SHA'"
+
+      - name: Upload release
+        run: |
+          rsync -az --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.next/' \
+            --exclude='node_modules/' \
+            --exclude='.env*' \
+            --exclude='graphify-out/' \
+            --exclude='storage/uploads/' \
+            -e "ssh -i $HOME/.ssh/deploy_key -p $VPS_PORT -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            ./ "$VPS_USER@$VPS_HOST:$DEPLOY_PATH/releases/$GITHUB_SHA/"
+
+      - name: Activate release
+        run: |
+          ssh -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
+            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "bash '$DEPLOY_PATH/releases/$GITHUB_SHA/scripts/deploy-vps.sh' '$DEPLOY_PATH/releases/$GITHUB_SHA' '$DEPLOY_PATH' '$GITHUB_SHA'"

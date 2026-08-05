@@ -9,8 +9,17 @@ export type SessionPayload = {
   customerId?: string | null;
 };
 
+const configuredSecret = process.env.JWT_SECRET;
+
+if (
+  process.env.NODE_ENV === "production" &&
+  (!configuredSecret || configuredSecret.length < 32)
+) {
+  throw new Error("JWT_SECRET produksi wajib diisi minimal 32 karakter");
+}
+
 const secret = new TextEncoder().encode(
-  process.env.JWT_SECRET || "lims-medialab-secret"
+  configuredSecret || "lims-medialab-development-secret"
 );
 
 export async function signSession(payload: SessionPayload) {
