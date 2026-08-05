@@ -12,7 +12,7 @@ export async function GET() {
   const quotations = await prisma.quotation.findMany({
     where: {
       status: {
-        in: ["LTR_CREATED", "COC_CREATED"],
+        in: ["APPROVED", "PO_UPLOADED", "LTR_CREATED", "COC_CREATED"],
       },
     },
     include: {
@@ -24,10 +24,15 @@ export async function GET() {
         },
       },
       ltr: true,
+      ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
       coc: {
         include: {
           sample: true,
         },
+      },
+      cocs: {
+        include: { sample: true, ltr: true, items: true },
+        orderBy: { sequence: "asc" },
       },
       stps: true,
       samples: true,

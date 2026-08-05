@@ -28,6 +28,7 @@ const quotationItemSchema = z.object({
 });
 
 const quotationUpdateSchema = z.object({
+  editReason: z.string().trim().min(8, "Alasan perubahan minimal 8 karakter").max(1000),
   customerId: z.string().min(1, "Customer wajib dipilih"),
   coaTemplateId: z.string().min(1, "Template COA wajib dipilih"),
   note: nullableString,
@@ -127,7 +128,9 @@ export async function GET(_request: Request, context: RouteContext) {
       },
       purchaseOrder: true,
       ltr: true,
+      ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
       coc: true,
+      cocs: { include: { items: true }, orderBy: { sequence: "asc" } },
       stps: true,
       invoice: true,
       samples: {
@@ -182,7 +185,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     include: {
       purchaseOrder: true,
       ltr: true,
+      ltrs: true,
       coc: true,
+      cocs: true,
     },
   });
 
@@ -193,13 +198,25 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  if (existingQuotation.status !== "REVISION") {
+  const editableStatuses = ["REVISION", "REJECTED", "APPROVED", "PO_UPLOADED"];
+  if (!editableStatuses.includes(existingQuotation.status)) {
+    return NextResponse.json(
+      {
+        message: "Quotation pada status ini tidak dapat direvisi oleh sales",
+      },
+      { status: 400 }
+    );
+  }
+  if (
+    ["APPROVED", "PO_UPLOADED"].includes(existingQuotation.status) &&
+    (existingQuotation.ltrs.length > 0 || existingQuotation.cocs.length > 0)
+  ) {
     return NextResponse.json(
       {
         message:
-          "Staff hanya bisa merevisi quotation yang statusnya REVISION dari customer",
+          "Quotation tidak dapat diubah karena LTR/COC sudah terbit. Gunakan audit trail dan proses pembatalan dokumen terlebih dahulu.",
       },
-      { status: 400 }
+      { status: 409 }
     );
   }
 
@@ -279,6 +296,10 @@ export async function PATCH(request: Request, context: RouteContext) {
   const nextQuotationNo = generateRevisionQuotationNo(
     existingQuotation.quotationNo
   );
+  const isCustomerRevision = existingQuotation.status === "REVISION";
+  const wasApproved = ["APPROVED", "PO_UPLOADED"].includes(
+    existingQuotation.status
+  );
 
   const quotation = await prisma.$transaction(async (tx) => {
     await captureQuotationRevision(tx, {
@@ -302,6 +323,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         customerId: parsed.data.customerId,
         coaTemplateId: parsed.data.coaTemplateId,
         note: parsed.data.note || existingQuotation.note,
+        revisionReason: parsed.data.editReason,
+        postApprovalEditReason: wasApproved ? parsed.data.editReason : null,
 
         quotationDate:
           toDate(parsed.data.quotationDate) ||
@@ -323,7 +346,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         paymentTerm: parsed.data.paymentTerm || null,
         termsNote: parsed.data.termsNote || null,
 
-        status: "NEGOTIATION",
+        status: isCustomerRevision ? "NEGOTIATION" : "VERIFIED",
         verifiedById: null,
         approvedById: null,
         items: {
@@ -385,15 +408,19 @@ export async function PATCH(request: Request, context: RouteContext) {
       action: "UPDATED",
       session: permission.session!,
       request,
-      reason: parsed.data.note || null,
-      changeSummary: `Quotation direvisi menjadi ${nextQuotationNo}`,
+      reason: parsed.data.editReason,
+      changeSummary: wasApproved
+        ? `Quotation approved diedit menjadi ${nextQuotationNo}; wajib approval ulang`
+        : `Quotation direvisi menjadi ${nextQuotationNo}`,
     });
 
     return updated;
   });
 
   return NextResponse.json({
-    message: `Quotation berhasil direvisi dan dikirim ke customer sebagai ${nextQuotationNo}`,
+    message: isCustomerRevision
+      ? `Quotation berhasil direvisi dan dikirim ke customer sebagai ${nextQuotationNo}`
+      : `Quotation berhasil direvisi sebagai ${nextQuotationNo} dan dikirim untuk approval ulang`,
     quotation,
   });
 }

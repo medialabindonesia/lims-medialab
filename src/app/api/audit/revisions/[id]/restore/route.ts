@@ -47,6 +47,17 @@ export async function POST(request: Request, context: RouteContext) {
           select: { id: true },
         });
         if (dependentSample) throw new Error("QUOTATION_HAS_SAMPLE");
+        const dependentDocument = await tx.quotation.findUnique({
+          where: { id: target.entityId },
+          select: { _count: { select: { ltrs: true, cocs: true } } },
+        });
+        if (
+          dependentDocument &&
+          (dependentDocument._count.ltrs > 0 ||
+            dependentDocument._count.cocs > 0)
+        ) {
+          throw new Error("QUOTATION_HAS_DOCUMENT");
+        }
 
         const data = snapshot.quotation;
         await tx.quotationItem.deleteMany({
@@ -62,6 +73,7 @@ export async function POST(request: Request, context: RouteContext) {
             status: "REVISION",
             totalAmount: data.totalAmount,
             note: data.note,
+            revisionReason: parsed.data.reason,
             quotationDate: new Date(data.quotationDate),
             validUntil: data.validUntil ? new Date(data.validUntil) : null,
             samplingBy: data.samplingBy as never,
@@ -162,6 +174,10 @@ export async function POST(request: Request, context: RouteContext) {
       INVALID_SNAPSHOT: ["Format snapshot tidak valid", 409],
       QUOTATION_HAS_SAMPLE: [
         "Quotation sudah memiliki sample. Ubah melalui revisi hasil laboratorium agar jejak downstream tidak rusak.",
+        409,
+      ],
+      QUOTATION_HAS_DOCUMENT: [
+        "Quotation yang sudah memiliki LTR/COC tidak dapat di-restore karena ruang lingkup dokumen downstream harus tetap konsisten.",
         409,
       ],
     };

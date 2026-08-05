@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createWriteStream } from "node:fs";
-import { mkdir, unlink } from "node:fs/promises";
+import { access, mkdir, unlink } from "node:fs/promises";
+import { constants } from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { Readable } from "node:stream";
@@ -14,7 +15,11 @@ import {
   safeSupportFileName,
   SUPPORT_ALLOWED_MIME_TYPES,
 } from "@/lib/support-attachments";
-import { supportUploadDir, supportUploadUrl } from "@/lib/support-storage";
+import {
+  supportUploadDir,
+  supportUploadDirCandidates,
+  supportUploadUrl,
+} from "@/lib/support-storage";
 
 export const runtime = "nodejs";
 // Body di-stream langsung ke disk, jadi jangan biarkan Next mem-buffer response.
@@ -84,8 +89,26 @@ export async function POST(request: Request) {
       "hex"
     )}-${stem}${ext}`;
 
-    const dir = path.join(supportUploadDir(), safeTicketId);
-    await mkdir(dir, { recursive: true });
+    let selectedRoot: string | null = null;
+    let dir: string | null = null;
+    for (const candidate of supportUploadDirCandidates()) {
+      try {
+        const candidateDir = path.join(candidate, safeTicketId);
+        await mkdir(candidateDir, { recursive: true });
+        await access(candidateDir, constants.W_OK);
+        selectedRoot = candidate;
+        dir = candidateDir;
+        break;
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        if (code !== "EACCES" && code !== "EPERM" && code !== "EROFS") {
+          throw error;
+        }
+      }
+    }
+    if (!selectedRoot || !dir) {
+      throw new Error("UPLOAD_STORAGE_NOT_WRITABLE");
+    }
     const target = path.join(dir, fileName);
 
     let written = 0;
@@ -111,13 +134,24 @@ export async function POST(request: Request) {
       throw new Error("File kosong");
     }
 
-    const publicUrl = supportUploadUrl(safeTicketId, fileName);
+    const throughApplication = path.resolve(selectedRoot) !== path.resolve(supportUploadDir());
+    const publicUrl = supportUploadUrl(
+      safeTicketId,
+      fileName,
+      throughApplication
+    );
     return NextResponse.json({ url: publicUrl, downloadUrl: publicUrl });
   } catch (error) {
     return NextResponse.json(
       {
         message:
-          error instanceof Error ? error.message : "Upload tidak dapat diproses",
+          error instanceof Error && error.message === "UPLOAD_STORAGE_NOT_WRITABLE"
+            ? "Penyimpanan lampiran belum dapat ditulis server. Admin perlu memeriksa ownership SUPPORT_UPLOAD_DIR."
+            : (error as NodeJS.ErrnoException)?.code === "EACCES"
+              ? "Server tidak memiliki izin menulis lampiran. Silakan hubungi admin sistem."
+              : error instanceof Error
+                ? error.message
+                : "Upload tidak dapat diproses",
       },
       { status: 400 }
     );

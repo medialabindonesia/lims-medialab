@@ -12,6 +12,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import Select from "@/components/ui/Select";
 
 type UserWithRelations = User & {
   role: Role;
@@ -392,19 +393,13 @@ export default function AdminUsersClient({
                   <label className="mb-2 block text-sm text-slate-600">
                     Role
                   </label>
-                  <select
+                  <Select
                     value={form.roleId}
-                    onChange={(event) =>
-                      setForm({ ...form, roleId: event.target.value })
-                    }
-                    className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
-                  >
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name} - {role.code}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => setForm({ ...form, roleId: value })}
+                    options={roles.map((role) => ({ value: role.id, label: `${role.name} - ${role.code}` }))}
+                    ariaLabel="Role"
+                    buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-slate-900 outline-none"
+                  />
                 </div>
               </div>
 
@@ -412,21 +407,19 @@ export default function AdminUsersClient({
                 <label className="mb-2 block text-sm text-slate-600">
                   Hubungkan ke Customer
                 </label>
-                <select
+                <Select
                   value={form.customerId}
-                  onChange={(event) =>
-                    setForm({ ...form, customerId: event.target.value })
-                  }
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
-                >
-                  <option value="">Tidak terhubung ke customer</option>
-                  {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                      {customer.company ? ` - ${customer.company}` : ""}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setForm({ ...form, customerId: value })}
+                  options={[
+                    { value: "", label: "Tidak terhubung ke customer" },
+                    ...customers.map((customer) => ({
+                      value: customer.id,
+                      label: `${customer.name}${customer.company ? ` - ${customer.company}` : ""}`,
+                    })),
+                  ]}
+                  ariaLabel="Hubungkan ke Customer"
+                  buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-slate-900 outline-none"
+                />
               </div>
 
               <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">

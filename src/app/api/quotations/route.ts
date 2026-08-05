@@ -19,6 +19,7 @@ const nullableDate = z.preprocess(
 const quotationItemSchema = z.object({
   parameterId: z.string().min(1, "Parameter wajib dipilih"),
   qty: z.coerce.number().int().min(1, "Qty minimal 1"),
+  customPrice: z.coerce.number().min(0).optional(),
   description: nullableString,
   customerSampleId: nullableString,
   samplingLocation: nullableString,
@@ -68,13 +69,14 @@ function calculateTotals(input: {
   items: Array<{
     parameterId: string;
     qty: number;
+    customPrice?: number;
   }>;
   priceMap: Map<string, number>;
   samplingCost?: number;
   vatPercent?: number;
 }) {
   const totalAmount = input.items.reduce((total, item) => {
-    const price = input.priceMap.get(item.parameterId) || 0;
+    const price = item.customPrice ?? input.priceMap.get(item.parameterId) ?? 0;
     return total + price * item.qty;
   }, 0);
 
@@ -139,7 +141,12 @@ export async function GET(request: Request) {
       },
       purchaseOrder: true,
       ltr: true,
+      ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
       coc: true,
+      cocs: {
+        include: { items: true, ltr: true, sample: true },
+        orderBy: { sequence: "asc" },
+      },
       stps: true,
       invoice: true,
       samples: {
@@ -153,7 +160,43 @@ export async function GET(request: Request) {
     },
   });
 
-  return NextResponse.json({ quotations });
+  const quotationIds = quotations.map((quotation) => quotation.id);
+  const [revisions, creators] = await Promise.all([
+    quotationIds.length
+      ? prisma.auditRevision.findMany({
+          where: { entityType: "QUOTATION", entityId: { in: quotationIds } },
+          select: {
+            id: true,
+            entityId: true,
+            revisionNo: true,
+            action: true,
+            changeSummary: true,
+            reason: true,
+            actorNameSnapshot: true,
+            createdAt: true,
+          },
+          orderBy: [{ entityId: "asc" }, { revisionNo: "desc" }],
+        })
+      : Promise.resolve([]),
+    prisma.user.findMany({
+      where: {
+        id: {
+          in: [...new Set(quotations.map((item) => item.requestedById).filter(Boolean))] as string[],
+        },
+      },
+      select: { id: true, name: true, email: true },
+    }),
+  ]);
+  const creatorMap = new Map(creators.map((creator) => [creator.id, creator]));
+  return NextResponse.json({
+    quotations: quotations.map((quotation) => ({
+      ...quotation,
+      requestedBy: quotation.requestedById
+        ? creatorMap.get(quotation.requestedById) || null
+        : null,
+      revisions: revisions.filter((revision) => revision.entityId === quotation.id),
+    })),
+  });
 }
 
 export async function POST(request: Request) {
@@ -307,7 +350,7 @@ export async function POST(request: Request) {
           return {
             parameterId: item.parameterId,
             qty: item.qty,
-            price: priceMap.get(item.parameterId) || 0,
+            price: item.customPrice ?? priceMap.get(item.parameterId) ?? 0,
             description: item.description || null,
             customerSampleId: item.customerSampleId || null,
             samplingLocation: item.samplingLocation || null,
@@ -335,7 +378,9 @@ export async function POST(request: Request) {
       },
       purchaseOrder: true,
       ltr: true,
+      ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
       coc: true,
+      cocs: { include: { items: true }, orderBy: { sequence: "asc" } },
       stps: true,
     },
   });

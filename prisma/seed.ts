@@ -63,6 +63,8 @@ const menus = [
   { name: "Approve Quotation", key: "quotation.approve", href: "/quotations/approve", icon: "BadgeCheck", sort: 33 },
 
   { name: "Create LTR", key: "sales.ltr", href: "/sales/ltr", icon: "FileText", sort: 40 },
+  { name: "Sales Monitoring", key: "sales.monitoring", href: "/sales/monitoring", icon: "BarChart3", sort: 41 },
+  { name: "Sampling Schedule", key: "sales.sampling_schedule", href: "/sales/sampling-schedule", icon: "CalendarRange", sort: 42 },
 
   { name: "Create COC", key: "technical.coc", href: "/technical/coc", icon: "ClipboardCheck", sort: 50 },
   { name: "Create STPS", key: "technical.stps", href: "/technical/stps", icon: "FileSignature", sort: 51 },
@@ -142,12 +144,16 @@ const roleAccess: Record<string, string[]> = {
     "quotation.verify",
     "quotation.revise",
     "sales.ltr",
+    "sales.monitoring",
+    "sales.sampling_schedule",
     "audit.revisions",
   ],
 
   SALES_MANAGER_DIRECTOR: [
     "dashboard.worker",
     "quotation.approve",
+    "sales.monitoring",
+    "sales.sampling_schedule",
   ],
 
   FINANCE_STAFF: [
@@ -160,6 +166,7 @@ const roleAccess: Record<string, string[]> = {
     "dashboard.worker",
     "technical.coc",
     "technical.stps",
+    "sales.sampling_schedule",
   ],
 
   CUSTOMER_SERVICE: [

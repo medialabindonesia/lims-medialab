@@ -8,10 +8,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Award,
+  BarChart3,
   BadgeCheck,
   BadgeDollarSign,
   Briefcase,
   Building2,
+  CalendarRange,
   CheckCheck,
   ClipboardCheck,
   ClipboardPen,
@@ -74,10 +76,12 @@ type MenuGroup = {
 
 const iconMap: Record<string, ElementType> = {
   Award,
+  BarChart3,
   BadgeCheck,
   BadgeDollarSign,
   Briefcase,
   Building2,
+  CalendarRange,
   CheckCheck,
   ClipboardCheck,
   ClipboardPen,
@@ -354,6 +358,7 @@ export default function Sidebar({
   session: DashboardSession;
 }) {
   const reduce = useReducedMotion();
+  const pathname = usePathname();
   const [openMobile, setOpenMobile] = useState(false);
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -372,6 +377,16 @@ export default function Sidebar({
   const supportBadge = supportKey
     ? { key: supportKey, count: supportUnread }
     : undefined;
+  const activeMenu = menus.find((menu) => isActivePath(pathname, menu.href));
+  const dashboardMenu = menus.find((menu) => menu.key.startsWith("dashboard."));
+  const monitoringMenu = menus.find((menu) => menu.key === "sales.monitoring");
+  const supportMenu = menus.find(
+    (menu) => menu.key === "support.center" || menu.key === "support.desk"
+  );
+  const mobilePrimary = [dashboardMenu, activeMenu, monitoringMenu, supportMenu, ...menus]
+    .filter((menu): menu is DashboardMenuItem => Boolean(menu))
+    .filter((menu, index, all) => all.findIndex((item) => item.id === menu.id) === index)
+    .slice(0, 4);
 
   useEffect(() => {
     if (!openMobile) return;
@@ -404,44 +419,44 @@ export default function Sidebar({
         />
       </aside>
 
-      <div className="sticky top-0 z-30 mb-4 flex items-center justify-between border-b border-blue-100 bg-white/92 px-4 py-3 shadow-[0_8px_28px_rgba(7,43,107,0.08)] backdrop-blur-xl lg:hidden">
-        <Link
-          href="/dashboard"
-          className="flex min-w-0 items-center gap-3 rounded-xl"
-        >
-          <div className="rounded-xl border border-blue-100 bg-white px-2 py-1.5">
-            <Image
-              src="/images/logo-medialab.png"
-              alt="Medialab Indonesia"
-              width={142}
-              height={43}
-              priority
-              className="h-auto w-[7.6rem] sm:w-[8.8rem]"
-            />
-          </div>
-
-          <div className="hidden min-w-0 sm:block">
-            <p className="truncate text-xs font-extrabold uppercase tracking-[0.12em] text-blue-700">
-              LIMS Workspace
-            </p>
-            <p className="truncate text-[11px] font-medium text-slate-500">
-              {session.roleName}
-            </p>
-          </div>
-        </Link>
-
-        <button
-          ref={openButtonRef}
-          type="button"
-          onClick={() => setOpenMobile(true)}
-          aria-label="Buka navigasi"
-          aria-expanded={openMobile}
-          aria-controls="mobile-navigation"
-          className="grid h-11 w-11 place-items-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-800 transition hover:bg-blue-100"
-        >
-          <MenuIcon size={22} />
-        </button>
-      </div>
+      <nav
+        aria-label="Navigasi bawah"
+        className="fixed inset-x-0 bottom-0 z-[9000] border-t border-blue-100 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-14px_38px_rgba(7,43,107,0.14)] backdrop-blur-xl lg:hidden"
+      >
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
+          {mobilePrimary.map((item) => {
+            const Icon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : Home;
+            const active = isActivePath(pathname, item.href);
+            const badge = supportBadge?.key === item.key ? supportBadge.count : 0;
+            return (
+              <Link
+                key={item.id}
+                href={item.href}
+                aria-current={active ? "page" : undefined}
+                className={`relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold transition ${
+                  active ? "bg-blue-50 text-blue-800" : "text-slate-500 active:bg-slate-100"
+                }`}
+              >
+                <Icon size={20} className={active ? "text-blue-700" : "text-slate-500"} />
+                <span className="max-w-full truncate">{item.name.replace(" Dashboard", "")}</span>
+                {badge > 0 && <span className="absolute right-2 top-1 rounded-full bg-red-500 px-1.5 text-[9px] text-white">{badge}</span>}
+              </Link>
+            );
+          })}
+          <button
+            ref={openButtonRef}
+            type="button"
+            onClick={() => setOpenMobile(true)}
+            aria-label="Buka semua menu"
+            aria-expanded={openMobile}
+            aria-controls="mobile-navigation"
+            className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold text-slate-500 transition active:bg-slate-100"
+          >
+            <MenuIcon size={20} />
+            <span>Semua</span>
+          </button>
+        </div>
+      </nav>
 
       <AnimatePresence>
         {openMobile && (
@@ -452,18 +467,18 @@ export default function Sidebar({
             onMouseDown={(event) => {
               if (event.currentTarget === event.target) setOpenMobile(false);
             }}
-            className="fixed inset-0 z-[9999] bg-brand-navy/65 p-3 backdrop-blur-md sm:p-4 lg:hidden"
+            className="fixed inset-0 z-[9999] flex items-end bg-brand-navy/65 p-2 backdrop-blur-md sm:p-4 lg:hidden"
           >
             <motion.div
               id="mobile-navigation"
               role="dialog"
               aria-modal="true"
               aria-label="Navigasi LIMS"
-              initial={reduce ? false : { x: -24, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={reduce ? undefined : { x: -24, opacity: 0 }}
+              initial={reduce ? false : { y: 40, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={reduce ? undefined : { y: 40, opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="relative h-full w-full max-w-sm overflow-hidden rounded-[2rem] border border-white/15 bg-brand-navy shadow-2xl"
+              className="relative h-[88dvh] w-full overflow-hidden rounded-[2rem] border border-white/15 bg-brand-navy shadow-2xl sm:mx-auto sm:max-w-lg"
             >
               <button
                 ref={closeButtonRef}

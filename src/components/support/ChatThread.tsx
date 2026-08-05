@@ -37,6 +37,48 @@ function fileSize(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+const LINK_PATTERN = /(https?:\/\/[^\s<]+|www\.[^\s<]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/gi;
+const EXACT_LINK_PATTERN = /^(?:https?:\/\/[^\s<]+|www\.[^\s<]+|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})$/i;
+
+function MessageBody({
+  body,
+  onDark,
+}: {
+  body: string;
+  onDark: boolean;
+}) {
+  return (
+    <p className="whitespace-pre-wrap break-words leading-relaxed">
+      {body.split(LINK_PATTERN).map((part, index) => {
+        if (!part || !EXACT_LINK_PATTERN.test(part)) {
+          return <span key={index}>{part}</span>;
+        }
+        const isEmail = part.includes("@") && !part.startsWith("http");
+        const href = isEmail
+          ? `mailto:${part}`
+          : part.startsWith("www.")
+            ? `https://${part}`
+            : part;
+        return (
+          <a
+            key={`${part}-${index}`}
+            href={href}
+            target={isEmail ? undefined : "_blank"}
+            rel={isEmail ? undefined : "noreferrer nofollow"}
+            className={`font-bold underline decoration-2 underline-offset-2 ${
+              onDark
+                ? "text-white decoration-white/60 hover:decoration-white"
+                : "text-blue-700 decoration-blue-300 hover:text-blue-900"
+            }`}
+          >
+            {part}
+          </a>
+        );
+      })}
+    </p>
+  );
+}
+
 export default function ChatThread({
   messages,
   viewer,
@@ -242,9 +284,7 @@ export default function ChatThread({
               )}
 
               {message.body && (
-                <p className="whitespace-pre-wrap break-words leading-relaxed">
-                  {message.body}
-                </p>
+                <MessageBody body={message.body} onDark={isOwn && !isInternal} />
               )}
 
               <div

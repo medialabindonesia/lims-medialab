@@ -9,6 +9,7 @@ import {
   Send,
 } from "lucide-react";
 import ExportButtons from "@/components/exports/ExportButtons";
+import Select from "@/components/ui/Select";
 
 type SampleMode = "receive" | "distribute";
 
@@ -428,23 +429,13 @@ export default function SampleFlowClient({
                       </div>
 
                       {mode === "distribute" && (
-                        <select
+                        <Select
                           value={parameter.analystId || analysts[0]?.id || ""}
-                          onChange={(event) =>
-                            updateAnalyst(
-                              sample.id,
-                              parameter.id,
-                              event.target.value
-                            )
-                          }
-                          className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
-                        >
-                          {analysts.map((analyst) => (
-                            <option key={analyst.id} value={analyst.id}>
-                              {analyst.name}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(value) => updateAnalyst(sample.id, parameter.id, value)}
+                          options={analysts.map((analyst) => ({ value: analyst.id, label: analyst.name }))}
+                          ariaLabel={`Analyst untuk ${parameter.parameter.name}`}
+                          buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-900 outline-none"
+                        />
                       )}
                     </div>
                   ))}

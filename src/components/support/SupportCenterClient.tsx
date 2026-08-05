@@ -32,6 +32,7 @@ import {
 import { TicketStatusBadge } from "@/components/support/Badges";
 import { useSupportUnread } from "@/hooks/useSupportUnread";
 import { reauthAbly } from "@/lib/ably-client";
+import Select from "@/components/ui/Select";
 
 const categoryIcons: Record<string, ElementType> = {
   FilePlus,
@@ -377,41 +378,38 @@ export default function SupportCenterClient({
                 })}
               </div>
               {contextType !== "GENERAL" && (
-                <select
+                <Select
                   value={contextId}
-                  onChange={(event) => setContextId(event.target.value)}
-                  className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-[#114DA5]"
-                >
-                  <option value="">
-                    {contextType === "QUOTATION"
-                      ? "Pilih quotation..."
+                  onChange={setContextId}
+                  options={[
+                    {
+                      value: "",
+                      label:
+                        contextType === "QUOTATION"
+                          ? "Pilih quotation..."
+                          : contextType === "RESULT_REVISION"
+                            ? "Pilih revisi hasil..."
+                            : "Pilih pesanan / sample...",
+                    },
+                    ...(contextType === "QUOTATION"
+                      ? contexts.quotations.map((item) => ({
+                          value: item.id,
+                          label: `${item.quotationNo} · ${item.status}`,
+                        }))
                       : contextType === "RESULT_REVISION"
-                        ? "Pilih revisi hasil..."
-                        : "Pilih pesanan / sample..."}
-                  </option>
-                  {contextType === "QUOTATION"
-                    ? contexts.quotations.map((item) => (
-                        <option key={item.id} value={item.id}>
-                          {item.quotationNo} · {item.status}
-                        </option>
-                      ))
-                    : contextType === "RESULT_REVISION"
-                      ? contexts.revisions.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.sampleNo} · Revisi {item.revisionNo} ·{" "}
-                            {item.action}
-                          </option>
-                        ))
-                      : contexts.samples.map((item) => (
-                          <option key={item.id} value={item.id}>
-                            {item.sampleNo}
-                            {item.quotation
-                              ? ` · ${item.quotation.quotationNo}`
-                              : ""}{" "}
-                            · {item.status}
-                          </option>
-                        ))}
-                </select>
+                        ? contexts.revisions.map((item) => ({
+                            value: item.id,
+                            label: `${item.sampleNo} · Revisi ${item.revisionNo} · ${item.action}`,
+                          }))
+                        : contexts.samples.map((item) => ({
+                            value: item.id,
+                            label: `${item.sampleNo}${item.quotation ? ` · ${item.quotation.quotationNo}` : ""} · ${item.status}`,
+                          }))),
+                  ]}
+                  ariaLabel="Konteks tiket"
+                  className="mt-3 w-full"
+                  buttonClassName="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm text-slate-800 outline-none"
+                />
               )}
             </div>
 

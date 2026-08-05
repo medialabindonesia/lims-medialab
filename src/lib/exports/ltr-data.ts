@@ -25,6 +25,12 @@ export async function getAuthorizedLtrForExport(ltrId: string) {
       id: ltrId,
     },
     include: {
+      items: {
+        include: {
+          quotationItem: { include: { parameter: true } },
+        },
+        orderBy: { sort: "asc" },
+      },
       quotation: {
         include: {
           customer: true,
@@ -39,6 +45,10 @@ export async function getAuthorizedLtrForExport(ltrId: string) {
           },
           purchaseOrder: true,
           coc: true,
+          cocs: {
+            where: { ltrId },
+            orderBy: { sequence: "asc" },
+          },
           stps: true,
           samples: true,
         },
@@ -67,8 +77,17 @@ export async function getAuthorizedLtrForExport(ltrId: string) {
     };
   }
 
+  const scopedLtr = {
+    ...ltr,
+    quotation: {
+      ...ltr.quotation,
+      coc: ltr.quotation.cocs[0] || ltr.quotation.coc,
+      items: ltr.items.map((item) => item.quotationItem),
+    },
+  };
+
   return {
-    ltr,
+    ltr: scopedLtr,
     response: null,
   };
 }

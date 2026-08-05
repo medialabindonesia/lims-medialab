@@ -1,11 +1,13 @@
 "use client";
 
-import type { ElementType, FormEvent, ReactNode } from "react";
+import type { ElementType, FormEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { fadeUpItem, staggerContainer, EASE_OUT } from "@/lib/motion";
 import ExportButtons from "@/components/exports/ExportButtons";
+import Select, { type SelectOption } from "@/components/ui/Select";
+import DatePickerField from "@/components/ui/DatePickerField";
 import {
   CalendarDays,
   ClipboardCheck,
@@ -72,9 +74,20 @@ type Quotation = {
     id: string;
     ltrNo: string;
   } | null;
+  ltrs?: Array<{
+    id: string;
+    ltrNo: string;
+    sequence: number;
+    groupLabel?: string | null;
+    items?: Array<{ quotationItemId: string }>;
+  }>;
   coc?: {
     id: string;
     cocNo: string;
+    sequence?: number;
+    groupLabel?: string | null;
+    ltrId?: string | null;
+    items?: Array<{ quotationItemId: string }>;
     customerEmailCoa?: string | null;
     customerCode?: string | null;
     samplerName?: string | null;
@@ -95,6 +108,7 @@ type Quotation = {
       status: string;
     } | null;
   } | null;
+  cocs?: Array<NonNullable<Quotation["coc"]>>;
   stps?: Array<{
     id: string;
     stpsNo: string;
@@ -128,6 +142,9 @@ type CocItemForm = {
 };
 
 type CocForm = {
+  cocId: string;
+  ltrId: string;
+  groupLabel: string;
   customerEmailCoa: string;
   customerCode: string;
   samplerName: string;
@@ -265,12 +282,14 @@ function SelectField({
   label,
   value,
   onChange,
-  children,
+  options,
+  placeholder,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  children: ReactNode;
+  options: SelectOption[];
+  placeholder?: string;
 }) {
   return (
     <div>
@@ -278,13 +297,14 @@ function SelectField({
         {label}
       </label>
 
-      <select
+      <Select
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-      >
-        {children}
-      </select>
+        onChange={onChange}
+        options={options}
+        placeholder={placeholder}
+        ariaLabel={label}
+        buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-900 outline-none transition hover:border-blue-300"
+      />
     </div>
   );
 }
@@ -331,6 +351,9 @@ export default function TechnicalDocumentClient({
   const [loading, setLoading] = useState(false);
 
   const [cocForm, setCocForm] = useState<CocForm>({
+    cocId: "",
+    ltrId: "",
+    groupLabel: "Bagian 1",
     customerEmailCoa: "",
     customerCode: "",
     samplerName: "",
@@ -386,7 +409,13 @@ export default function TechnicalDocumentClient({
         quotation.customer.name.toLowerCase().includes(keyword) ||
         (quotation.customer.company || "").toLowerCase().includes(keyword) ||
         (quotation.ltr?.ltrNo || "").toLowerCase().includes(keyword) ||
+        (quotation.ltrs || []).some((ltr) =>
+          ltr.ltrNo.toLowerCase().includes(keyword)
+        ) ||
         (quotation.coc?.cocNo || "").toLowerCase().includes(keyword) ||
+        (quotation.cocs || []).some((coc) =>
+          coc.cocNo.toLowerCase().includes(keyword)
+        ) ||
         (quotation.coc?.samplingLocation || "").toLowerCase().includes(keyword) ||
         (quotation.stps?.[0]?.stpsNo || "").toLowerCase().includes(keyword)
       );
@@ -407,12 +436,15 @@ export default function TechnicalDocumentClient({
     }
   }
 
-  function openCocForm(quotation: Quotation) {
+  function openCocForm(
+    quotation: Quotation,
+    targetCoc?: NonNullable<Quotation["coc"]> | null
+  ) {
     setSelectedQuotation(quotation);
     setMessage("");
 
     const fallbackSamplingLocation =
-      quotation.coc?.samplingLocation ||
+      targetCoc?.samplingLocation ||
       [
         quotation.customer.samplingAddressLine1,
         quotation.customer.samplingAddressLine2,
@@ -421,37 +453,57 @@ export default function TechnicalDocumentClient({
         .join(", ") ||
       "";
 
+    const usedByOtherCocs = new Set(
+      (quotation.cocs || [])
+        .filter((coc) => coc.id !== targetCoc?.id)
+        .flatMap((coc) => coc.items?.map((item) => item.quotationItemId) || [])
+    );
+    const targetItemIds = new Set(
+      targetCoc?.items?.map((item) => item.quotationItemId) || []
+    );
+    const selectedItems = quotation.items.filter((item) =>
+      targetCoc ? targetItemIds.has(item.id) : !usedByOtherCocs.has(item.id)
+    );
+    if (selectedItems.length === 0) {
+      setMessage("Semua titik uji quotation ini sudah masuk ke COC lain.");
+      return;
+    }
+
     setCocForm({
+      cocId: targetCoc?.id || "",
+      ltrId: targetCoc?.ltrId || "",
+      groupLabel:
+        targetCoc?.groupLabel || `Bagian ${(quotation.cocs?.length || 0) + 1}`,
       customerEmailCoa:
-        quotation.coc?.customerEmailCoa ||
+        targetCoc?.customerEmailCoa ||
         quotation.customer.recipientEmail1 ||
         quotation.customer.email ||
         "",
-      customerCode: quotation.coc?.customerCode || quotation.customer.id,
-      samplerName: quotation.coc?.samplerName || "",
+      customerCode: targetCoc?.customerCode || quotation.customer.id,
+      samplerName: targetCoc?.samplerName || "",
       samplingLocation: fallbackSamplingLocation,
       tatRequested:
-        (quotation.coc?.tatRequested as CocForm["tatRequested"]) ||
+        (targetCoc?.tatRequested as CocForm["tatRequested"]) ||
         (quotation.tatRequested as CocForm["tatRequested"]) ||
         "NORMAL",
       plannedSamplingStart: toInputDateTime(
-        quotation.coc?.plannedSamplingStart
+        targetCoc?.plannedSamplingStart
       ),
-      plannedSamplingEnd: toInputDateTime(quotation.coc?.plannedSamplingEnd),
-      estimatedCoaDate: toInputDate(quotation.coc?.estimatedCoaDate),
+      plannedSamplingEnd: toInputDateTime(targetCoc?.plannedSamplingEnd),
+      estimatedCoaDate: toInputDate(targetCoc?.estimatedCoaDate),
       sampleConditionSamplingInfo:
-        quotation.coc?.sampleConditionSamplingInfo ||
+        targetCoc?.sampleConditionSamplingInfo ||
         "Sample diterima sesuai informasi sampling.",
       sampleConditionMethod:
-        quotation.coc?.sampleConditionMethod || "Sesuai metode pengujian.",
+        targetCoc?.sampleConditionMethod || "Sesuai metode pengujian.",
       sampleConditionReceived:
-        quotation.coc?.sampleConditionReceived || "Baik",
-      abnormalCondition: quotation.coc?.abnormalCondition || "",
-      specialInstruction: quotation.coc?.specialInstruction || "",
+        targetCoc?.sampleConditionReceived || "Baik",
+      abnormalCondition: targetCoc?.abnormalCondition || "",
+      specialInstruction: targetCoc?.specialInstruction || "",
       deliveryMethod:
-        (quotation.coc?.deliveryMethod as CocForm["deliveryMethod"]) ||
+        (targetCoc?.deliveryMethod as CocForm["deliveryMethod"]) ||
         "MEDIALAB_SAMPLING",
-      items: quotation.items.map((item) => ({
+      items: selectedItems.map((item) => ({
         id: item.id,
         customerSampleId: item.customerSampleId || "",
         samplingLocation: item.samplingLocation || fallbackSamplingLocation,
@@ -504,6 +556,37 @@ export default function TechnicalDocumentClient({
           : item
       ),
     }));
+  }
+
+  function toggleCocItem(item: QuotationItem) {
+    if (!selectedQuotation) return;
+    const usedByOther = (selectedQuotation.cocs || []).some(
+      (coc) =>
+        coc.id !== cocForm.cocId &&
+        coc.items?.some((link) => link.quotationItemId === item.id)
+    );
+    if (usedByOther) return;
+
+    setCocForm((prev) => {
+      const selected = prev.items.some((candidate) => candidate.id === item.id);
+      return {
+        ...prev,
+        items: selected
+          ? prev.items.filter((candidate) => candidate.id !== item.id)
+          : [
+              ...prev.items,
+              {
+                id: item.id,
+                customerSampleId: item.customerSampleId || "",
+                samplingLocation:
+                  item.samplingLocation || prev.samplingLocation || "",
+                regulationMatrix: item.regulationMatrix || "",
+                durationSampling: item.durationSampling || "",
+                method: item.method || item.parameter.method || "",
+              },
+            ],
+      };
+    });
   }
 
   async function submitForm(event: FormEvent<HTMLFormElement>) {
@@ -621,6 +704,36 @@ export default function TechnicalDocumentClient({
               <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="grid gap-4 lg:grid-cols-3">
                   <Field
+                    label="Nama kelompok COC"
+                    value={cocForm.groupLabel}
+                    onChange={(value) =>
+                      setCocForm((prev) => ({ ...prev, groupLabel: value }))
+                    }
+                    placeholder="Contoh: Area Produksi A"
+                    icon={ClipboardCheck}
+                  />
+
+                  <SelectField
+                    label="Referensi LTR (opsional)"
+                    value={cocForm.ltrId}
+                    onChange={(value) =>
+                      setCocForm((prev) => ({ ...prev, ltrId: value }))
+                    }
+                    options={[
+                      { value: "", label: "Tanpa LTR — COC langsung" },
+                      ...(selectedQuotation.ltrs || []).map((ltr) => ({
+                        value: ltr.id,
+                        label: `${ltr.ltrNo} · ${ltr.groupLabel || `Bagian ${ltr.sequence}`}`,
+                      })),
+                    ]}
+                  />
+
+                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+                    <strong>Dokumen non-komersial</strong>
+                    <p className="mt-1 text-xs">COC tidak menampilkan harga dan dapat dibuat tanpa LTR.</p>
+                  </div>
+
+                  <Field
                     label="Customer Email COA"
                     value={cocForm.customerEmailCoa}
                     onChange={(value) =>
@@ -689,13 +802,14 @@ export default function TechnicalDocumentClient({
                         tatRequested: value as CocForm["tatRequested"],
                       }))
                     }
-                  >
-                    <option value="NORMAL">Normal</option>
-                    <option value="URGENT">Urgent</option>
-                    <option value="TOP_URGENT">Top Urgent</option>
-                  </SelectField>
+                    options={[
+                      { value: "NORMAL", label: "Normal" },
+                      { value: "URGENT", label: "Urgent" },
+                      { value: "TOP_URGENT", label: "Top Urgent" },
+                    ]}
+                  />
 
-                  <Field
+                  <DatePickerField
                     label="Planned Sampling Start"
                     value={cocForm.plannedSamplingStart}
                     onChange={(value) =>
@@ -704,11 +818,10 @@ export default function TechnicalDocumentClient({
                         plannedSamplingStart: value,
                       }))
                     }
-                    type="datetime-local"
-                    icon={CalendarDays}
+                    includeTime
                   />
 
-                  <Field
+                  <DatePickerField
                     label="Planned Sampling End"
                     value={cocForm.plannedSamplingEnd}
                     onChange={(value) =>
@@ -717,11 +830,11 @@ export default function TechnicalDocumentClient({
                         plannedSamplingEnd: value,
                       }))
                     }
-                    type="datetime-local"
-                    icon={CalendarDays}
+                    includeTime
+                    min={cocForm.plannedSamplingStart}
                   />
 
-                  <Field
+                  <DatePickerField
                     label="Estimated COA Date"
                     value={cocForm.estimatedCoaDate}
                     onChange={(value) =>
@@ -730,8 +843,7 @@ export default function TechnicalDocumentClient({
                         estimatedCoaDate: value,
                       }))
                     }
-                    type="date"
-                    icon={CalendarDays}
+                    min={cocForm.plannedSamplingEnd || cocForm.plannedSamplingStart}
                   />
 
                   <SelectField
@@ -743,12 +855,13 @@ export default function TechnicalDocumentClient({
                         deliveryMethod: value as CocForm["deliveryMethod"],
                       }))
                     }
-                  >
-                    <option value="MEDIALAB_SAMPLING">Medialab Sampling</option>
-                    <option value="CUSTOMER_DELIVERY">Customer Delivery</option>
-                    <option value="COURIER">Courier</option>
-                    <option value="OTHER">Other</option>
-                  </SelectField>
+                    options={[
+                      { value: "MEDIALAB_SAMPLING", label: "Medialab Sampling" },
+                      { value: "CUSTOMER_DELIVERY", label: "Customer Delivery" },
+                      { value: "COURIER", label: "Courier" },
+                      { value: "OTHER", label: "Other" },
+                    ]}
+                  />
 
                   <div className="lg:col-span-3">
                     <TextAreaField
@@ -836,6 +949,7 @@ export default function TechnicalDocumentClient({
                   <table className="w-full min-w-[1300px] text-sm">
                     <thead className="bg-slate-50 text-left text-slate-600">
                       <tr>
+                        <th className="w-[76px] px-4 py-3">Pilih</th>
                         <th className="w-[56px] px-4 py-3">No</th>
                         <th className="px-4 py-3">No. Lab / Sample ID</th>
                         <th className="px-4 py-3">Area Sampling</th>
@@ -851,18 +965,48 @@ export default function TechnicalDocumentClient({
                         const formItem = cocForm.items.find(
                           (formItem) => formItem.id === item.id
                         );
+                        const usedByOther = (selectedQuotation.cocs || []).find(
+                          (coc) =>
+                            coc.id !== cocForm.cocId &&
+                            coc.items?.some(
+                              (link) => link.quotationItemId === item.id
+                            )
+                        );
+                        const selected = Boolean(formItem);
 
                         return (
                           <tr
                             key={item.id}
-                            className="border-t border-slate-200 align-top hover:bg-slate-50"
+                            className={`border-t border-slate-200 align-top ${
+                              usedByOther
+                                ? "bg-slate-100 opacity-60"
+                                : selected
+                                  ? "bg-blue-50/40"
+                                  : "hover:bg-slate-50"
+                            }`}
                           >
+                            <td className="px-4 py-4">
+                              <input
+                                type="checkbox"
+                                checked={selected}
+                                disabled={Boolean(usedByOther)}
+                                onChange={() => toggleCocItem(item)}
+                                aria-label={`Pilih ${item.description || item.parameter.name}`}
+                                className="h-5 w-5 accent-blue-600"
+                              />
+                              {usedByOther && (
+                                <span className="mt-1 block text-[10px] font-bold text-amber-700">
+                                  COC {usedByOther.sequence}
+                                </span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-slate-600">
                               {index + 1}
                             </td>
 
                             <td className="px-4 py-3">
                               <input
+                                disabled={!selected}
                                 value={formItem?.customerSampleId || ""}
                                 onChange={(event) =>
                                   updateCocItem(
@@ -878,6 +1022,7 @@ export default function TechnicalDocumentClient({
 
                             <td className="px-4 py-3">
                               <textarea
+                                disabled={!selected}
                                 value={formItem?.samplingLocation || ""}
                                 onChange={(event) =>
                                   updateCocItem(
@@ -894,6 +1039,7 @@ export default function TechnicalDocumentClient({
 
                             <td className="px-4 py-3">
                               <input
+                                disabled={!selected}
                                 value={formItem?.regulationMatrix || ""}
                                 onChange={(event) =>
                                   updateCocItem(
@@ -913,6 +1059,7 @@ export default function TechnicalDocumentClient({
 
                             <td className="px-4 py-3">
                               <input
+                                disabled={!selected}
                                 value={formItem?.method || ""}
                                 onChange={(event) =>
                                   updateCocItem(
@@ -928,6 +1075,7 @@ export default function TechnicalDocumentClient({
 
                             <td className="px-4 py-3">
                               <input
+                                disabled={!selected}
                                 value={formItem?.durationSampling || ""}
                                 onChange={(event) =>
                                   updateCocItem(
@@ -1009,7 +1157,7 @@ export default function TechnicalDocumentClient({
                     icon={FileSignature}
                   />
 
-                  <Field
+                  <DatePickerField
                     label="Issued Date"
                     value={stpsForm.issuedDate}
                     onChange={(value) =>
@@ -1018,8 +1166,6 @@ export default function TechnicalDocumentClient({
                         issuedDate: value,
                       }))
                     }
-                    type="date"
-                    icon={CalendarDays}
                   />
 
                   <div />
@@ -1206,7 +1352,12 @@ export default function TechnicalDocumentClient({
             </button>
 
             <motion.button
-              disabled={loading}
+              disabled={
+                loading ||
+                (mode === "coc" &&
+                  (cocForm.items.length === 0 ||
+                    cocForm.groupLabel.trim().length < 3))
+              }
               whileHover={loading ? undefined : { scale: 1.02 }}
               whileTap={loading ? undefined : { scale: 0.97 }}
               className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
@@ -1245,7 +1396,7 @@ export default function TechnicalDocumentClient({
             </h2>
             <p className="mt-2 max-w-3xl text-sm text-slate-500">
               {mode === "coc"
-                ? "Buat Chain of Custody setelah LTR selesai. Sistem otomatis menyiapkan sample dan parameter sample."
+                ? "Pisahkan titik uji menjadi beberapa COC. COC dapat dibuat langsung setelah approval, tanpa harga dan tanpa LTR."
                 : "Buat Surat Tugas Pengambilan Sampel berdasarkan COC yang sudah dibuat."}
             </p>
           </div>
@@ -1309,12 +1460,12 @@ export default function TechnicalDocumentClient({
 
                     <p className="flex items-center gap-2">
                       <FileSignature size={15} />
-                      LTR: {quotation.ltr?.ltrNo || "-"}
+                      LTR: {quotation.ltrs?.length || (quotation.ltr ? 1 : 0)} dokumen
                     </p>
 
                     <p className="flex items-center gap-2">
                       <ClipboardCheck size={15} />
-                      COC: {quotation.coc?.cocNo || "-"}
+                      COC: {quotation.cocs?.length || (quotation.coc ? 1 : 0)} dokumen
                     </p>
 
                     <p className="flex items-center gap-2">
@@ -1366,45 +1517,52 @@ export default function TechnicalDocumentClient({
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  {quotation.ltr && (
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                  {(quotation.ltrs?.length
+                    ? quotation.ltrs
+                    : quotation.ltr
+                      ? [{ ...quotation.ltr, sequence: 1, groupLabel: "Dokumen utama" }]
+                      : []
+                  ).map((ltr) => (
+                    <div key={ltr.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
                       <p className="mb-2 text-right text-[11px] font-bold text-slate-500">
-                        LTR
+                        LTR {ltr.sequence} · {ltr.groupLabel || "Tanpa label"}
                       </p>
-                      <ExportButtons
-                        compact
-                        pdfUrl={`/api/exports/ltr/${quotation.ltr.id}/pdf`}
-                        excelUrl={`/api/exports/ltr/${quotation.ltr.id}/excel`}
-                      />
+                      <ExportButtons compact pdfUrl={`/api/exports/ltr/${ltr.id}/pdf`} excelUrl={`/api/exports/ltr/${ltr.id}/excel`} />
                     </div>
-                  )}
+                  ))}
 
                   {mode === "coc" ? (
                     <>
                       <button
-                        onClick={() => openCocForm(quotation)}
+                        onClick={() => openCocForm(quotation, null)}
                         className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
                       >
-                        {quotation.coc ? (
-                          <Pencil size={16} />
-                        ) : (
-                          <Send size={16} />
-                        )}
-                        {quotation.coc ? "Edit COC" : "Create COC"}
+                        <Send size={16} />
+                        Buat COC baru
                       </button>
 
-                      {quotation.coc && (
-                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
-                          <p className="mb-2 text-right text-[11px] font-bold text-slate-500">
-                            COC
-                          </p>
-                          <ExportButtons
-                            compact
-                            pdfUrl={`/api/exports/coc/${quotation.coc.id}/pdf`}
-                            excelUrl={`/api/exports/coc/${quotation.coc.id}/excel`}
-                          />
+                      {(quotation.cocs?.length
+                        ? quotation.cocs
+                        : quotation.coc
+                          ? [quotation.coc]
+                          : []
+                      ).map((coc) => (
+                        <div key={coc.id} className="w-full rounded-2xl border border-slate-200 bg-slate-50 p-2">
+                          <div className="mb-2 flex items-center justify-between gap-2">
+                            <p className="text-[11px] font-bold text-slate-500">
+                              COC {coc.sequence || 1} · {coc.groupLabel || "Dokumen utama"}
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => openCocForm(quotation, coc)}
+                              className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1 text-[11px] font-bold text-blue-700"
+                            >
+                              <Pencil size={11} /> Edit
+                            </button>
+                          </div>
+                          <ExportButtons compact pdfUrl={`/api/exports/coc/${coc.id}/pdf`} excelUrl={`/api/exports/coc/${coc.id}/excel`} />
                         </div>
-                      )}
+                      ))}
                     </>
                   ) : (
                     <>

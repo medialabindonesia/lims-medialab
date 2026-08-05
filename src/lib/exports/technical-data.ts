@@ -25,6 +25,13 @@ export async function getAuthorizedCocForExport(cocId: string) {
       id: cocId,
     },
     include: {
+      ltr: true,
+      items: {
+        include: {
+          quotationItem: { include: { parameter: true } },
+        },
+        orderBy: { sort: "asc" },
+      },
       sample: {
         include: {
           parameters: {
@@ -69,8 +76,17 @@ export async function getAuthorizedCocForExport(cocId: string) {
     };
   }
 
+  const scopedCoc = {
+    ...coc,
+    quotation: {
+      ...coc.quotation,
+      ltr: coc.ltr || coc.quotation.ltr,
+      items: coc.items.map((item) => item.quotationItem),
+    },
+  };
+
   return {
-    coc,
+    coc: scopedCoc,
     response: null,
   };
 }

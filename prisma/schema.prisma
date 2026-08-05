@@ -10,6 +10,7 @@ enum QuotationStatus {
   REQUESTED
   VERIFIED
   REVISION
+  REJECTED
   NEGOTIATION
   APPROVED
   CONFIRMED
@@ -324,6 +325,9 @@ model Quotation {
   status        QuotationStatus @default(REQUESTED)
   totalAmount   Float           @default(0)
   note          String?
+  revisionReason String?        @db.Text
+  rejectionReason String?       @db.Text
+  postApprovalEditReason String? @db.Text
 
   quotationDate DateTime  @default(now())
   validUntil    DateTime?
@@ -343,13 +347,17 @@ model Quotation {
   requestedById String?
   verifiedById  String?
   approvedById  String?
+  primaryLtrId  String? @unique
+  primaryCocId  String? @unique
 
   customer       Customer        @relation(fields: [customerId], references: [id])
   coaTemplate    CoaTemplate?    @relation(fields: [coaTemplateId], references: [id])
   items          QuotationItem[]
   purchaseOrder  PurchaseOrder?
-  ltr            Ltr?
-  coc            Coc?
+  ltr            Ltr?             @relation("PrimaryLtr", fields: [primaryLtrId], references: [id], onDelete: SetNull)
+  coc            Coc?             @relation("PrimaryCoc", fields: [primaryCocId], references: [id], onDelete: SetNull)
+  ltrs           Ltr[]            @relation("QuotationLtrs")
+  cocs           Coc[]            @relation("QuotationCocs")
   invoice        Invoice?
   samples        Sample[]
   stps           Stps[]
@@ -375,6 +383,8 @@ model QuotationItem {
 
   quotation Quotation         @relation(fields: [quotationId], references: [id])
   parameter AnalysisParameter @relation(fields: [parameterId], references: [id])
+  ltrItems  LtrItem[]
+  cocItems  CocItem[]
 }
 
 model PurchaseOrder {
@@ -393,20 +403,44 @@ model PurchaseOrder {
 model Ltr {
   id          String  @id @default(cuid())
   ltrNo       String  @unique
-  quotationId String  @unique
+  quotationId String
+  sequence    Int     @default(1)
+  groupLabel  String?
   createdById String?
 
-  quotation Quotation @relation(fields: [quotationId], references: [id])
+  quotation Quotation  @relation("QuotationLtrs", fields: [quotationId], references: [id])
+  primaryFor Quotation? @relation("PrimaryLtr")
+  items      LtrItem[]
+  cocs       Coc[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([quotationId, sequence])
+  @@index([quotationId])
+}
+
+model LtrItem {
+  id              String @id @default(cuid())
+  ltrId           String
+  quotationItemId String
+  sort            Int    @default(0)
+
+  ltr             Ltr           @relation(fields: [ltrId], references: [id], onDelete: Cascade)
+  quotationItem   QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
+
+  @@unique([ltrId, quotationItemId])
+  @@index([quotationItemId])
 }
 
 model Coc {
   id          String  @id @default(cuid())
   cocNo       String  @unique
-  quotationId String  @unique
+  quotationId String
+  ltrId       String?
   sampleId    String?
+  sequence    Int     @default(1)
+  groupLabel  String?
   createdById String?
 
   customerEmailCoa String?
@@ -426,11 +460,31 @@ model Coc {
   specialInstruction          String?
   deliveryMethod              DeliveryMethod?
 
-  quotation Quotation @relation(fields: [quotationId], references: [id])
+  quotation Quotation  @relation("QuotationCocs", fields: [quotationId], references: [id])
+  primaryFor Quotation? @relation("PrimaryCoc")
+  ltr       Ltr?      @relation(fields: [ltrId], references: [id], onDelete: SetNull)
   sample    Sample?   @relation(fields: [sampleId], references: [id])
+  items     CocItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([quotationId, sequence])
+  @@index([quotationId])
+  @@index([ltrId])
+}
+
+model CocItem {
+  id              String @id @default(cuid())
+  cocId           String
+  quotationItemId String
+  sort            Int    @default(0)
+
+  coc             Coc           @relation(fields: [cocId], references: [id], onDelete: Cascade)
+  quotationItem   QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
+
+  @@unique([cocId, quotationItemId])
+  @@index([quotationItemId])
 }
 
 model Stps {

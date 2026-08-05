@@ -3,7 +3,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { supportUploadDir } from "@/lib/support-storage";
+import { supportUploadDirCandidates } from "@/lib/support-storage";
 
 export const runtime = "nodejs";
 
@@ -16,29 +16,25 @@ export async function GET(
   context: { params: Promise<{ path: string[] }> }
 ) {
   const { path: segments } = await context.params;
-  const root = path.resolve(supportUploadDir());
-  const target = path.resolve(root, ...segments.map((s) => decodeURIComponent(s)));
-
-  // Tolak path traversal (`..`) yang keluar dari folder upload.
-  if (target !== root && !target.startsWith(root + path.sep)) {
-    return new NextResponse("Not found", { status: 404 });
+  const decoded = segments.map((segment) => decodeURIComponent(segment));
+  for (const candidate of supportUploadDirCandidates()) {
+    const root = path.resolve(candidate);
+    const target = path.resolve(root, ...decoded);
+    if (target !== root && !target.startsWith(root + path.sep)) continue;
+    try {
+      const info = await stat(target);
+      if (!info.isFile()) continue;
+      const stream = Readable.toWeb(createReadStream(target)) as unknown as ReadableStream;
+      return new NextResponse(stream, {
+        headers: {
+          "Content-Length": String(info.size),
+          "Cache-Control": "public, max-age=31536000, immutable",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    } catch {
+      // Coba kandidat berikutnya.
+    }
   }
-
-  try {
-    const info = await stat(target);
-    if (!info.isFile()) return new NextResponse("Not found", { status: 404 });
-
-    const stream = Readable.toWeb(
-      createReadStream(target)
-    ) as unknown as ReadableStream;
-
-    return new NextResponse(stream, {
-      headers: {
-        "Content-Length": String(info.size),
-        "Cache-Control": "public, max-age=31536000, immutable",
-      },
-    });
-  } catch {
-    return new NextResponse("Not found", { status: 404 });
-  }
+  return new NextResponse("Not found", { status: 404 });
 }

@@ -8,8 +8,6 @@ import {
   Star,
   UserCheck,
   UserPlus,
-  Wifi,
-  WifiOff,
 } from "lucide-react";
 import {
   PRIORITY_STYLES,
@@ -34,6 +32,8 @@ import { PriorityBadge, TicketStatusBadge } from "@/components/support/Badges";
 import ChatThread from "@/components/support/ChatThread";
 import ChatComposer from "@/components/support/ChatComposer";
 import { useTicketChannel } from "@/hooks/useTicketChannel";
+import Select from "@/components/ui/Select";
+import PresenceStatus from "@/components/support/PresenceStatus";
 
 const STATUS_ACTIONS: { status: TicketStatus; label: string }[] = [
   { status: "IN_PROGRESS", label: "Proses" },
@@ -72,7 +72,7 @@ export default function SupportConversationClient({
     }
   }, [ticket.id]);
 
-  const { connected, publishTyping } = useTicketChannel(ticket.id, {
+  const { selfOnline, opponentOnline, opponentNames, publishTyping } = useTicketChannel(ticket.id, {
     onMessage: (message) => {
       appendMessage(message);
       if (message.senderRole === "CUSTOMER") markRead();
@@ -93,7 +93,7 @@ export default function SupportConversationClient({
       if (reader !== "CUSTOMER") return;
       setMessages((prev) => applyRead(prev, "CUSTOMER", at));
     },
-  });
+  }, { userId: agentId, name: viewerName, role: "AGENT" });
 
   useEffect(() => {
     markRead();
@@ -204,12 +204,11 @@ export default function SupportConversationClient({
                       : `Pesanan / sample · ${ticket.sampleNo || ticket.contextLabel}`}
               </p>
             </div>
-            <span
-              title={connected ? "Realtime aktif" : "Realtime offline"}
-              className={connected ? "text-emerald-500" : "text-slate-300"}
-            >
-              {connected ? <Wifi size={16} /> : <WifiOff size={16} />}
-            </span>
+            <PresenceStatus
+              selfOnline={selfOnline}
+              opponentOnline={opponentOnline}
+              opponentLabel={opponentNames[0] || "Customer"}
+            />
           </div>
 
           <div className="min-h-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 p-3">
@@ -307,20 +306,19 @@ export default function SupportConversationClient({
             <p className="mb-3 text-xs font-black uppercase tracking-wide text-slate-400">
               Prioritas
             </p>
-            <select
+            <Select
               value={ticket.priority}
               disabled={busy || closed}
-              onChange={(event) =>
-                patchTicket({ priority: event.target.value as TicketPriority })
+              onChange={(value) =>
+                patchTicket({ priority: value as TicketPriority })
               }
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none disabled:opacity-50"
-            >
-              {TICKET_PRIORITIES.map((p) => (
-                <option key={p} value={p}>
-                  {PRIORITY_STYLES[p].label}
-                </option>
-              ))}
-            </select>
+              options={TICKET_PRIORITIES.map((priority) => ({
+                value: priority,
+                label: PRIORITY_STYLES[priority].label,
+              }))}
+              ariaLabel="Prioritas tiket"
+              buttonClassName="flex min-h-11 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-800 outline-none disabled:opacity-50"
+            />
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

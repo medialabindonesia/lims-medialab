@@ -3,6 +3,7 @@
 import { Fragment, useMemo, useState } from "react";
 import type { Menu, Role, RoleMenu } from "@prisma/client";
 import { Save } from "lucide-react";
+import Select from "@/components/ui/Select";
 
 type RoleWithMenus = Role & {
   roleMenus: Array<
@@ -228,20 +229,17 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
         </label>
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          <select
+          <Select
             value={selectedRoleId}
-            onChange={(event) => {
-              setSelectedRoleId(event.target.value);
+            onChange={(value) => {
+              setSelectedRoleId(value);
               setMessage("");
             }}
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-900 outline-none focus:border-emerald-500 md:max-w-md"
-          >
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name} - {role.code}
-              </option>
-            ))}
-          </select>
+            options={roles.map((role) => ({ value: role.id, label: `${role.name} - ${role.code}` }))}
+            ariaLabel="Pilih Role"
+            className="w-full md:max-w-md"
+            buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-slate-900 outline-none"
+          />
 
           <button
             onClick={savePermissions}

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import "@daypicker/react/style.css";
 import MotionProvider from "@/components/providers/MotionProvider";
 
 export const metadata: Metadata = {

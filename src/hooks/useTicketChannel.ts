@@ -7,6 +7,11 @@ import type { SupportMessageDTO, SupportTicketDTO } from "@/lib/support";
 
 type TypingPayload = { name: string; role: string };
 type ReadPayload = { reader: "CUSTOMER" | "AGENT"; at: string };
+type PresenceProfile = {
+  userId: string;
+  name: string;
+  role: "CUSTOMER" | "AGENT";
+};
 
 type Handlers = {
   onMessage?: (message: SupportMessageDTO) => void;
@@ -22,8 +27,13 @@ type Handlers = {
  * Subscribe ke kanal satu tiket. Aman jika Ably tak tersedia (no-op).
  * Typing di-throttle supaya hemat kuota pesan free-tier.
  */
-export function useTicketChannel(ticketId: string | null, handlers: Handlers) {
+export function useTicketChannel(
+  ticketId: string | null,
+  handlers: Handlers,
+  presence?: PresenceProfile
+) {
   const [connected, setConnected] = useState(false);
+  const [opponentNames, setOpponentNames] = useState<string[]>([]);
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
 
@@ -63,8 +73,45 @@ export function useTicketChannel(ticketId: string | null, handlers: Handlers) {
     channel.subscribe("typing", onTyping);
     channel.subscribe("read", onRead);
 
+    const refreshPresence = async () => {
+      if (!presence || cancelled) return;
+      try {
+        const members = await channel.presence.get();
+        if (cancelled) return;
+        const names = members
+          .filter((member) => {
+            const profile = member.data as PresenceProfile | undefined;
+            return profile?.role && profile.role !== presence.role;
+          })
+          .map((member) => {
+            const profile = member.data as PresenceProfile;
+            return profile.name;
+          });
+        setOpponentNames([...new Set(names)]);
+      } catch {
+        if (!cancelled) setOpponentNames([]);
+      }
+    };
+    const onPresence = () => void refreshPresence();
+    if (presence) {
+      channel.presence.subscribe("enter", onPresence);
+      channel.presence.subscribe("update", onPresence);
+      channel.presence.subscribe("leave", onPresence);
+      channel.presence.subscribe("present", onPresence);
+      void channel.presence
+        .enter(presence)
+        .then(refreshPresence)
+        .catch(() => setOpponentNames([]));
+    }
+
     const onStateChange = (state: AblyTypes.ConnectionStateChange) => {
-      if (!cancelled) setConnected(state.current === "connected");
+      if (!cancelled) {
+        const online = state.current === "connected";
+        setConnected(online);
+        if (online && presence) {
+          void channel.presence.enter(presence).then(refreshPresence).catch(() => {});
+        }
+      }
     };
     client.connection.on(onStateChange);
     setConnected(client.connection.state === "connected");
@@ -75,10 +122,17 @@ export function useTicketChannel(ticketId: string | null, handlers: Handlers) {
       channel.unsubscribe("ticket.update", onUpdate);
       channel.unsubscribe("typing", onTyping);
       channel.unsubscribe("read", onRead);
+      if (presence) {
+        channel.presence.unsubscribe("enter", onPresence);
+        channel.presence.unsubscribe("update", onPresence);
+        channel.presence.unsubscribe("leave", onPresence);
+        channel.presence.unsubscribe("present", onPresence);
+        void channel.presence.leave().catch(() => {});
+      }
       client.connection.off(onStateChange);
       channelRef.current = null;
     };
-  }, [ticketId]);
+  }, [ticketId, presence?.userId, presence?.name, presence?.role]);
 
   const publishTyping = useCallback((payload: TypingPayload) => {
     const channel = channelRef.current;
@@ -93,5 +147,11 @@ export function useTicketChannel(ticketId: string | null, handlers: Handlers) {
     });
   }, []);
 
-  return { connected, publishTyping };
+  return {
+    connected,
+    selfOnline: connected,
+    opponentOnline: opponentNames.length > 0,
+    opponentNames,
+    publishTyping,
+  };
 }

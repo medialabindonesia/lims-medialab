@@ -5,9 +5,10 @@ import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { fadeUpItem, staggerContainer, EASE_OUT } from "@/lib/motion";
 import ExportButtons from "@/components/exports/ExportButtons";
+import Select, { type SelectOption } from "@/components/ui/Select";
+import DatePickerField from "@/components/ui/DatePickerField";
 import {
   BadgeCheck,
-  CalendarDays,
   CheckCircle2,
   ClipboardCheck,
   Copy,
@@ -98,6 +99,9 @@ type Quotation = {
   quotationNo: string;
   status: string;
   note?: string | null;
+  revisionReason?: string | null;
+  rejectionReason?: string | null;
+  postApprovalEditReason?: string | null;
   totalAmount: number;
   samplingCost: number;
   vatPercent: number;
@@ -127,10 +131,34 @@ type Quotation = {
     id: string;
     ltrNo: string;
   } | null;
+  ltrs?: Array<{
+    id: string;
+    ltrNo: string;
+    sequence: number;
+    groupLabel?: string | null;
+    items: Array<{ quotationItemId: string }>;
+  }>;
   coc?: {
     id: string;
     cocNo: string;
   } | null;
+  cocs?: Array<{
+    id: string;
+    cocNo: string;
+    sequence: number;
+    groupLabel?: string | null;
+    items: Array<{ quotationItemId: string }>;
+  }>;
+  requestedBy?: { id: string; name: string; email: string } | null;
+  revisions?: Array<{
+    id: string;
+    revisionNo: number;
+    action: string;
+    changeSummary?: string | null;
+    reason?: string | null;
+    actorNameSnapshot?: string | null;
+    createdAt: string;
+  }>;
   stps?: Array<{
     id: string;
     stpsNo: string;
@@ -160,6 +188,7 @@ type FormItem = {
 
 type QuotationForm = {
   id?: string;
+  editReason: string;
   customerId: string;
   coaTemplateId: string;
   note: string;
@@ -190,6 +219,7 @@ type ModalTab = "detail" | "items" | "terms";
 const flowSteps = [
   "REQUESTED",
   "REVISION",
+  "REJECTED",
   "NEGOTIATION",
   "CONFIRMED",
   "VERIFIED",
@@ -278,6 +308,7 @@ function getStatusStyle(status: string) {
   const styles: Record<string, string> = {
     REQUESTED: "bg-blue-50 text-blue-700",
     REVISION: "bg-yellow-50 text-yellow-700",
+    REJECTED: "bg-red-50 text-red-700",
     NEGOTIATION: "bg-orange-50 text-orange-700",
     CONFIRMED: "bg-green-50 text-green-700",
     VERIFIED: "bg-cyan-50 text-cyan-700",
@@ -375,12 +406,12 @@ function SelectField({
   label,
   value,
   onChange,
-  children,
+  options,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
-  children: React.ReactNode;
+  options: SelectOption[];
 }) {
   return (
     <div>
@@ -388,13 +419,13 @@ function SelectField({
         {label}
       </label>
 
-      <select
+      <Select
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-      >
-        {children}
-      </select>
+        onChange={onChange}
+        options={options}
+        ariaLabel={label}
+        buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-900 outline-none transition hover:border-blue-300"
+      />
     </div>
   );
 }
@@ -443,6 +474,9 @@ export default function QuotationFlowClient({
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [documentQuotation, setDocumentQuotation] = useState<Quotation | null>(null);
+  const [documentLabel, setDocumentLabel] = useState("");
+  const [documentItemIds, setDocumentItemIds] = useState<string[]>([]);
 
   function buildItemsFromTemplate(templateId: string): FormItem[] {
     const template = coaTemplates.find((item) => item.id === templateId);
@@ -480,6 +514,7 @@ export default function QuotationFlowClient({
   const defaultTemplateId = coaTemplates[0]?.id || "";
 
   const [form, setForm] = useState<QuotationForm>({
+    editReason: "",
     customerId: customers[0]?.id || "",
     coaTemplateId: defaultTemplateId,
     note: "",
@@ -506,7 +541,7 @@ export default function QuotationFlowClient({
   }, []);
 
   useEffect(() => {
-    if (!openForm) return;
+    if (!openForm && !documentQuotation) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -514,7 +549,7 @@ export default function QuotationFlowClient({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [openForm]);
+  }, [openForm, documentQuotation]);
 
   const config = modeConfig[mode];
 
@@ -542,13 +577,20 @@ export default function QuotationFlowClient({
         ? quotations
         : mode === "verify"
           ? quotations.filter((quotation) => quotation.status === "CONFIRMED")
-          : mode === "revise"
-            ? quotations.filter((quotation) => quotation.status === "REVISION")
+            : mode === "revise"
+            ? quotations.filter((quotation) =>
+                ["REVISION", "REJECTED", "APPROVED", "PO_UPLOADED"].includes(
+                  quotation.status
+                )
+              )
             : mode === "approve"
               ? quotations.filter((quotation) => quotation.status === "VERIFIED")
               : mode === "ltr"
                 ? quotations.filter(
-                    (quotation) => quotation.status === "PO_UPLOADED"
+                    (quotation) =>
+                      ["PO_UPLOADED", "LTR_CREATED", "COC_CREATED"].includes(
+                        quotation.status
+                      )
                   )
                 : mode === "coc"
                   ? quotations.filter(
@@ -583,6 +625,7 @@ export default function QuotationFlowClient({
     const templateId = coaTemplates[0]?.id || "";
 
     setForm({
+      editReason: "",
       customerId: customers[0]?.id || "",
       coaTemplateId: templateId,
       note: "",
@@ -617,6 +660,7 @@ export default function QuotationFlowClient({
 
     setForm({
       id: quotation.id,
+      editReason: "",
       customerId: quotation.customer.id,
       coaTemplateId: templateId,
       note: quotation.note || "",
@@ -831,11 +875,12 @@ export default function QuotationFlowClient({
 
     if (!response.ok) {
       setMessage(data.message || "Action gagal");
-      return;
+      return false;
     }
 
     setMessage(data.message || "Action berhasil");
     await refreshData();
+    return true;
   }
 
   async function uploadPo(quotation: Quotation) {
@@ -864,6 +909,56 @@ export default function QuotationFlowClient({
 
     await runAction(`/api/quotations/${quotation.id}/revision`, "PATCH", {
       note: revisionNote,
+    });
+  }
+
+  async function rejectQuotation(quotation: Quotation) {
+    const reason = window.prompt(
+      `Catatan penolakan untuk sales staff (${quotation.quotationNo}), minimal 8 karakter:`
+    );
+    if (!reason) return;
+    await runAction(`/api/quotations/${quotation.id}/reject`, "PATCH", { reason });
+  }
+
+  function openLtrGrouping(quotation: Quotation) {
+    const usedIds = new Set(
+      (quotation.ltrs || []).flatMap((ltr) =>
+        ltr.items.map((item) => item.quotationItemId)
+      )
+    );
+    const availableIds = quotation.items
+      .map((item) => item.id)
+      .filter((itemId) => !usedIds.has(itemId));
+    if (availableIds.length === 0) {
+      setMessage("Semua titik uji quotation ini sudah masuk ke LTR.");
+      return;
+    }
+    const nextSequence = (quotation.ltrs?.length || 0) + 1;
+    setDocumentQuotation(quotation);
+    setDocumentLabel(`Bagian ${nextSequence}`);
+    setDocumentItemIds(availableIds);
+  }
+
+  async function createGroupedLtr() {
+    if (!documentQuotation || documentItemIds.length === 0) return;
+    const success = await runAction(
+      `/api/quotations/${documentQuotation.id}/ltr`,
+      "POST",
+      { groupLabel: documentLabel, itemIds: documentItemIds }
+    );
+    if (success) setDocumentQuotation(null);
+  }
+
+  async function restoreQuotationRevision(
+    quotation: Quotation,
+    revision: NonNullable<Quotation["revisions"]>[number]
+  ) {
+    const reason = window.prompt(
+      `Kembalikan ${quotation.quotationNo} ke revisi ${revision.revisionNo}. Jelaskan alasannya (minimal 8 karakter):`
+    );
+    if (!reason) return;
+    await runAction(`/api/audit/revisions/${revision.id}/restore`, "POST", {
+      reason,
     });
   }
 
@@ -933,28 +1028,35 @@ export default function QuotationFlowClient({
 
     if (mode === "approve") {
       return (
-        <button
-          onClick={() =>
-            runAction(`/api/quotations/${quotation.id}/approve`, "PATCH")
-          }
-          className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
-        >
-          <BadgeCheck size={16} />
-          Approve
-        </button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            onClick={() => rejectQuotation(quotation)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700 transition-colors hover:bg-red-100"
+          >
+            <X size={16} />
+            Tolak & Beri Catatan
+          </button>
+          <button
+            onClick={() =>
+              runAction(`/api/quotations/${quotation.id}/approve`, "PATCH")
+            }
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
+          >
+            <BadgeCheck size={16} />
+            Approve
+          </button>
+        </div>
       );
     }
 
     if (mode === "ltr") {
       return (
         <button
-          onClick={() =>
-            runAction(`/api/quotations/${quotation.id}/ltr`, "POST")
-          }
+          onClick={() => openLtrGrouping(quotation)}
           className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
         >
           <FileText size={16} />
-          Create LTR
+          Buat Kelompok LTR
         </button>
       );
     }
@@ -1055,45 +1157,37 @@ export default function QuotationFlowClient({
                     onChange={(value) =>
                       setForm((prev) => ({ ...prev, customerId: value }))
                     }
-                  >
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                        {customer.company ? ` - ${customer.company}` : ""}
-                      </option>
-                    ))}
-                  </SelectField>
+                    options={customers.map((customer) => ({
+                      value: customer.id,
+                      label: `${customer.name}${customer.company ? ` - ${customer.company}` : ""}`,
+                    }))}
+                  />
 
                   <SelectField
                     label="Template COA"
                     value={form.coaTemplateId}
                     onChange={changeTemplate}
-                  >
-                    {coaTemplates.map((template) => (
-                      <option key={template.id} value={template.id}>
-                        {template.name} - {template.code}
-                      </option>
-                    ))}
-                  </SelectField>
+                    options={coaTemplates.map((template) => ({
+                      value: template.id,
+                      label: `${template.name} - ${template.code}`,
+                    }))}
+                  />
 
-                  <Field
+                  <DatePickerField
                     label="Quotation Date"
                     value={form.quotationDate}
-                    type="date"
                     onChange={(value) =>
                       setForm((prev) => ({ ...prev, quotationDate: value }))
                     }
-                    icon={CalendarDays}
                   />
 
-                  <Field
+                  <DatePickerField
                     label="Valid Until"
                     value={form.validUntil}
-                    type="date"
                     onChange={(value) =>
                       setForm((prev) => ({ ...prev, validUntil: value }))
                     }
-                    icon={CalendarDays}
+                    min={form.quotationDate}
                   />
 
                   <SelectField
@@ -1105,11 +1199,12 @@ export default function QuotationFlowClient({
                         samplingBy: value as QuotationForm["samplingBy"],
                       }))
                     }
-                  >
-                    <option value="MEDIALAB">Medialab</option>
-                    <option value="CUSTOMER">Customer</option>
-                    <option value="THIRD_PARTY">Third Party</option>
-                  </SelectField>
+                    options={[
+                      { value: "MEDIALAB", label: "Medialab" },
+                      { value: "CUSTOMER", label: "Customer" },
+                      { value: "THIRD_PARTY", label: "Third Party" },
+                    ]}
+                  />
 
                   <SelectField
                     label="TAT Requested"
@@ -1120,11 +1215,12 @@ export default function QuotationFlowClient({
                         tatRequested: value as QuotationForm["tatRequested"],
                       }))
                     }
-                  >
-                    <option value="NORMAL">Normal</option>
-                    <option value="URGENT">Urgent</option>
-                    <option value="TOP_URGENT">Top Urgent</option>
-                  </SelectField>
+                    options={[
+                      { value: "NORMAL", label: "Normal" },
+                      { value: "URGENT", label: "Urgent" },
+                      { value: "TOP_URGENT", label: "Top Urgent" },
+                    ]}
+                  />
 
                   <div className="lg:col-span-3">
                     <SelectField
@@ -1137,15 +1233,14 @@ export default function QuotationFlowClient({
                             value as QuotationForm["testingObjective"],
                         }))
                       }
-                    >
-                      <option value="ROUTINE_MONITORING">
-                        Routine Monitoring
-                      </option>
-                      <option value="SUPERVISION">Supervision</option>
-                      <option value="CASE_PROOF">Case Proof</option>
-                      <option value="RESEARCH">Research</option>
-                      <option value="OTHER">Other</option>
-                    </SelectField>
+                      options={[
+                        { value: "ROUTINE_MONITORING", label: "Routine Monitoring" },
+                        { value: "SUPERVISION", label: "Supervision" },
+                        { value: "CASE_PROOF", label: "Case Proof" },
+                        { value: "RESEARCH", label: "Research" },
+                        { value: "OTHER", label: "Other" },
+                      ]}
+                    />
                   </div>
 
                   <div className="lg:col-span-3">
@@ -1158,6 +1253,19 @@ export default function QuotationFlowClient({
                       placeholder="Catatan quotation"
                     />
                   </div>
+
+                  {form.id && (
+                    <div className="lg:col-span-3">
+                      <TextAreaField
+                        label="Alasan perubahan (wajib, minimal 8 karakter)"
+                        value={form.editReason}
+                        onChange={(value) =>
+                          setForm((prev) => ({ ...prev, editReason: value }))
+                        }
+                        placeholder="Contoh: pengurangan dua titik uji sesuai konfirmasi customer"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1276,25 +1384,20 @@ export default function QuotationFlowClient({
                             className="border-t border-slate-200 hover:bg-slate-50"
                           >
                             <td className="px-4 py-3">
-                              <select
+                              <Select
                                 value={item.parameterId}
-                                onChange={(event) =>
-                                  changeParameter(index, event.target.value)
-                                }
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-                              >
-                                {selectedTemplateParameters.map(
-                                  (templateParameter) => (
-                                    <option
-                                      key={templateParameter.parameterId}
-                                      value={templateParameter.parameterId}
-                                    >
-                                      {templateParameter.displayName ||
-                                        templateParameter.parameter.name}
-                                    </option>
-                                  )
+                                onChange={(value) => changeParameter(index, value)}
+                                options={selectedTemplateParameters.map(
+                                  (templateParameter) => ({
+                                    value: templateParameter.parameterId,
+                                    label:
+                                      templateParameter.displayName ||
+                                      templateParameter.parameter.name,
+                                  })
                                 )}
-                              </select>
+                                ariaLabel={`Parameter baris ${index + 1}`}
+                                buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-900 outline-none transition hover:border-blue-300"
+                              />
 
                               <input
                                 value={item.description}
@@ -1579,7 +1682,8 @@ export default function QuotationFlowClient({
                 customers.length === 0 ||
                 parameters.length === 0 ||
                 coaTemplates.length === 0 ||
-                form.items.length === 0
+                form.items.length === 0 ||
+                (Boolean(form.id) && form.editReason.trim().length < 8)
               }
               whileHover={reduce || loading ? undefined : { scale: 1.02 }}
               whileTap={reduce || loading ? undefined : { scale: 0.97 }}
@@ -1597,6 +1701,159 @@ export default function QuotationFlowClient({
       </motion.form>
     </div>
   );
+
+  const ltrModal = documentQuotation ? (
+    <div
+      className="fixed inset-0 z-[99999] flex items-end justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:items-center"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) setDocumentQuotation(null);
+      }}
+    >
+      <motion.div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Buat kelompok LTR"
+        initial={reduce ? false : { opacity: 0, y: 28, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.25, ease: EASE_OUT }}
+        className="flex max-h-[92dvh] w-full max-w-2xl flex-col overflow-hidden rounded-[2rem] border border-blue-100 bg-white shadow-2xl"
+      >
+        <div className="flex items-start justify-between border-b border-blue-100 p-5">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-blue-600">
+              Pemisahan dokumen
+            </p>
+            <h3 className="mt-1 text-xl font-black text-slate-900">
+              Buat LTR dari {documentQuotation.quotationNo}
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Pilih rentang/titik uji yang menjadi bagian LTR ini. Titik yang
+              sudah dipakai LTR lain otomatis dikunci.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDocumentQuotation(null)}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-slate-500"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-5">
+          <Field
+            label="Nama kelompok dokumen"
+            value={documentLabel}
+            onChange={setDocumentLabel}
+            placeholder="Contoh: Area Produksi A"
+          />
+
+          <div className="mt-5 flex items-center justify-between gap-3">
+            <p className="text-sm font-bold text-slate-700">
+              {documentItemIds.length} titik dipilih
+            </p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const usedIds = new Set(
+                    (documentQuotation.ltrs || []).flatMap((ltr) =>
+                      ltr.items.map((item) => item.quotationItemId)
+                    )
+                  );
+                  setDocumentItemIds(
+                    documentQuotation.items
+                      .map((item) => item.id)
+                      .filter((itemId) => !usedIds.has(itemId))
+                  );
+                }}
+                className="rounded-xl bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700"
+              >
+                Pilih semua tersisa
+              </button>
+              <button
+                type="button"
+                onClick={() => setDocumentItemIds([])}
+                className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-slate-600"
+              >
+                Kosongkan
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-3 grid gap-2">
+            {documentQuotation.items.map((item, index) => {
+              const owner = (documentQuotation.ltrs || []).find((ltr) =>
+                ltr.items.some((link) => link.quotationItemId === item.id)
+              );
+              const checked = documentItemIds.includes(item.id);
+              return (
+                <label
+                  key={item.id}
+                  className={`flex min-h-14 items-start gap-3 rounded-2xl border p-3 transition ${
+                    owner
+                      ? "cursor-not-allowed border-slate-200 bg-slate-100 opacity-60"
+                      : checked
+                        ? "border-blue-300 bg-blue-50"
+                        : "border-slate-200 bg-white hover:border-blue-200"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={Boolean(owner)}
+                    onChange={(event) =>
+                      setDocumentItemIds((current) =>
+                        event.target.checked
+                          ? [...current, item.id]
+                          : current.filter((id) => id !== item.id)
+                      )
+                    }
+                    className="mt-1 h-5 w-5 accent-blue-600"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-black text-slate-900">
+                      #{index + 1} {item.description || item.parameter.name}
+                    </span>
+                    <span className="mt-1 block text-xs text-slate-500">
+                      {item.customerSampleId || "Tanpa sample ID"} · {item.samplingLocation || "Lokasi belum diisi"}
+                    </span>
+                    {owner && (
+                      <span className="mt-1 block text-xs font-bold text-amber-700">
+                        Sudah masuk {owner.ltrNo} ({owner.groupLabel})
+                      </span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex gap-3 border-t border-blue-100 p-5">
+          <button
+            type="button"
+            onClick={() => setDocumentQuotation(null)}
+            className="flex-1 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600"
+          >
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={createGroupedLtr}
+            disabled={
+              loading ||
+              documentItemIds.length === 0 ||
+              documentLabel.trim().length < 3
+            }
+            className="flex-[1.4] rounded-2xl bg-brand-blue px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {loading ? "Membuat…" : "Buat LTR kelompok ini"}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  ) : null;
 
   return (
     <motion.div
@@ -1727,6 +1984,23 @@ export default function QuotationFlowClient({
                     </p>
                   )}
 
+                  {quotation.rejectionReason && (
+                    <div className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+                      <p className="text-xs font-black uppercase tracking-wide text-red-700">
+                        Catatan penolakan manager
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-red-800">
+                        {quotation.rejectionReason}
+                      </p>
+                    </div>
+                  )}
+
+                  {quotation.postApprovalEditReason && (
+                    <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                      Alasan edit setelah approval: {quotation.postApprovalEditReason}
+                    </p>
+                  )}
+
                   <div className="mt-4 flex flex-wrap gap-2">
                     {quotation.items.map((item) => (
                       <span
@@ -1764,10 +2038,68 @@ export default function QuotationFlowClient({
 
                   <div className="mt-4 grid gap-2 text-xs text-slate-500 md:grid-cols-4">
                     <p>PO: {quotation.purchaseOrder?.poNumber || "-"}</p>
-                    <p>LTR: {quotation.ltr?.ltrNo || "-"}</p>
-                    <p>COC: {quotation.coc?.cocNo || "-"}</p>
+                    <p>LTR: {quotation.ltrs?.length || (quotation.ltr ? 1 : 0)} dokumen</p>
+                    <p>COC: {quotation.cocs?.length || (quotation.coc ? 1 : 0)} dokumen</p>
                     <p>STPS: {stpsNo}</p>
                   </div>
+
+                  <details className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+                    <summary className="flex min-h-12 items-center justify-between gap-3 px-4 py-3 text-sm font-black text-slate-800">
+                      Detail quotation, ruang lingkup & histori
+                      <span className="text-xs font-semibold text-blue-600">Buka detail</span>
+                    </summary>
+                    <div className="border-t border-slate-200 bg-white p-4">
+                      <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                        <p><span className="text-slate-400">Dibuat oleh</span><br /><strong>{quotation.requestedBy?.name || "-"}</strong></p>
+                        <p><span className="text-slate-400">Email akun</span><br /><strong>{quotation.requestedBy?.email || "-"}</strong></p>
+                        <p><span className="text-slate-400">Payment term</span><br /><strong>{quotation.paymentTerm || "-"}</strong></p>
+                      </div>
+
+                      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+                        <table className="w-full min-w-[760px] text-left text-xs">
+                          <thead><tr><th className="px-3 py-2">No.</th><th className="px-3 py-2">Titik/parameter</th><th className="px-3 py-2">Sample ID</th><th className="px-3 py-2">Lokasi</th><th className="px-3 py-2">Metode</th><th className="px-3 py-2">Qty</th></tr></thead>
+                          <tbody>
+                            {quotation.items.map((item, index) => (
+                              <tr key={item.id} className="border-t border-slate-100">
+                                <td className="px-3 py-2 font-bold">{index + 1}</td>
+                                <td className="px-3 py-2">{item.description || item.parameter.name}</td>
+                                <td className="px-3 py-2">{item.customerSampleId || "-"}</td>
+                                <td className="px-3 py-2">{item.samplingLocation || "-"}</td>
+                                <td className="px-3 py-2">{item.method || item.parameter.method || "-"}</td>
+                                <td className="px-3 py-2">{item.qty}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {(quotation.revisions?.length || 0) > 0 && (
+                        <div className="mt-4">
+                          <p className="text-xs font-black uppercase tracking-wide text-slate-500">Riwayat versi</p>
+                          <div className="mt-2 grid gap-2">
+                            {quotation.revisions?.map((revision, index) => (
+                              <div key={revision.id} className="flex flex-col gap-3 rounded-xl border border-slate-200 p-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                  <p className="text-sm font-black text-slate-800">Rev {revision.revisionNo} · {revision.action}</p>
+                                  <p className="mt-0.5 text-xs text-slate-500">{revision.changeSummary || "Perubahan quotation"} · {revision.actorNameSnapshot || "Sistem"} · {formatDate(revision.createdAt)}</p>
+                                  {revision.reason && <p className="mt-1 text-xs text-amber-700">Alasan: {revision.reason}</p>}
+                                </div>
+                                {mode === "revise" && index > 0 && (quotation.ltrs?.length || 0) === 0 && (quotation.cocs?.length || 0) === 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => restoreQuotationRevision(quotation, revision)}
+                                    className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700"
+                                  >
+                                    Kembali ke versi ini
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </details>
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
@@ -1779,18 +2111,18 @@ export default function QuotationFlowClient({
     excelUrl={`/api/exports/quotation/${quotation.id}/excel`}
   />
 
-  {quotation.ltr && (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
+  {(quotation.ltrs?.length ? quotation.ltrs : quotation.ltr ? [{ ...quotation.ltr, sequence: 1, groupLabel: "Dokumen utama", items: [] }] : []).map((ltr) => (
+    <div key={ltr.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
       <p className="mb-2 text-right text-[11px] font-bold text-slate-500">
-        LTR
+        LTR {ltr.sequence} · {ltr.groupLabel || "Tanpa label"}
       </p>
       <ExportButtons
         compact
-        pdfUrl={`/api/exports/ltr/${quotation.ltr.id}/pdf`}
-        excelUrl={`/api/exports/ltr/${quotation.ltr.id}/excel`}
+        pdfUrl={`/api/exports/ltr/${ltr.id}/pdf`}
+        excelUrl={`/api/exports/ltr/${ltr.id}/excel`}
       />
     </div>
-  )}
+  ))}
 </div>
 </div>
             </motion.div>
@@ -1805,6 +2137,7 @@ export default function QuotationFlowClient({
       </motion.div>
 
       {mounted && openForm ? createPortal(modal, document.body) : null}
+      {mounted && documentQuotation ? createPortal(ltrModal, document.body) : null}
     </motion.div>
   );
 }

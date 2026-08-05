@@ -17,7 +17,7 @@ export default function AppShell({ session, menus, children }: AppShellProps) {
     <div className="dashboard-canvas min-h-screen bg-slate-50 text-slate-900">
       <Sidebar session={session} menus={menus} />
 
-      <main className="min-h-screen px-4 pb-8 pt-1 lg:ml-80 lg:px-8 lg:py-8">
+      <main className="min-h-screen px-3 pb-28 pt-4 sm:px-4 lg:ml-80 lg:px-8 lg:py-8">
         <div className="mx-auto max-w-[90rem]">
           <PageTransition>{children}</PageTransition>
         </div>

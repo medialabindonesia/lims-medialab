@@ -24,7 +24,7 @@ export default function DashboardShell({
       <main
         id="main-content"
         tabIndex={-1}
-        className="min-h-screen px-4 pb-8 pt-1 transition-[margin,padding] duration-300 lg:ml-80 lg:px-8 lg:py-8 xl:px-10"
+        className="min-h-screen px-3 pb-28 pt-4 transition-[margin,padding] duration-300 sm:px-4 lg:ml-80 lg:px-8 lg:py-8 xl:px-10"
       >
         <div className="mx-auto w-full max-w-[90rem]">
           <PageTransition>{children}</PageTransition>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Wifi, WifiOff } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import {
   type ChatMessage,
   type SupportMessageDTO,
@@ -21,13 +21,18 @@ import ChatThread from "@/components/support/ChatThread";
 import ChatComposer from "@/components/support/ChatComposer";
 import StarRating from "@/components/support/StarRating";
 import { useTicketChannel } from "@/hooks/useTicketChannel";
+import PresenceStatus from "@/components/support/PresenceStatus";
 
 export default function SupportChatClient({
   initialTicket,
   initialMessages,
+  viewerId,
+  viewerName,
 }: {
   initialTicket: SupportTicketDTO;
   initialMessages: SupportMessageDTO[];
+  viewerId: string;
+  viewerName: string;
 }) {
   const [ticket, setTicket] = useState(initialTicket);
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
@@ -52,7 +57,7 @@ export default function SupportChatClient({
     }
   }, [ticket.id]);
 
-  const { connected, publishTyping } = useTicketChannel(ticket.id, {
+  const { selfOnline, opponentOnline, opponentNames, publishTyping } = useTicketChannel(ticket.id, {
     onMessage: (message) => {
       appendMessage(message);
       if (message.senderRole === "AGENT") markRead();
@@ -73,7 +78,7 @@ export default function SupportChatClient({
       if (reader !== "AGENT") return;
       setMessages((prev) => applyRead(prev, "AGENT", at));
     },
-  });
+  }, { userId: viewerId, name: viewerName, role: "CUSTOMER" });
 
   useEffect(() => {
     markRead();
@@ -178,12 +183,11 @@ export default function SupportChatClient({
         </div>
 
         <div className="flex items-center gap-2">
-          <span
-            title={connected ? "Realtime aktif" : "Realtime offline"}
-            className={connected ? "text-emerald-500" : "text-slate-300"}
-          >
-            {connected ? <Wifi size={16} /> : <WifiOff size={16} />}
-          </span>
+          <PresenceStatus
+            selfOnline={selfOnline}
+            opponentOnline={opponentOnline}
+            opponentLabel={opponentNames[0] || "Tim support"}
+          />
           <TicketStatusBadge status={ticket.status} />
         </div>
       </div>

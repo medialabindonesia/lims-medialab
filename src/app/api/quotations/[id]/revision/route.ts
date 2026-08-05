@@ -77,6 +77,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       data: {
         status: "REVISION",
         note: parsed.data.note,
+        revisionReason: parsed.data.note,
       },
     });
     await tx.workflowLog.create({

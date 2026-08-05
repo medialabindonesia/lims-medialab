@@ -26,6 +26,8 @@ export default async function CustomerTicketPage({ params }: PageProps) {
     <SupportChatClient
       initialTicket={detail.ticket}
       initialMessages={detail.messages}
+      viewerId={session.userId}
+      viewerName={detail.ticket.customerName || session.email}
     />
   );
 }

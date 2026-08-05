@@ -206,6 +206,42 @@ table {
   font-variant-numeric: tabular-nums;
 }
 
+/* React DayPicker v10, diselaraskan dengan brand dan target sentuh mobile. */
+.medialab-day-picker .rdp-root {
+  --rdp-accent-color: var(--brand-blue);
+  --rdp-accent-background-color: #edf5ff;
+  --rdp-day_button-border-radius: 0.85rem;
+  --rdp-day_button-height: 2.6rem;
+  --rdp-day_button-width: 2.6rem;
+  margin: 0 auto;
+}
+
+.medialab-day-picker .rdp-month_caption {
+  color: var(--brand-navy);
+  font-weight: 850;
+}
+
+.medialab-day-picker .rdp-button_previous,
+.medialab-day-picker .rdp-button_next {
+  border: 1px solid #d8e3f0;
+  border-radius: 0.75rem;
+  background: #f5f8fc;
+  color: var(--brand-blue);
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.medialab-day-picker .rdp-button_previous:hover,
+.medialab-day-picker .rdp-button_next:hover {
+  transform: translateY(-1px);
+  background: #edf5ff;
+}
+
+.medialab-day-picker .rdp-selected .rdp-day_button {
+  background: var(--brand-blue);
+  color: white;
+  font-weight: 800;
+}
+
 /* Shared application canvas */
 .dashboard-canvas {
   position: relative;

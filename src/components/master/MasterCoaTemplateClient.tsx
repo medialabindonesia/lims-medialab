@@ -7,6 +7,7 @@ import type {
   CoaTemplateParameter,
 } from "@prisma/client";
 import { FileBadge, Plus, RefreshCcw, Save, Search, X } from "lucide-react";
+import Select from "@/components/ui/Select";
 
 type TemplateWithParams = CoaTemplate & {
   parameters: Array<
@@ -495,19 +496,13 @@ export default function MasterCoaTemplateClient({
                     key={`${item.parameterId}-${index}`}
                     className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 xl:grid-cols-[1.3fr_1fr_0.7fr_1fr_1fr_1fr_80px_90px]"
                   >
-                    <select
+                    <Select
                       value={item.parameterId}
-                      onChange={(event) =>
-                        changeParameter(index, event.target.value)
-                      }
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500"
-                    >
-                      {parameters.map((parameter) => (
-                        <option key={parameter.id} value={parameter.id}>
-                          {parameter.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(value) => changeParameter(index, value)}
+                      options={parameters.map((parameter) => ({ value: parameter.id, label: parameter.name }))}
+                      ariaLabel={`Parameter ${index + 1}`}
+                      buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-900 outline-none"
+                    />
 
                     <input
                       value={item.displayName}
