@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { getCustomerOrders } from "@/lib/order-tracking";
-import MotionHeader from "@/components/layout/MotionHeader";
+import PageHeader from "@/components/layout/PageHeader";
 import CustomerDashboardClient from "@/components/customer/CustomerDashboardClient";
 
 export default async function CustomerDashboardPage() {
@@ -35,10 +35,10 @@ export default async function CustomerDashboardPage() {
 
   return (
     <section>
-      <MotionHeader
-        eyebrow="Customer Dashboard"
-        title="Customer Engagement Portal"
-        subtitle="Alur customer dari request quotation, kirim sample, review preliminary COA, sampai final COA dan invoice."
+      <PageHeader
+        eyebrow="Portal Customer"
+        title="Pesanan & Progres Anda"
+        subtitle="Pantau setiap pesanan dari penawaran, pengiriman sample, hasil uji, sampai sertifikat dan tagihan."
       />
 
       <CustomerDashboardClient

@@ -129,6 +129,93 @@ function getMenuGroupKey(menuKey: string) {
   return menuKey.split(".")[0] || "other";
 }
 
+/**
+ * Label pendek khusus navigasi bawah (mobile). Slot hanya selebar ±70px,
+ * jadi nama menu penuh seperti "Support Center" atau "Preliminary COA" pasti
+ * terpotong. Label di sini sengaja satu kata supaya utuh terbaca.
+ */
+const MOBILE_SHORT_LABEL: Record<string, string> = {
+  "dashboard.admin": "Beranda",
+  "dashboard.worker": "Beranda",
+  "dashboard.customer": "Beranda",
+  "dashboard.finance": "Beranda",
+  "dashboard.lab": "Beranda",
+  "quotation.request": "Quotation",
+  "quotation.verify": "Verifikasi",
+  "quotation.revise": "Revisi",
+  "quotation.approve": "Approve",
+  "coa.preliminary": "Hasil",
+  "coa.final": "Sertifikat",
+  "customer.invoices": "Invoice",
+  "support.center": "Bantuan",
+  "support.desk": "Bantuan",
+  "support.faq": "FAQ",
+  "sales.monitoring": "Monitor",
+  "sales.ltr": "LTR",
+  "sales.sampling_schedule": "Jadwal",
+  "technical.coc": "COC",
+  "technical.stps": "STPS",
+  "lab.receive_sample": "Sample",
+  "lab.conduct_analysis": "Analisis",
+  "lab.enter_results": "Input",
+  "finance.create_invoice": "Invoice",
+  "finance.approve_invoice": "Approve",
+  "master.customers": "Customer",
+  "master.parameters": "Parameter",
+  "admin.users": "User",
+};
+
+/**
+ * Empat slot tetap navigasi bawah per role. Sengaja TIDAK bergantung pada
+ * halaman aktif: sebelumnya menu aktif disisipkan ke daftar sehingga posisi
+ * tombol bergeser setiap pindah halaman dan user kehilangan memori otot.
+ */
+const MOBILE_PRIMARY_KEYS: Record<string, string[]> = {
+  CUSTOMER_ENGAGEMENT: [
+    "dashboard.customer",
+    "quotation.request",
+    "coa.preliminary",
+    "support.center",
+  ],
+};
+
+function getMobileLabel(item: DashboardMenuItem) {
+  const mapped = MOBILE_SHORT_LABEL[item.key];
+
+  if (mapped) return mapped;
+
+  return item.name.replace(" Dashboard", "").split(" ")[0];
+}
+
+/**
+ * Empat menu utama untuk navigasi bawah, dipilih secara deterministik:
+ * preferensi per role dulu, lalu dashboard, lalu urutan menu apa adanya.
+ */
+function pickMobilePrimary(
+  menus: DashboardMenuItem[],
+  roleCode: string
+): DashboardMenuItem[] {
+  const preferred = MOBILE_PRIMARY_KEYS[roleCode] || [];
+  const picked: DashboardMenuItem[] = [];
+
+  for (const key of preferred) {
+    const found = menus.find((menu) => menu.key === key);
+    if (found) picked.push(found);
+  }
+
+  const dashboard = menus.find((menu) => menu.key.startsWith("dashboard."));
+  if (dashboard && !picked.some((menu) => menu.id === dashboard.id)) {
+    picked.unshift(dashboard);
+  }
+
+  for (const menu of menus) {
+    if (picked.length >= 4) break;
+    if (!picked.some((item) => item.id === menu.id)) picked.push(menu);
+  }
+
+  return picked.slice(0, 4);
+}
+
 function getInitials(name: string) {
   return (
     name
@@ -199,7 +286,7 @@ function SidebarContent({
 
   return (
     <div className="flex h-full flex-col bg-brand-navy text-white">
-      <div className="shrink-0 border-b border-white/10 px-5 py-5">
+      <div className="shrink-0 border-b border-white/10 px-4 py-4 lg:px-5 lg:py-5">
         <Link
           href="/dashboard"
           onClick={onClose}
@@ -220,7 +307,7 @@ function SidebarContent({
               width={220}
               height={66}
               priority
-              className="relative z-10 h-auto w-[12rem]"
+              className="relative z-10 h-auto w-40 lg:w-48"
             />
           </div>
 
@@ -377,16 +464,10 @@ export default function Sidebar({
   const supportBadge = supportKey
     ? { key: supportKey, count: supportUnread }
     : undefined;
-  const activeMenu = menus.find((menu) => isActivePath(pathname, menu.href));
-  const dashboardMenu = menus.find((menu) => menu.key.startsWith("dashboard."));
-  const monitoringMenu = menus.find((menu) => menu.key === "sales.monitoring");
-  const supportMenu = menus.find(
-    (menu) => menu.key === "support.center" || menu.key === "support.desk"
+  const mobilePrimary = useMemo(
+    () => pickMobilePrimary(menus, session.roleCode),
+    [menus, session.roleCode]
   );
-  const mobilePrimary = [dashboardMenu, activeMenu, monitoringMenu, supportMenu, ...menus]
-    .filter((menu): menu is DashboardMenuItem => Boolean(menu))
-    .filter((menu, index, all) => all.findIndex((item) => item.id === menu.id) === index)
-    .slice(0, 4);
 
   useEffect(() => {
     if (!openMobile) return;
@@ -423,7 +504,7 @@ export default function Sidebar({
         aria-label="Navigasi bawah"
         className="fixed inset-x-0 bottom-0 z-[9000] border-t border-blue-100 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-14px_38px_rgba(7,43,107,0.14)] backdrop-blur-xl lg:hidden"
       >
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0.5">
           {mobilePrimary.map((item) => {
             const Icon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : Home;
             const active = isActivePath(pathname, item.href);
@@ -433,13 +514,25 @@ export default function Sidebar({
                 key={item.id}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold transition ${
-                  active ? "bg-blue-50 text-blue-800" : "text-slate-500 active:bg-slate-100"
+                aria-label={item.name}
+                className={`relative flex min-h-13 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1 text-[10px] font-bold leading-none transition ${
+                  active
+                    ? "bg-blue-50 text-blue-800"
+                    : "text-slate-500 active:bg-slate-100"
                 }`}
               >
-                <Icon size={20} className={active ? "text-blue-700" : "text-slate-500"} />
-                <span className="max-w-full truncate">{item.name.replace(" Dashboard", "")}</span>
-                {badge > 0 && <span className="absolute right-2 top-1 rounded-full bg-red-500 px-1.5 text-[9px] text-white">{badge}</span>}
+                <span className="relative">
+                  <Icon
+                    size={20}
+                    className={active ? "text-blue-700" : "text-slate-500"}
+                  />
+                  {badge > 0 && (
+                    <span className="absolute -right-2 -top-1.5 min-w-4 rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-4 text-white">
+                      {badge > 9 ? "9+" : badge}
+                    </span>
+                  )}
+                </span>
+                <span className="max-w-full truncate">{getMobileLabel(item)}</span>
               </Link>
             );
           })}
@@ -450,7 +543,7 @@ export default function Sidebar({
             aria-label="Buka semua menu"
             aria-expanded={openMobile}
             aria-controls="mobile-navigation"
-            className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl px-1 text-[10px] font-bold text-slate-500 transition active:bg-slate-100"
+            className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1 text-[10px] font-bold leading-none text-slate-500 transition active:bg-slate-100"
           >
             <MenuIcon size={20} />
             <span>Semua</span>

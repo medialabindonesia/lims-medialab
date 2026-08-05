@@ -30,6 +30,7 @@ import {
   type SupportTicketDTO,
 } from "@/lib/support";
 import { TicketStatusBadge } from "@/components/support/Badges";
+import { parseDocumentNumber } from "@/lib/customer-labels";
 import { useSupportUnread } from "@/hooks/useSupportUnread";
 import { reauthAbly } from "@/lib/ably-client";
 import Select from "@/components/ui/Select";
@@ -292,29 +293,30 @@ export default function SupportCenterClient({
         variants={reduce ? undefined : fadeUp}
         initial={reduce ? undefined : "hidden"}
         animate={reduce ? undefined : "visible"}
-        className="mb-8 overflow-hidden rounded-[2rem] border border-slate-200 bg-gradient-to-br from-emerald-500 to-sky-500 p-8 text-white shadow-sm"
+        className="mb-5 overflow-hidden rounded-[1.25rem] border border-slate-200 bg-gradient-to-br from-emerald-500 to-sky-500 p-4 text-white shadow-sm sm:mb-8 sm:rounded-[2rem] sm:p-7"
       >
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20">
-            <LifeBuoy size={26} />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/20 sm:h-12 sm:w-12 sm:rounded-2xl">
+            <LifeBuoy size={22} />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-white/80">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-white/80 sm:text-sm">
               Support Center
             </p>
-            <h1 className="text-3xl font-black tracking-tight">
+            <h1 className="text-lg font-black leading-tight tracking-tight sm:text-3xl">
               Ada yang bisa kami bantu?
             </h1>
           </div>
         </div>
 
-        <div className="mt-6 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-sm">
-          <Search size={20} className="text-slate-400" />
+        <div className="mt-4 flex min-h-11 items-center gap-2.5 rounded-xl bg-white px-3.5 shadow-sm sm:mt-6 sm:rounded-2xl sm:px-4">
+          <Search size={18} className="shrink-0 text-slate-400" />
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Cari pertanyaan… (mis. invoice, sample, COA)"
-            className="flex-1 bg-transparent text-sm text-slate-700 outline-none"
+            placeholder="Cari pertanyaan…"
+            aria-label="Cari pertanyaan"
+            className="min-w-0 flex-1 bg-transparent text-[13px] text-slate-700 outline-none sm:text-sm"
           />
         </div>
       </motion.div>
@@ -325,7 +327,7 @@ export default function SupportCenterClient({
           variants={reduce ? undefined : fadeUp}
           initial={reduce ? undefined : "hidden"}
           animate={reduce ? undefined : "visible"}
-          className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+          className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6"
         >
           <button
             type="button"
@@ -348,7 +350,7 @@ export default function SupportCenterClient({
               <label className="mb-2 block text-sm font-bold text-slate-700">
                 Konteks percakapan
               </label>
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
                 {[
                   {
                     value: "GENERAL" as const,
@@ -472,7 +474,7 @@ export default function SupportCenterClient({
               type="button"
               onClick={submitTicket}
               disabled={submitting || (contextType !== "GENERAL" && !contextId)}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60 sm:w-auto"
             >
               <Send size={16} />
               {submitting ? "Mengirim…" : "Mulai Chat"}
@@ -570,16 +572,18 @@ export default function SupportCenterClient({
         </div>
       ) : (
         /* Home: topic cards + my tickets */
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           <div>
-            <h2 className="mb-4 text-lg font-black text-slate-900">
+            <h2 className="mb-3 text-base font-black text-slate-900 sm:mb-4 sm:text-lg">
               Pilih topik masalah
             </h2>
+            {/* Dua kolom di mobile: enam topik jadi muat satu layar, tidak
+                perlu scroll panjang hanya untuk memilih kategori. */}
             <motion.div
               variants={reduce ? undefined : staggerContainer()}
               initial={reduce ? undefined : "hidden"}
               animate={reduce ? undefined : "visible"}
-              className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+              className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-3"
             >
               {faq.map((category) => (
                 <motion.button
@@ -587,14 +591,16 @@ export default function SupportCenterClient({
                   variants={reduce ? undefined : fadeUpItem}
                   type="button"
                   onClick={() => setActiveCategory(category)}
-                  className="group flex items-start gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md"
+                  className="group flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-3.5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md sm:flex-row sm:items-start sm:gap-4 sm:p-5"
                 >
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 transition-transform group-hover:scale-110">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 transition-transform group-hover:scale-110 sm:h-12 sm:w-12 sm:rounded-2xl">
                     <CategoryIcon name={category.icon} />
                   </div>
-                  <div>
-                    <p className="font-bold text-slate-800">{category.name}</p>
-                    <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold leading-snug text-slate-800 sm:text-base">
+                      {category.name}
+                    </p>
+                    <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-slate-500 sm:text-sm sm:leading-5">
                       {category.description ||
                         `${category.items.length} pertanyaan`}
                     </p>
@@ -605,11 +611,11 @@ export default function SupportCenterClient({
           </div>
 
           <div>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-black text-slate-900">
+            <div className="mb-3 flex items-center justify-between gap-2 sm:mb-4">
+              <h2 className="flex min-w-0 items-center gap-2 text-base font-black text-slate-900 sm:text-lg">
                 Tiket Saya
                 {unread > 0 && (
-                  <span className="ml-2 rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                  <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white">
                     {unread} baru
                   </span>
                 )}
@@ -617,38 +623,38 @@ export default function SupportCenterClient({
               <button
                 type="button"
                 onClick={() => openCompose(null)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500 px-3.5 py-2 text-sm font-bold text-white hover:bg-emerald-600"
+                className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl bg-emerald-500 px-3 text-[13px] font-bold text-white hover:bg-emerald-600 sm:min-h-11 sm:px-3.5 sm:text-sm"
               >
                 <MessageCircle size={15} /> Tiket baru
               </button>
             </div>
 
             {tickets.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
-                <p className="text-sm text-slate-500">
+              <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center sm:p-8">
+                <p className="text-[13px] text-slate-500 sm:text-sm">
                   Belum ada tiket. Mulai dari topik di atas atau buat tiket
                   baru.
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 {tickets.map((ticket) => (
                   <Link
                     key={ticket.id}
                     href={`/support/tickets/${ticket.id}`}
-                    className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 hover:shadow-md"
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-sm transition hover:border-emerald-200 hover:shadow-md sm:rounded-2xl sm:p-4"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="truncate font-bold text-slate-800">
+                        <p className="truncate text-[13px] font-bold text-slate-800 sm:text-base">
                           {ticket.subject}
                         </p>
                         {(ticket.unreadForCustomer ?? 0) > 0 && (
                           <span className="h-2 w-2 shrink-0 rounded-full bg-red-500" />
                         )}
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-400">
-                        {ticket.ticketNo} ·{" "}
+                      <p className="mt-0.5 truncate text-[11px] text-slate-400 sm:text-xs">
+                        {parseDocumentNumber(ticket.ticketNo).short} ·{" "}
                         {formatRelative(ticket.lastMessageAt)}
                       </p>
                     </div>

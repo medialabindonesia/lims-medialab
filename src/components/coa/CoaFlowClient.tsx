@@ -10,6 +10,9 @@ import {
   X,
 } from "lucide-react";
 import ExportButtons from "@/components/exports/ExportButtons";
+import PageHeader from "@/components/layout/PageHeader";
+import DocumentCode from "@/components/ui/DocumentCode";
+import { humanOrderTitle, parseDocumentNumber } from "@/lib/customer-labels";
 
 type CoaMode = "preliminary" | "final";
 
@@ -195,7 +198,7 @@ export default function CoaFlowClient({
             onClick={() =>
               runAction(`/api/coa/${sample.id}/preliminary`, "POST")
             }
-            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:rounded-2xl sm:text-sm"
           >
             <FileBadge size={16} />
             Generate Preliminary
@@ -205,7 +208,7 @@ export default function CoaFlowClient({
 
       if (preliminary?.status === "SENT_TO_CUSTOMER") {
         return (
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
             {isCustomer && (
               <button
                 disabled={loading}
@@ -213,7 +216,7 @@ export default function CoaFlowClient({
                   setRejectTarget(sample);
                   setRejectReason("");
                 }}
-                className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 text-[13px] font-bold text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:rounded-2xl sm:text-sm"
               >
                 <ThumbsDown size={16} />
                 Minta Revisi
@@ -225,10 +228,10 @@ export default function CoaFlowClient({
               onClick={() =>
                 runAction(`/api/coa/${sample.id}/customer-confirm`, "PATCH")
               }
-              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:rounded-2xl sm:text-sm"
             >
               <CheckCircle2 size={16} />
-              Confirm Preliminary
+              {isCustomer ? "Hasil Sudah Sesuai" : "Confirm Preliminary"}
             </button>
           </div>
         );
@@ -247,7 +250,7 @@ export default function CoaFlowClient({
           <button
             disabled={loading}
             onClick={() => runAction(`/api/coa/${sample.id}/final`, "POST")}
-            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:rounded-2xl sm:text-sm"
           >
             <Award size={16} />
             Generate Final COA
@@ -309,107 +312,247 @@ export default function CoaFlowClient({
     );
   }
 
+  const headerCopy = isCustomer
+    ? mode === "preliminary"
+      ? {
+          title: "Hasil Uji Sementara",
+          subtitle:
+            "Periksa hasil uji laboratorium Anda, lalu konfirmasi bila sudah sesuai agar sertifikat resmi diterbitkan.",
+          empty: "Belum ada hasil uji yang menunggu konfirmasi Anda.",
+        }
+      : {
+          title: "Sertifikat Hasil Uji",
+          subtitle:
+            "Unduh sertifikat resmi (Final COA) untuk pesanan yang sudah Anda konfirmasi.",
+          empty: "Belum ada sertifikat yang terbit.",
+        }
+    : mode === "preliminary"
+      ? {
+          title: "Preliminary COA",
+          subtitle:
+            "Generate preliminary COA dari sample yang sudah tervalidasi, lalu customer melakukan confirm.",
+          empty: "Data COA belum tersedia.",
+        }
+      : {
+          title: "Final COA",
+          subtitle: "Generate final COA setelah customer confirm preliminary COA.",
+          empty: "Data COA belum tersedia.",
+        };
+
   return (
-    <div className="space-y-6">
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-emerald-600">
-              Certificate Flow
-            </p>
-
-            <h2 className="mt-1 text-2xl font-black text-slate-900">
-              {mode === "preliminary" ? "Preliminary COA" : "Final COA"}
-            </h2>
-
-            <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              {mode === "preliminary"
-                ? "Generate preliminary COA dari sample yang sudah tervalidasi, lalu customer melakukan confirm."
-                : "Generate final COA setelah customer confirm preliminary COA."}
-            </p>
-          </div>
-
+    <div className="space-y-4 sm:space-y-6">
+      <PageHeader
+        className="mb-0"
+        eyebrow={isCustomer ? "Hasil Uji" : "Certificate Flow"}
+        title={headerCopy.title}
+        subtitle={headerCopy.subtitle}
+        actions={
           <button
             onClick={refreshData}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-[13px] font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 sm:rounded-2xl sm:text-sm"
           >
-            <RefreshCcw size={17} />
+            <RefreshCcw size={16} />
             Refresh
           </button>
-        </div>
-
+        }
+      >
         {message && (
-          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] text-slate-600 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">
             {message}
           </p>
         )}
-      </div>
+      </PageHeader>
 
       {/* flex-col (bukan grid) sengaja dipilih: grid item tanpa min-width:0
           tumbuh mengikuti konten (tabel min-w-[900px] di dalamnya), memaksa
           SELURUH HALAMAN melebar horizontal di layar sempit. flex-col tidak
           kena mekanisme "automatic minimum size" itu. */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-3 sm:gap-5">
         {visibleSamples.map((sample) => {
           const preliminary = sample.coa.find(
             (item) => item.type === "PRELIMINARY"
           );
           const finalCoa = sample.coa.find((item) => item.type === "FINAL");
+          const sampleDoc = parseDocumentNumber(sample.sampleNo);
 
           return (
             <div
               key={sample.id}
-              className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-emerald-200"
+              className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm transition hover:border-emerald-200 sm:rounded-3xl sm:p-5"
             >
-              <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="mb-4 flex flex-col gap-3 sm:mb-5 sm:gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <h3 className="text-xl font-black text-slate-900">
-                      {sample.sampleNo}
-                    </h3>
+                  {isCustomer ? (
+                    <>
+                      <h3 className="text-[15px] font-black leading-snug text-slate-900 sm:text-lg">
+                        {humanOrderTitle(sample.coaTemplate?.name)}
+                      </h3>
+                      <p className="mt-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
+                        <span className="font-mono text-slate-500">
+                          {sampleDoc.short}
+                        </span>{" "}
+                        · Sample yang Anda kirim
+                      </p>
+                    </>
+                  ) : (
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-black text-slate-900 sm:text-xl">
+                        {sample.sampleNo}
+                      </h3>
 
-                    <span
-                      className={[
-                        "rounded-full px-3 py-1 text-xs font-semibold",
-                        getStatusStyle(sample.status),
-                      ].join(" ")}
-                    >
-                      {sample.status}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-2 text-sm text-slate-500 md:grid-cols-2 xl:grid-cols-3">
-                    <p>
-                      Customer:{" "}
-                      <span className="font-semibold text-slate-900">
-                        {sample.customer.name}
+                      <span
+                        className={[
+                          "rounded-full px-3 py-1 text-xs font-semibold",
+                          getStatusStyle(sample.status),
+                        ].join(" ")}
+                      >
+                        {sample.status}
                       </span>
-                    </p>
+                    </div>
+                  )}
 
-                    <p>Quotation: {sample.quotation?.quotationNo || "-"}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 text-[12px] sm:text-sm xl:grid-cols-3">
+                    {!isCustomer && (
+                      <div className="min-w-0">
+                        <dt className="text-slate-400">Customer</dt>
+                        <dd className="truncate font-semibold text-slate-900">
+                          {sample.customer.name}
+                        </dd>
+                      </div>
+                    )}
 
-                    <p>Template: {sample.coaTemplate?.name || "-"}</p>
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomer ? "Jenis uji" : "Template"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {sample.coaTemplate?.name || "-"}
+                      </dd>
+                    </div>
 
-                    <p>
-                      Preliminary:{" "}
-                      {preliminary
-                        ? `${preliminary.coaNo} / ${preliminary.status}`
-                        : "-"}
-                    </p>
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomer ? "Penawaran" : "Quotation"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {sample.quotation
+                          ? isCustomer
+                            ? parseDocumentNumber(sample.quotation.quotationNo)
+                                .short
+                            : sample.quotation.quotationNo
+                          : "-"}
+                      </dd>
+                    </div>
 
-                    <p>
-                      Final:{" "}
-                      {finalCoa
-                        ? `${finalCoa.coaNo} / ${finalCoa.status}`
-                        : "-"}
-                    </p>
-                  </div>
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomer ? "Hasil sementara" : "Preliminary"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {preliminary
+                          ? isCustomer
+                            ? parseDocumentNumber(preliminary.coaNo).short
+                            : `${preliminary.coaNo} / ${preliminary.status}`
+                          : "-"}
+                      </dd>
+                    </div>
+
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomer ? "Sertifikat" : "Final"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {finalCoa
+                          ? isCustomer
+                            ? parseDocumentNumber(finalCoa.coaNo).short
+                            : `${finalCoa.coaNo} / ${finalCoa.status}`
+                          : "-"}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  {isCustomer && (preliminary || finalCoa) && (
+                    <DocumentCode
+                      code={(finalCoa || preliminary)!.coaNo}
+                      label="Kode dokumen hasil"
+                      className="mt-3"
+                    />
+                  )}
                 </div>
 
                 {renderExportButtons(sample)}
               </div>
 
-              <div className="overflow-hidden rounded-2xl border border-slate-200">
+              {/* Mobile: tabel 7 kolom tidak terbaca di 390px, jadi tiap
+                  parameter ditampilkan sebagai kartu ringkas. */}
+              <ul className="space-y-2 sm:hidden">
+                {sample.parameters.map((item) => {
+                  const displayName =
+                    item.displayNameSnapshot ||
+                    item.templateParameter?.displayName ||
+                    item.parameter.name;
+
+                  const unit =
+                    item.unitSnapshot ||
+                    item.templateParameter?.unit ||
+                    item.parameter.unit ||
+                    "";
+
+                  const standard =
+                    item.standardSnapshot ||
+                    item.templateParameter?.standard ||
+                    "-";
+
+                  const limit =
+                    item.limitSnapshot ||
+                    item.templateParameter?.limitValue ||
+                    "-";
+
+                  const method =
+                    item.methodSnapshot ||
+                    item.templateParameter?.method ||
+                    item.parameter.method ||
+                    "-";
+
+                  return (
+                    <li
+                      key={item.id}
+                      className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="min-w-0 flex-1 text-[13px] font-bold leading-snug text-slate-900">
+                          {displayName}
+                        </p>
+                        <p className="shrink-0 text-right text-[13px] font-black text-slate-900">
+                          {item.resultValue || "-"}
+                          {unit && (
+                            <span className="ml-0.5 text-[11px] font-semibold text-slate-400">
+                              {unit}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+
+                      <dl className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-slate-500">
+                        <div className="min-w-0">
+                          <dt className="text-slate-400">Baku mutu</dt>
+                          <dd className="truncate font-semibold">{standard}</dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-slate-400">Batas</dt>
+                          <dd className="truncate font-semibold">{limit}</dd>
+                        </div>
+                        <div className="col-span-2 min-w-0">
+                          <dt className="text-slate-400">Metode</dt>
+                          <dd className="truncate font-semibold">{method}</dd>
+                        </div>
+                      </dl>
+                    </li>
+                  );
+                })}
+              </ul>
+
+              <div className="hidden overflow-hidden rounded-2xl border border-slate-200 sm:block">
                 <div className="overflow-auto">
                   <table className="w-full min-w-[900px] text-sm">
                     <thead className="bg-slate-50 text-left text-slate-600">
@@ -491,7 +634,7 @@ export default function CoaFlowClient({
         })}
 
         {visibleSamples.length === 0 && (
-          <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+          <div className="rounded-[1.25rem] border border-slate-200 bg-white p-8 text-center text-[13px] text-slate-500 shadow-sm sm:rounded-3xl sm:p-10 sm:text-base">
             Data COA belum tersedia.
           </div>
         )}

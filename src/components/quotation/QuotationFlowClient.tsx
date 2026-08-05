@@ -8,7 +8,11 @@ import ExportButtons from "@/components/exports/ExportButtons";
 import Select, { type SelectOption } from "@/components/ui/Select";
 import DatePickerField from "@/components/ui/DatePickerField";
 import {
+  AlertCircle,
+  ArrowLeft,
+  ArrowRight,
   BadgeCheck,
+  Check,
   CheckCircle2,
   ClipboardCheck,
   Copy,
@@ -18,6 +22,7 @@ import {
   FilePlus,
   FileText,
   FlaskConical,
+  Lock,
   MapPin,
   PackageCheck,
   Percent,
@@ -30,6 +35,16 @@ import {
   Wallet,
   X,
 } from "lucide-react";
+import PageHeader from "@/components/layout/PageHeader";
+import Disclosure from "@/components/ui/Disclosure";
+import DocumentCode from "@/components/ui/DocumentCode";
+import StatusBadge from "@/components/ui/StatusBadge";
+import {
+  formatShortDate,
+  humanOrderTitle,
+  parseDocumentNumber,
+  quotationStatusMeta,
+} from "@/lib/customer-labels";
 
 type FlowMode = "request" | "verify" | "revise" | "approve" | "ltr" | "coc";
 
@@ -172,6 +187,8 @@ type Props = {
   parameters: ParameterOption[];
   coaTemplates: CoaTemplateOption[];
   initialQuotations: Quotation[];
+  /** Role pemakai halaman — menentukan apakah istilah internal diterjemahkan. */
+  viewerRole?: string;
 };
 
 type FormItem = {
@@ -215,6 +232,60 @@ type QuotationForm = {
 };
 
 type ModalTab = "detail" | "items" | "terms";
+
+/**
+ * Langkah pembuatan quotation, dikerjakan berurutan. Sebelumnya ketiganya
+ * berupa tab bebas-lompat sehingga user gampang menyimpan data setengah jadi
+ * dan, di layar mobile, kehilangan konteks "sudah sampai mana".
+ */
+const WIZARD_STEPS = [
+  { key: "detail", label: "Detail", title: "Quotation Detail" },
+  { key: "items", label: "Parameter", title: "Parameter & Pricing" },
+  { key: "terms", label: "Ringkasan", title: "Terms & Summary" },
+] as const;
+
+/**
+ * Syarat kelengkapan tiap langkah. Dipakai untuk mengunci tombol "Lanjut"
+ * sekaligus menampilkan alasan kenapa belum bisa lanjut.
+ */
+function getStepIssues(step: ModalTab, form: QuotationForm): string[] {
+  const issues: string[] = [];
+
+  if (step === "detail") {
+    if (!form.customerId) issues.push("Pilih customer terlebih dahulu.");
+    if (!form.coaTemplateId) issues.push("Pilih template COA terlebih dahulu.");
+    if (!form.quotationDate) issues.push("Tanggal quotation wajib diisi.");
+    if (!form.validUntil) issues.push("Tanggal valid until wajib diisi.");
+    if (
+      form.quotationDate &&
+      form.validUntil &&
+      form.validUntil < form.quotationDate
+    ) {
+      issues.push("Valid until tidak boleh mendahului tanggal quotation.");
+    }
+  }
+
+  if (step === "items") {
+    if (form.items.length === 0) {
+      issues.push("Tambahkan minimal satu parameter.");
+    }
+    if (form.items.some((item) => !item.parameterId)) {
+      issues.push("Masih ada baris parameter yang belum dipilih.");
+    }
+    if (form.items.some((item) => !item.qty || Number(item.qty) < 1)) {
+      issues.push("Qty setiap parameter minimal 1.");
+    }
+  }
+
+  if (step === "terms") {
+    if (!form.paymentTerm.trim()) issues.push("Payment term wajib diisi.");
+    if (form.id && form.editReason.trim().length < 8) {
+      issues.push("Alasan revisi minimal 8 karakter.");
+    }
+  }
+
+  return issues;
+}
 
 const flowSteps = [
   "REQUESTED",
@@ -464,8 +535,10 @@ export default function QuotationFlowClient({
   parameters,
   coaTemplates,
   initialQuotations,
+  viewerRole,
 }: Props) {
   const reduce = useReducedMotion();
+  const isCustomerView = viewerRole === "CUSTOMER_ENGAGEMENT";
 
   const [mounted, setMounted] = useState(false);
   const [quotations, setQuotations] = useState<Quotation[]>(initialQuotations);
@@ -552,6 +625,50 @@ export default function QuotationFlowClient({
   }, [openForm, documentQuotation]);
 
   const config = modeConfig[mode];
+
+  // Customer memakai bahasa sehari-hari; staf internal tetap memakai istilah
+  // dokumen resmi supaya rujukan antar tim tidak berubah.
+  const headerCopy =
+    isCustomerView && mode === "request"
+      ? {
+          title: "Penawaran Saya",
+          description:
+            "Ajukan permintaan penawaran, pantau persetujuannya, lalu unggah PO setelah penawaran disetujui.",
+          empty: "Belum ada penawaran. Mulai dengan mengajukan penawaran baru.",
+        }
+      : config;
+
+  // --- Wizard form ---------------------------------------------------------
+  // Buat baru: langkah dikunci berurutan supaya data tidak setengah jadi.
+  // Revisi: semua langkah sudah pernah terisi, jadi user bebas melompat ke
+  // bagian yang ingin diubah dan bisa menyimpan kapan saja.
+  const isEditing = Boolean(form.id);
+  const stepIndex = Math.max(
+    0,
+    WIZARD_STEPS.findIndex((step) => step.key === activeTab)
+  );
+  const isLastStep = stepIndex === WIZARD_STEPS.length - 1;
+  const currentStepIssues = getStepIssues(activeTab, form);
+  const allStepIssues = WIZARD_STEPS.flatMap((step) =>
+    getStepIssues(step.key, form)
+  );
+
+  function isStepUnlocked(index: number) {
+    if (isEditing || index <= stepIndex) return true;
+
+    return WIZARD_STEPS.slice(0, index).every(
+      (step) => getStepIssues(step.key, form).length === 0
+    );
+  }
+
+  function goToStep(index: number) {
+    const target = WIZARD_STEPS[index];
+
+    if (!target || !isStepUnlocked(index)) return;
+
+    setActiveTab(target.key);
+    setMessage("");
+  }
 
   const selectedCustomer = useMemo(() => {
     return customers.find((customer) => customer.id === form.customerId);
@@ -824,6 +941,17 @@ export default function QuotationFlowClient({
   async function submitQuotation(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    // Jaga-jaga bila form ter-submit lewat tombol Enter dari langkah awal:
+    // wizard tidak boleh menyimpan data yang belum lengkap.
+    const blockingIssues = WIZARD_STEPS.flatMap((step) =>
+      getStepIssues(step.key, form)
+    );
+
+    if (blockingIssues.length > 0) {
+      setMessage(blockingIssues[0]);
+      return;
+    }
+
     setLoading(true);
     setMessage("");
 
@@ -1085,62 +1213,89 @@ export default function QuotationFlowClient({
         initial={reduce ? false : { opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease: EASE_OUT }}
-        className="flex h-[92vh] w-full max-w-7xl flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 shadow-2xl"
+        className="flex h-[94dvh] w-full max-w-7xl flex-col overflow-hidden rounded-[1.25rem] border border-slate-200 bg-slate-50 shadow-2xl sm:h-[92vh] sm:rounded-[2rem]"
       >
-        <div className="flex shrink-0 items-start justify-between border-b border-slate-200 bg-white px-6 py-5">
-          <div>
-            <p className="text-sm font-semibold text-emerald-600">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-6 sm:py-5">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-emerald-600 sm:text-sm">
               Quotation Flow
             </p>
-            <h2 className="mt-1 text-2xl font-black text-slate-900">
-              {form.id ? "Revisi Quotation" : "Buat Quotation"}
+            <h2 className="mt-0.5 text-lg font-black leading-tight text-slate-900 sm:mt-1 sm:text-2xl">
+              {isEditing ? "Revisi Quotation" : "Buat Quotation"}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Format mengikuti dokumen quotation: customer, template COA,
-              sampling detail, parameter, biaya, VAT, dan terms.
+            <p className="mt-1 hidden text-sm text-slate-500 sm:block">
+              {isEditing
+                ? "Ubah bagian yang perlu diperbaiki, lalu simpan revisinya."
+                : `Langkah ${stepIndex + 1} dari ${WIZARD_STEPS.length} — ${WIZARD_STEPS[stepIndex].title}.`}
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => setOpenForm(false)}
-            className="rounded-2xl p-2.5 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            aria-label="Tutup form quotation"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:rounded-2xl"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
 
-        <div className="shrink-0 overflow-x-auto border-b border-slate-200 bg-white px-6 py-3">
-          <div className="flex min-w-max gap-2">
-            {[
-              { key: "detail", label: "Quotation Detail", icon: FilePlus },
-              { key: "items", label: "Parameter & Pricing", icon: FlaskConical },
-              { key: "terms", label: "Terms & Summary", icon: Wallet },
-            ].map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.key;
+        {/* Indikator langkah. Saat membuat baru, langkah berikutnya terkunci
+            sampai langkah sekarang lengkap; saat revisi semuanya terbuka. */}
+        <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+          <ol className="flex items-center gap-1.5 sm:gap-2">
+            {WIZARD_STEPS.map((step, index) => {
+              const active = activeTab === step.key;
+              const done = index < stepIndex && !getStepIssues(step.key, form).length;
+              const unlocked = isStepUnlocked(index);
 
               return (
-                <button
-                  key={tab.key}
-                  type="button"
-                  onClick={() => setActiveTab(tab.key as ModalTab)}
-                  className={[
-                    "inline-flex items-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold transition-colors",
-                    active
-                      ? "bg-emerald-500 text-white shadow-sm"
-                      : "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                  ].join(" ")}
-                >
-                  <Icon size={16} />
-                  {tab.label}
-                </button>
+                <li key={step.key} className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => goToStep(index)}
+                    disabled={!unlocked}
+                    aria-current={active ? "step" : undefined}
+                    className={[
+                      "flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl px-2 text-[11px] font-bold transition-colors sm:justify-start sm:px-3 sm:text-sm",
+                      active
+                        ? "bg-emerald-500 text-white shadow-sm"
+                        : unlocked
+                          ? "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                          : "border border-slate-100 bg-slate-50 text-slate-300",
+                    ].join(" ")}
+                  >
+                    <span
+                      className={[
+                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black",
+                        active
+                          ? "bg-white/25 text-white"
+                          : done
+                            ? "bg-emerald-500 text-white"
+                            : "bg-slate-200 text-slate-500",
+                      ].join(" ")}
+                    >
+                      {done ? <Check size={11} /> : index + 1}
+                    </span>
+                    <span className="truncate">{step.label}</span>
+                    {!unlocked && <Lock size={11} className="shrink-0" />}
+                  </button>
+                </li>
               );
             })}
+          </ol>
+
+          <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+              style={{
+                width: `${((stepIndex + 1) / WIZARD_STEPS.length) * 100}%`,
+              }}
+            />
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           {message && (
             <p className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {message}
@@ -1655,47 +1810,85 @@ export default function QuotationFlowClient({
           )}
         </div>
 
-        <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-white px-6 py-5 md:flex-row md:items-center md:justify-between">
-          <div className="text-sm text-slate-500">
-            Total:{" "}
-            <span className="font-black text-slate-900">
-              {formatRupiah(totalFormAmount)}
-            </span>{" "}
-            · Grand Total:{" "}
-            <span className="font-black text-emerald-600">
-              {formatRupiah(grandTotal)}
+        <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
+          {/* Alasan kenapa langkah ini belum bisa dilanjutkan. */}
+          {currentStepIssues.length > 0 && (
+            <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-4 text-amber-800 sm:text-xs">
+              <AlertCircle size={14} className="mt-0.5 shrink-0" />
+              <span>{currentStepIssues[0]}</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-3 text-[11px] text-slate-500 sm:text-sm">
+            <span className="min-w-0 truncate">
+              Grand Total:{" "}
+              <span className="font-black text-emerald-600">
+                {formatRupiah(grandTotal)}
+              </span>
+            </span>
+            <span className="hidden shrink-0 sm:inline">
+              Total parameter:{" "}
+              <span className="font-black text-slate-900">
+                {formatRupiah(totalFormAmount)}
+              </span>
             </span>
           </div>
 
-          <div className="flex gap-3">
+          <div className="mt-3 flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setOpenForm(false)}
-              className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              onClick={() =>
+                stepIndex === 0 ? setOpenForm(false) : goToStep(stepIndex - 1)
+              }
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:rounded-2xl sm:text-sm"
             >
-              Batal
+              {stepIndex === 0 ? (
+                "Batal"
+              ) : (
+                <>
+                  <ArrowLeft size={15} />
+                  Kembali
+                </>
+              )}
             </button>
 
-            <motion.button
-              disabled={
-                loading ||
-                customers.length === 0 ||
-                parameters.length === 0 ||
-                coaTemplates.length === 0 ||
-                form.items.length === 0 ||
-                (Boolean(form.id) && form.editReason.trim().length < 8)
-              }
-              whileHover={reduce || loading ? undefined : { scale: 1.02 }}
-              whileTap={reduce || loading ? undefined : { scale: 0.97 }}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Save size={17} />
-              {loading
-                ? "Menyimpan..."
-                : form.id
-                  ? "Kirim Revisi"
-                  : "Simpan Quotation"}
-            </motion.button>
+            {/* Buat baru: Simpan hanya muncul di langkah terakhir.
+                Revisi: Simpan selalu tersedia di langkah mana pun. */}
+            {!isLastStep && (
+              <motion.button
+                type="button"
+                onClick={() => goToStep(stepIndex + 1)}
+                disabled={currentStepIssues.length > 0}
+                whileHover={reduce ? undefined : { scale: 1.01 }}
+                whileTap={reduce ? undefined : { scale: 0.98 }}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-2xl sm:text-sm"
+              >
+                Lanjut
+                <ArrowRight size={15} />
+              </motion.button>
+            )}
+
+            {(isLastStep || isEditing) && (
+              <motion.button
+                disabled={
+                  loading ||
+                  customers.length === 0 ||
+                  parameters.length === 0 ||
+                  coaTemplates.length === 0 ||
+                  allStepIssues.length > 0
+                }
+                whileHover={reduce || loading ? undefined : { scale: 1.01 }}
+                whileTap={reduce || loading ? undefined : { scale: 0.98 }}
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-2xl sm:text-sm"
+              >
+                <Save size={16} />
+                {loading
+                  ? "Menyimpan..."
+                  : isEditing
+                    ? "Kirim Revisi"
+                    : "Simpan Quotation"}
+              </motion.button>
+            )}
           </div>
         </div>
       </motion.form>
@@ -1862,21 +2055,13 @@ export default function QuotationFlowClient({
       animate="visible"
       className="space-y-6"
     >
-      <motion.div
-        variants={fadeUpItem}
-        className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
-      >
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h2 className="text-2xl font-black text-slate-900">
-              {config.title}
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              {config.description}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
+      <PageHeader
+        className="mb-0"
+        eyebrow="Quotation Flow"
+        title={headerCopy.title}
+        subtitle={headerCopy.description}
+        actions={
+          <>
             {mode === "request" && (
               <motion.button
                 whileHover={reduce ? undefined : { scale: 1.02 }}
@@ -1887,100 +2072,161 @@ export default function QuotationFlowClient({
                   parameters.length === 0 ||
                   coaTemplates.length === 0
                 }
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:rounded-2xl sm:text-sm"
               >
-                <FilePlus size={17} />
-                Buat Quotation
+                <FilePlus size={16} />
+                {isCustomerView ? "Ajukan Penawaran" : "Buat Quotation"}
               </motion.button>
             )}
 
             <button
               onClick={refreshData}
-              className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:rounded-2xl sm:text-sm"
             >
-              <RefreshCcw size={17} />
+              <RefreshCcw size={16} />
               Refresh
             </button>
-          </div>
-        </div>
-
-        <div className="relative mt-5 max-w-md">
+          </>
+        }
+      >
+        <div className="relative max-w-md">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            size={17}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
           />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cari quotation, customer, template..."
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-emerald-500"
+            placeholder={
+              isCustomerView
+                ? "Cari penawaran, jenis uji, nomor…"
+                : "Cari quotation, customer, template..."
+            }
+            aria-label="Cari quotation"
+            className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-emerald-500 sm:rounded-2xl"
           />
         </div>
 
         {message && !openForm && (
-          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] text-slate-600 sm:rounded-2xl sm:text-sm">
             {message}
           </p>
         )}
-      </motion.div>
+      </PageHeader>
 
-      <motion.div variants={fadeUpItem} className="grid gap-4">
+      <motion.div variants={fadeUpItem} className="grid gap-3 sm:gap-4">
         {visibleQuotations.map((quotation) => {
           const currentStep = getStepIndex(quotation.status);
           const stpsNo = quotation.stps?.[0]?.stpsNo || "-";
+          const doc = parseDocumentNumber(quotation.quotationNo);
+          const statusMeta = quotationStatusMeta(quotation.status);
+          const itemCount = quotation.items.length;
 
           return (
             <motion.div
               key={quotation.id}
               whileHover={reduce ? undefined : { y: -3 }}
-              className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-emerald-200"
+              className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-emerald-200 sm:rounded-[2rem] sm:p-5"
             >
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="text-lg font-black text-slate-900">
-                      {quotation.quotationNo}
-                    </span>
-
-                    <span
-                      className={[
-                        "rounded-full px-3 py-1 text-xs font-semibold",
-                        getStatusStyle(quotation.status),
-                      ].join(" ")}
-                    >
-                      {quotation.status}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3 text-sm text-slate-500 md:grid-cols-2 xl:grid-cols-4">
-                    <p>
-                      Customer:{" "}
-                      <span className="font-semibold text-slate-900">
-                        {quotation.customer?.name}
+                  {/* Identitas. Customer mengenali pesanan dari jenis ujinya,
+                      staf internal tetap dari nomor dokumen. */}
+                  {isCustomerView ? (
+                    <>
+                      <h3 className="text-[15px] font-black leading-snug text-slate-900 sm:text-lg">
+                        {humanOrderTitle(quotation.coaTemplate?.name)}
+                      </h3>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
+                        <span className="font-mono text-slate-500">
+                          {doc.short}
+                        </span>
+                        {doc.revision !== null && (
+                          <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                            Revisi {doc.revision}
+                          </span>
+                        )}
+                        <span>{formatShortDate(quotation.quotationDate)}</span>
+                      </div>
+                      <div className="mt-2">
+                        <StatusBadge
+                          label={statusMeta.label}
+                          tone={statusMeta.tone}
+                        />
+                        <p className="mt-1.5 text-[13px] leading-5 text-slate-500 sm:text-sm">
+                          {statusMeta.description}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="text-base font-black text-slate-900 sm:text-lg">
+                        {quotation.quotationNo}
                       </span>
-                    </p>
-                    <p>Template: {quotation.coaTemplate?.name || "-"}</p>
-                    <p>Date: {formatDate(quotation.quotationDate)}</p>
-                    <p>Valid Until: {formatDate(quotation.validUntil)}</p>
-                    <p>Sampling By: {samplingByLabel(quotation.samplingBy)}</p>
-                    <p>TAT: {tatLabel(quotation.tatRequested)}</p>
-                    <p>
-                      Objective:{" "}
-                      {testingObjectiveLabel(quotation.testingObjective)}
-                    </p>
-                    <p>
-                      Grand Total:{" "}
-                      <span className="font-black text-emerald-600">
+
+                      <span
+                        className={[
+                          "rounded-full px-3 py-1 text-xs font-semibold",
+                          getStatusStyle(quotation.status),
+                        ].join(" ")}
+                      >
+                        {quotation.status}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Ringkasan utama — dua kolom di mobile supaya tidak
+                      memanjang ke bawah seperti daftar sebelumnya. */}
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[12px] sm:text-sm xl:grid-cols-4">
+                    {!isCustomerView && (
+                      <div className="min-w-0">
+                        <dt className="text-slate-400">Customer</dt>
+                        <dd className="truncate font-semibold text-slate-900">
+                          {quotation.customer?.name}
+                        </dd>
+                      </div>
+                    )}
+
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomerView ? "Jenis uji" : "Template"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {quotation.coaTemplate?.name || "-"}
+                      </dd>
+                    </div>
+
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">Berlaku sampai</dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {formatDate(quotation.validUntil)}
+                      </dd>
+                    </div>
+
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomerView ? "Pengambilan sample" : "Sampling By"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {samplingByLabel(quotation.samplingBy)}
+                      </dd>
+                    </div>
+
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomerView ? "Total biaya" : "Grand Total"}
+                      </dt>
+                      <dd className="truncate font-black text-emerald-600">
                         {formatRupiah(
                           quotation.grandTotal || quotation.totalAmount
                         )}
-                      </span>
-                    </p>
-                  </div>
+                      </dd>
+                    </div>
+                  </dl>
 
                   {quotation.note && (
-                    <p className="mt-3 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                      Note: {quotation.note}
+                    <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[13px] text-slate-500 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">
+                      Catatan: {quotation.note}
                     </p>
                   )}
 
@@ -2001,54 +2247,104 @@ export default function QuotationFlowClient({
                     </p>
                   )}
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {quotation.items.map((item) => (
-                      <span
-                        key={item.id}
-                        className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600"
-                      >
-                        {item.description || item.parameter.name} x {item.qty} ·{" "}
-                        {formatRupiah(item.price)}
-                      </span>
-                    ))}
-                  </div>
+                  {/* Parameter & riwayat status disembunyikan di balik
+                      disclosure: keduanya panjang dan hanya dibutuhkan saat
+                      customer benar-benar ingin memeriksa rinciannya. */}
+                  <div className="mt-3 divide-y divide-slate-100 border-y border-slate-100">
+                    <Disclosure
+                      label={
+                        isCustomerView ? "Parameter & harga" : "Parameter"
+                      }
+                      count={itemCount}
+                    >
+                      <div className="flex flex-wrap gap-1.5">
+                        {quotation.items.map((item) => (
+                          <span
+                            key={item.id}
+                            className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600 sm:text-xs"
+                          >
+                            {item.description || item.parameter.name} ×{" "}
+                            {item.qty} · {formatRupiah(item.price)}
+                          </span>
+                        ))}
+                      </div>
+                    </Disclosure>
 
-                  <div className="mt-5 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                    {flowSteps.map((step, index) => {
-                      const done = index <= currentStep;
+                    <Disclosure
+                      label={isCustomerView ? "Riwayat status" : "Alur status"}
+                      count={`${currentStep + 1}/${flowSteps.length}`}
+                    >
+                      <ol className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                        {flowSteps.map((step, index) => {
+                          const done = index <= currentStep;
+                          const stepLabel = isCustomerView
+                            ? quotationStatusMeta(step).label
+                            : step;
 
-                      return (
-                        <div
-                          key={step}
-                          className={[
-                            "rounded-2xl border px-3 py-2 text-xs",
-                            done
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-slate-200 bg-slate-50 text-slate-400",
-                          ].join(" ")}
-                        >
-                          <div className="flex items-center gap-1">
-                            {done && <CheckCircle2 size={12} />}
-                            <span>{step}</span>
-                          </div>
+                          return (
+                            <li
+                              key={step}
+                              className={[
+                                "flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[11px] sm:text-xs",
+                                done
+                                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                  : "border-slate-200 bg-slate-50 text-slate-400",
+                              ].join(" ")}
+                            >
+                              {done && <CheckCircle2 size={12} className="shrink-0" />}
+                              <span className="truncate">{stepLabel}</span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+
+                      <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500 sm:text-xs md:grid-cols-4">
+                        <div>
+                          <dt className="text-slate-400">PO</dt>
+                          <dd className="truncate font-semibold">
+                            {quotation.purchaseOrder?.poNumber || "-"}
+                          </dd>
                         </div>
-                      );
-                    })}
+                        <div>
+                          <dt className="text-slate-400">LTR</dt>
+                          <dd className="font-semibold">
+                            {quotation.ltrs?.length || (quotation.ltr ? 1 : 0)}{" "}
+                            dokumen
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400">COC</dt>
+                          <dd className="font-semibold">
+                            {quotation.cocs?.length || (quotation.coc ? 1 : 0)}{" "}
+                            dokumen
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-slate-400">STPS</dt>
+                          <dd className="truncate font-semibold">{stpsNo}</dd>
+                        </div>
+                      </dl>
+
+                      {isCustomerView && (
+                        <DocumentCode
+                          code={quotation.quotationNo}
+                          label="Kode penawaran"
+                          className="mt-3"
+                        />
+                      )}
+                    </Disclosure>
                   </div>
 
-                  <div className="mt-4 grid gap-2 text-xs text-slate-500 md:grid-cols-4">
-                    <p>PO: {quotation.purchaseOrder?.poNumber || "-"}</p>
-                    <p>LTR: {quotation.ltrs?.length || (quotation.ltr ? 1 : 0)} dokumen</p>
-                    <p>COC: {quotation.cocs?.length || (quotation.coc ? 1 : 0)} dokumen</p>
-                    <p>STPS: {stpsNo}</p>
-                  </div>
-
-                  <details className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                    <summary className="flex min-h-12 items-center justify-between gap-3 px-4 py-3 text-sm font-black text-slate-800">
-                      Detail quotation, ruang lingkup & histori
-                      <span className="text-xs font-semibold text-blue-600">Buka detail</span>
+                  <details className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-slate-50 sm:rounded-2xl">
+                    <summary className="flex min-h-11 items-center justify-between gap-3 px-3 py-2.5 text-[13px] font-black text-slate-800 sm:px-4 sm:py-3 sm:text-sm">
+                      {isCustomerView
+                        ? "Rincian lengkap & histori"
+                        : "Detail quotation, ruang lingkup & histori"}
+                      <span className="shrink-0 text-[11px] font-semibold text-blue-600 sm:text-xs">
+                        Buka
+                      </span>
                     </summary>
-                    <div className="border-t border-slate-200 bg-white p-4">
+                    <div className="border-t border-slate-200 bg-white p-3 sm:p-4">
                       <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
                         <p><span className="text-slate-400">Dibuat oleh</span><br /><strong>{quotation.requestedBy?.name || "-"}</strong></p>
                         <p><span className="text-slate-400">Email akun</span><br /><strong>{quotation.requestedBy?.email || "-"}</strong></p>
@@ -2102,7 +2398,7 @@ export default function QuotationFlowClient({
                   </details>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-col gap-2 lg:items-end">
   {renderActionButtons(quotation)}
 
   <ExportButtons
@@ -2130,8 +2426,8 @@ export default function QuotationFlowClient({
         })}
 
         {visibleQuotations.length === 0 && (
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
-            {config.empty}
+          <div className="rounded-[1.25rem] border border-slate-200 bg-white p-8 text-center text-[13px] text-slate-500 shadow-sm sm:rounded-[2rem] sm:p-10 sm:text-base">
+            {headerCopy.empty}
           </div>
         )}
       </motion.div>

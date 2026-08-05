@@ -17,14 +17,6 @@ export default async function PreliminaryCoaPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-600">COA Flow</p>
-        <h1 className="mt-2 text-4xl font-bold">Preliminary COA</h1>
-        <p className="mt-3 max-w-3xl text-slate-400">
-          Generate preliminary COA berdasarkan hasil lab yang sudah tervalidasi.
-        </p>
-      </div>
-
       <CoaFlowClient
         mode="preliminary"
         initialSamples={data.samples}
