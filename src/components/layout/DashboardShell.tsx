@@ -1,7 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Sidebar, { type DashboardMenuItem, type DashboardSession } from "./Sidebar";
+import Sidebar, {
+  type DashboardMenuItem,
+  type DashboardSession,
+} from "./Sidebar";
 import PageTransition from "./PageTransition";
 import SupportChatFab from "@/components/support/SupportChatFab";
 

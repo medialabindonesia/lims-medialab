@@ -168,21 +168,21 @@ export default function SupportCenterClient({
   const [tickets, setTickets] = useState(initialTickets);
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<FaqCategoryDTO | null>(
-    null
+    null,
   );
   const [composing, setComposing] = useState(
-    !!initialContextType && initialContextType !== "GENERAL"
+    !!initialContextType && initialContextType !== "GENERAL",
   );
   const [subject, setSubject] = useState(
     initialContextLabel
       ? `Bantuan: ${initialContextLabel}`
       : initialContextType === "QUOTATION"
-      ? "Bantuan Quotation"
-      : initialContextType === "ORDER_SAMPLE"
-      ? "Bantuan Pesanan / Sample"
-      : initialContextType === "RESULT_REVISION"
-      ? "Bantuan Revisi Hasil"
-      : ""
+        ? "Bantuan Quotation"
+        : initialContextType === "ORDER_SAMPLE"
+          ? "Bantuan Pesanan / Sample"
+          : initialContextType === "RESULT_REVISION"
+            ? "Bantuan Revisi Hasil"
+            : "",
   );
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -194,11 +194,9 @@ export default function SupportCenterClient({
       initialContextType === "ORDER_SAMPLE" ||
       initialContextType === "RESULT_REVISION"
       ? initialContextType
-      : "GENERAL"
+      : "GENERAL",
   );
-  const [contextId, setContextId] = useState(
-    initialContextId || ""
-  );
+  const [contextId, setContextId] = useState(initialContextId || "");
 
   async function refetchTickets() {
     try {
@@ -301,7 +299,9 @@ export default function SupportCenterClient({
             <LifeBuoy size={26} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-white/80">Support Center</p>
+            <p className="text-sm font-semibold text-white/80">
+              Support Center
+            </p>
             <h1 className="text-3xl font-black tracking-tight">
               Ada yang bisa kami bantu?
             </h1>
@@ -339,9 +339,7 @@ export default function SupportCenterClient({
             Chat dengan Customer Service
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            {activeCategory
-              ? `Topik: ${activeCategory.name}. `
-              : ""}
+            {activeCategory ? `Topik: ${activeCategory.name}. ` : ""}
             Jelaskan kebutuhan Anda, tim kami akan segera membantu.
           </p>
 
@@ -473,9 +471,7 @@ export default function SupportCenterClient({
             <button
               type="button"
               onClick={submitTicket}
-              disabled={
-                submitting || (contextType !== "GENERAL" && !contextId)
-              }
+              disabled={submitting || (contextType !== "GENERAL" && !contextId)}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 disabled:opacity-60"
             >
               <Send size={16} />
@@ -599,7 +595,8 @@ export default function SupportCenterClient({
                   <div>
                     <p className="font-bold text-slate-800">{category.name}</p>
                     <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">
-                      {category.description || `${category.items.length} pertanyaan`}
+                      {category.description ||
+                        `${category.items.length} pertanyaan`}
                     </p>
                   </div>
                 </motion.button>
@@ -629,7 +626,8 @@ export default function SupportCenterClient({
             {tickets.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
                 <p className="text-sm text-slate-500">
-                  Belum ada tiket. Mulai dari topik di atas atau buat tiket baru.
+                  Belum ada tiket. Mulai dari topik di atas atau buat tiket
+                  baru.
                 </p>
               </div>
             ) : (
@@ -650,7 +648,8 @@ export default function SupportCenterClient({
                         )}
                       </div>
                       <p className="mt-0.5 text-xs text-slate-400">
-                        {ticket.ticketNo} · {formatRelative(ticket.lastMessageAt)}
+                        {ticket.ticketNo} ·{" "}
+                        {formatRelative(ticket.lastMessageAt)}
                       </p>
                     </div>
                     <TicketStatusBadge status={ticket.status} />
