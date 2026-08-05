@@ -120,15 +120,16 @@ Uji dari komputer tersebut sebelum melanjutkan:
 ssh -i github-actions-lims -p 22 deploy@IP_VPS
 ```
 
-Ambil host key VPS dari jaringan tepercaya:
+Lihat fingerprint host key langsung dari VPS:
 
 ```bash
-ssh-keyscan -p 22 IP_VPS
+ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub
 ```
 
-Bandingkan fingerprint-nya dengan `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`
-yang dijalankan langsung di VPS. Jangan menyimpan hasil `ssh-keyscan` sebelum
-fingerprint cocok; pemeriksaan ini mencegah runner terhubung ke server palsu.
+Masukkan fingerprint terverifikasi tersebut pada nilai
+`VPS_HOST_FINGERPRINT` di workflow. Runner mengambil public host key dengan
+`ssh-keyscan` dan menolak koneksi jika fingerprint-nya berbeda. Pemeriksaan ini
+mencegah runner terhubung ke server palsu tanpa memerlukan secret known-hosts.
 
 ## 4. Konfigurasi GitHub
 
@@ -144,7 +145,6 @@ Tambahkan secrets berikut sebagai environment secrets atau repository secrets:
 | `VPS_PORT` | Port SSH, biasanya `22` |
 | `VPS_USER` | `deploy` |
 | `VPS_SSH_KEY` | Seluruh isi private key `github-actions-lims` |
-| `VPS_KNOWN_HOSTS` | Seluruh baris host key yang sudah diverifikasi |
 
 Tambahkan variables berikut pada environment `production`:
 
