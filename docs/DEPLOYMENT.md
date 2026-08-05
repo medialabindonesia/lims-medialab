@@ -1,5 +1,9 @@
 # Deployment Ubuntu 24.04 dengan GitHub Actions
 
+Untuk handoff ke Codex yang berjalan langsung di VPS, gunakan
+[`vps-codex/KNOWLEDGE.md`](vps-codex/KNOWLEDGE.md) dan prompt siap-tempel di
+[`vps-codex/PROMPT.md`](vps-codex/PROMPT.md).
+
 Target yang didukung oleh konfigurasi ini:
 
 - Ubuntu 24.04 LTS x86_64
