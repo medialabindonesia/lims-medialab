@@ -77,8 +77,9 @@ jobs:
       DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/apps/lims-medialab' }}
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
-      VPS_USER: ${{ secrets.VPS_USER }}
+      VPS_USER: ${{ vars.VPS_USER || 'deploy' }}
       VPS_HOST_FINGERPRINT: SHA256:Tvef6HALOMqP74Hd1zXMoTQE5ZJlIVQ7/HgQcfqfbrs
+      VPS_DEPLOY_KEY_FINGERPRINT: SHA256:SiNqsXM3YlbQhLL14ZVdWQQdbcw2VW756vc6FJNx+Qo
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -96,6 +97,14 @@ jobs:
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/deploy_key"
           chmod 600 "$HOME/.ssh/deploy_key"
+
+          actual_key_fingerprint="$(ssh-keygen -lf "$HOME/.ssh/deploy_key" | awk 'NR == 1 { print $2 }')"
+          if [[ "$actual_key_fingerprint" != "$VPS_DEPLOY_KEY_FINGERPRINT" ]]; then
+            echo "Fingerprint private key deployment tidak cocok" >&2
+            echo "Expected: $VPS_DEPLOY_KEY_FINGERPRINT" >&2
+            echo "Actual:   $actual_key_fingerprint" >&2
+            exit 1
+          fi
 
           for attempt in 1 2 3; do
             ssh-keyscan -T 10 -t ed25519 -p "$VPS_PORT" "$VPS_HOST" \
@@ -116,7 +125,7 @@ jobs:
       - name: Create release directory
         run: |
           ssh -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
-            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$VPS_USER@$VPS_HOST" \
             "mkdir -p '$DEPLOY_PATH/releases/$GITHUB_SHA'"
 
@@ -130,12 +139,12 @@ jobs:
             --exclude='.env*' \
             --exclude='graphify-out/' \
             --exclude='storage/uploads/' \
-            -e "ssh -i $HOME/.ssh/deploy_key -p $VPS_PORT -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
+            -e "ssh -i $HOME/.ssh/deploy_key -p $VPS_PORT -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" \
             ./ "$VPS_USER@$VPS_HOST:$DEPLOY_PATH/releases/$GITHUB_SHA/"
 
       - name: Activate release
         run: |
           ssh -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
-            -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$VPS_USER@$VPS_HOST" \
             "bash '$DEPLOY_PATH/releases/$GITHUB_SHA/scripts/deploy-vps.sh' '$DEPLOY_PATH/releases/$GITHUB_SHA' '$DEPLOY_PATH' '$GITHUB_SHA'"

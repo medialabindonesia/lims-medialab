@@ -120,6 +120,10 @@ Uji dari komputer tersebut sebelum melanjutkan:
 ssh -i github-actions-lims -p 22 deploy@IP_VPS
 ```
 
+Catat fingerprint key deployment dengan `ssh-keygen -lf github-actions-lims`
+dan samakan dengan `VPS_DEPLOY_KEY_FINGERPRINT` pada workflow. Dengan demikian,
+workflow berhenti lebih awal jika secret berisi key yang keliru atau rusak.
+
 Lihat fingerprint host key langsung dari VPS:
 
 ```bash
@@ -143,7 +147,6 @@ Tambahkan secrets berikut sebagai environment secrets atau repository secrets:
 | --- | --- |
 | `VPS_HOST` | IP atau hostname VPS |
 | `VPS_PORT` | Port SSH, biasanya `22` |
-| `VPS_USER` | `deploy` |
 | `VPS_SSH_KEY` | Seluruh isi private key `github-actions-lims` |
 
 Tambahkan variables berikut pada environment `production`:
@@ -152,6 +155,7 @@ Tambahkan variables berikut pada environment `production`:
 | --- | --- |
 | `DEPLOY_PATH` | Opsional; default `/opt/apps/lims-medialab` |
 | `APP_URL` | URL publik, misalnya `https://lims.example.com` |
+| `VPS_USER` | Opsional; default `deploy` |
 
 Workflow hanya meminta izin `contents: read`. Kredensial database, JWT, dan
 Ably tetap berada pada `/opt/apps/lims-medialab/shared/.env`, bukan di GitHub.
