@@ -21,6 +21,13 @@
 # production
 /build
 
+# VPS deployment runtime state
+/releases/
+/shared/
+/current
+/.current-*
+/.deploy.lock
+
 # misc
 .DS_Store
 *.pem

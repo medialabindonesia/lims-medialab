@@ -9,7 +9,7 @@ module.exports = {
       name: "lims-medialab",
       cwd: currentPath,
       script: "node_modules/next/dist/bin/next",
-      args: "start",
+      args: "start --hostname 127.0.0.1",
       exec_mode: "fork",
       instances: 1,
       env: {
