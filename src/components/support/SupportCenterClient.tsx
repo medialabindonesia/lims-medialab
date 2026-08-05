@@ -131,6 +131,9 @@ export default function SupportCenterClient({
   initialTickets,
   customerId,
   contexts,
+  initialContextType,
+  initialContextId,
+  initialContextLabel,
 }: {
   faq: FaqCategoryDTO[];
   initialTickets: SupportTicketDTO[];
@@ -155,6 +158,9 @@ export default function SupportCenterClient({
       changeSummary?: string | null;
     }>;
   };
+  initialContextType?: string;
+  initialContextId?: string;
+  initialContextLabel?: string;
 }) {
   const router = useRouter();
   const reduce = useReducedMotion();
@@ -164,15 +170,35 @@ export default function SupportCenterClient({
   const [activeCategory, setActiveCategory] = useState<FaqCategoryDTO | null>(
     null
   );
-  const [composing, setComposing] = useState(false);
-  const [subject, setSubject] = useState("");
+  const [composing, setComposing] = useState(
+    !!initialContextType && initialContextType !== "GENERAL"
+  );
+  const [subject, setSubject] = useState(
+    initialContextLabel
+      ? `Bantuan: ${initialContextLabel}`
+      : initialContextType === "QUOTATION"
+      ? "Bantuan Quotation"
+      : initialContextType === "ORDER_SAMPLE"
+      ? "Bantuan Pesanan / Sample"
+      : initialContextType === "RESULT_REVISION"
+      ? "Bantuan Revisi Hasil"
+      : ""
+  );
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [contextType, setContextType] = useState<
     "GENERAL" | "QUOTATION" | "ORDER_SAMPLE" | "RESULT_REVISION"
-  >("GENERAL");
-  const [contextId, setContextId] = useState("");
+  >(
+    initialContextType === "QUOTATION" ||
+      initialContextType === "ORDER_SAMPLE" ||
+      initialContextType === "RESULT_REVISION"
+      ? initialContextType
+      : "GENERAL"
+  );
+  const [contextId, setContextId] = useState(
+    initialContextId || ""
+  );
 
   async function refetchTickets() {
     try {

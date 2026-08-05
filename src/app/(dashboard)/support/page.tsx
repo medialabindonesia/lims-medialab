@@ -8,7 +8,15 @@ import {
 } from "@/lib/support-page-data";
 import SupportCenterClient from "@/components/support/SupportCenterClient";
 
-export default async function SupportCenterPage() {
+export default async function SupportCenterPage({
+  searchParams,
+}: {
+  searchParams: {
+    contextType?: string;
+    contextId?: string;
+    contextLabel?: string;
+  };
+}) {
   const session = await getSession();
 
   if (!session) redirect("/login");
@@ -41,6 +49,9 @@ export default async function SupportCenterPage() {
       initialTickets={tickets}
       customerId={session.customerId}
       contexts={contexts}
+      initialContextType={searchParams.contextType}
+      initialContextId={searchParams.contextId}
+      initialContextLabel={searchParams.contextLabel}
     />
   );
 }

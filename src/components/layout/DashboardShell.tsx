@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Sidebar, { type DashboardMenuItem, type DashboardSession } from "./Sidebar";
 import PageTransition from "./PageTransition";
+import SupportChatFab from "@/components/support/SupportChatFab";
 
 export default function DashboardShell({
   children,
@@ -30,6 +31,8 @@ export default function DashboardShell({
           <PageTransition>{children}</PageTransition>
         </div>
       </main>
+
+      {session.roleCode === "CUSTOMER_ENGAGEMENT" && <SupportChatFab />}
     </div>
   );
 }
