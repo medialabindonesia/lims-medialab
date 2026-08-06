@@ -33,6 +33,8 @@ import { fadeUpItem, staggerContainer } from "@/lib/motion";
 import type { OrderStage } from "@/lib/order-tracking";
 import type { OrderDetail } from "@/lib/order-detail";
 import ExportButtons from "@/components/exports/ExportButtons";
+import DocumentCode from "@/components/ui/DocumentCode";
+import { humanOrderTitle, parseDocumentNumber } from "@/lib/customer-labels";
 
 const iconMap: Record<string, ElementType> = {
   FilePlus,
@@ -129,6 +131,7 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
   const needsConfirm = summary.stage === 4;
   const needsPayment = summary.invoiceStatus === "SENT";
   const hasFinalCert = detail.documents.some((d) => d.kind === "final-coa");
+  const orderDoc = parseDocumentNumber(summary.quotationNo);
 
   return (
     <section className="min-h-screen pb-10">
@@ -146,16 +149,16 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
         initial={reduce ? undefined : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm sm:p-8"
+        className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-7"
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-600">
+            <p className="text-[11px] font-semibold text-emerald-600 sm:text-sm">
               Detail Pesanan
             </p>
-            <div className="mt-1 flex flex-wrap items-center gap-2.5">
-              <h1 className="text-3xl font-black tracking-tight text-slate-900">
-                {summary.quotationNo}
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-black leading-tight tracking-tight text-slate-900 sm:text-3xl">
+                {humanOrderTitle(summary.templateName)}
               </h1>
               {isUrgent && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-[11px] font-bold text-red-700">
@@ -164,28 +167,53 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
                 </span>
               )}
             </div>
-            <p className="mt-1 text-slate-500">
-              {summary.templateName || "Template belum ditentukan"}
+            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
+              <span className="font-mono text-slate-500">
+                {orderDoc.short}
+              </span>
+              {orderDoc.revision !== null && (
+                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                  Revisi {orderDoc.revision}
+                </span>
+              )}
+              <span>{summary.templateName || "Template belum ditentukan"}</span>
             </p>
           </div>
 
-          <div className="inline-flex shrink-0 items-center gap-2.5 rounded-2xl bg-emerald-50 px-4 py-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white ring-4 ring-emerald-100">
+          <div className="inline-flex shrink-0 items-center gap-2.5 rounded-xl bg-emerald-50 px-3 py-2.5 sm:rounded-2xl sm:px-4 sm:py-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white ring-4 ring-emerald-100">
               <Clock size={16} />
             </span>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-600">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-600 sm:text-[11px]">
                 Tahap saat ini
               </p>
-              <p className="text-sm font-black text-emerald-800">
+              <p className="text-[13px] font-black text-emerald-800 sm:text-sm">
                 {summary.stageLabel}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Big stepper */}
-        <div className="mt-7 flex items-start gap-1 overflow-x-auto pb-1">
+        {/* Progres ringkas — mobile */}
+        <div className="mt-4 sm:hidden">
+          <p className="text-[11px] font-bold text-slate-500">
+            Tahap {summary.stage + 1} dari {STAGES.length}
+          </p>
+          <div className="mt-1.5 flex gap-1" aria-hidden="true">
+            {STAGES.map((stage) => (
+              <span
+                key={stage}
+                className={`h-1.5 flex-1 rounded-full ${
+                  stage <= summary.stage ? "bg-emerald-500" : "bg-slate-200"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Stepper penuh — sm ke atas */}
+        <div className="mt-7 hidden items-start gap-1 overflow-x-auto pb-1 sm:flex">
           {STAGES.map((stage, i) => {
             const Icon = STAGE_ICONS[stage];
             const completed = stage < summary.stage;
@@ -228,35 +256,41 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
           })}
         </div>
 
-        <p className="mt-5 text-sm text-slate-600">
+        <p className="mt-4 text-[13px] leading-5 text-slate-600 sm:mt-5 sm:text-sm">
           {summary.stageDescription}
         </p>
 
+        <DocumentCode
+          code={summary.quotationNo}
+          label="Kode penawaran"
+          className="mt-3 sm:hidden"
+        />
+
         {/* Contextual CTAs */}
         {(needsConfirm || needsPayment || hasFinalCert) && (
-          <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-5">
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4 sm:mt-5 sm:pt-5">
             {needsConfirm && (
               <Link
                 href="/coa/preliminary"
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition hover:bg-emerald-600 sm:flex-none sm:rounded-2xl sm:text-sm"
               >
                 <FileBadge size={15} />
-                Lihat & Konfirmasi Hasil
+                Lihat &amp; Konfirmasi Hasil
               </Link>
             )}
             {needsPayment && (
               <Link
                 href="/customer/invoices"
-                className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition hover:bg-emerald-600 sm:flex-none sm:rounded-2xl sm:text-sm"
               >
                 <Receipt size={15} />
-                Bayar Invoice
+                Bayar Tagihan
               </Link>
             )}
             {hasFinalCert && (
               <Link
                 href="/coa/final"
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-[13px] font-bold text-slate-600 transition hover:bg-slate-50 sm:flex-none sm:rounded-2xl sm:text-sm"
               >
                 <Award size={15} />
                 Halaman Sertifikat
@@ -267,15 +301,15 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
       </motion.div>
 
       {/* Two-column body */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 sm:mt-6 sm:gap-6 lg:grid-cols-3">
         {/* LEFT: timeline + parameters.
             min-w-0 wajib: tanpa ini grid item memakai min-width:auto sehingga
             melebar mengikuti konten (tabel/teks) dan membocorkan overflow ke
             body di layar sempit. */}
-        <div className="flex min-w-0 flex-col gap-6 lg:col-span-2">
+        <div className="flex min-w-0 flex-col gap-4 sm:gap-6 lg:col-span-2">
           {/* Timeline */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-lg font-black text-slate-900">
+          <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+            <h2 className="mb-4 text-base font-black text-slate-900 sm:mb-5 sm:text-lg">
               Riwayat Pesanan
             </h2>
 
@@ -335,11 +369,69 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
           </div>
 
           {/* Parameters */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-black text-slate-900">
-              Parameter & Hasil Uji
+          <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+            <h2 className="mb-3 text-base font-black text-slate-900 sm:mb-4 sm:text-lg">
+              Parameter &amp; Hasil Uji
             </h2>
-            <div className="overflow-hidden rounded-2xl border border-slate-200">
+
+            {/* Mobile: satu kartu per parameter — tabel 4 kolom memaksa
+                scroll horizontal di layar 390px. */}
+            <ul className="space-y-2 sm:hidden">
+              {detail.parameters.map((p) => (
+                <li
+                  key={p.id}
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-bold leading-snug text-slate-800">
+                        {p.name}
+                      </p>
+                      {p.regulation && (
+                        <p className="mt-0.5 text-[11px] text-slate-400">
+                          {p.regulation}
+                        </p>
+                      )}
+                    </div>
+                    <p className="shrink-0 text-[13px] font-black text-slate-900">
+                      {p.resultValue ? (
+                        <>
+                          {p.resultValue}
+                          {p.unit ? (
+                            <span className="ml-0.5 text-[11px] font-semibold text-slate-400">
+                              {p.unit}
+                            </span>
+                          ) : null}
+                        </>
+                      ) : (
+                        <span className="text-slate-300">-</span>
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="truncate text-[11px] text-slate-400">
+                      {p.method || "Metode belum ditentukan"}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        p.status === "VALIDATED"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : p.status === "RETEST"
+                            ? "bg-amber-100 text-amber-700"
+                            : p.status === "WAITING"
+                              ? "bg-slate-100 text-slate-500"
+                              : "bg-sky-100 text-sky-700"
+                      }`}
+                    >
+                      {p.statusLabel}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-hidden rounded-2xl border border-slate-200 sm:block">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[560px] text-sm">
                   <thead className="bg-slate-50 text-left text-slate-500">
@@ -406,9 +498,9 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
         </div>
 
         {/* RIGHT: summary + documents + costt */}
-        <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
           {/* Ringkasan */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
             <h2 className="mb-3 text-lg font-black text-slate-900">
               Ringkasan
             </h2>
@@ -456,7 +548,7 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
           </div>
 
           {/* Dokumen */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
             <h2 className="mb-1 text-lg font-black text-slate-900">
               Pusat Dokumen
             </h2>
@@ -492,8 +584,8 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
           </div>
 
           {/* Biaya */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-black text-slate-900">
+          <div className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+            <h2 className="mb-3 text-base font-black text-slate-900 sm:mb-4 sm:text-lg">
               Rincian Biaya
             </h2>
 

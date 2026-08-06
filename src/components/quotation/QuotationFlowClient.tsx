@@ -21,16 +21,12 @@ import {
   FilePenLine,
   FilePlus,
   FileText,
-  FlaskConical,
   Lock,
-  MapPin,
-  PackageCheck,
   Percent,
   Plus,
   RefreshCcw,
   Save,
   Search,
-  Send,
   Upload,
   Wallet,
   X,
@@ -2299,6 +2295,22 @@ export default function QuotationFlowClient({
                       </ol>
 
                       <dl className="mt-3 grid grid-cols-2 gap-2 text-[11px] text-slate-500 sm:text-xs md:grid-cols-4">
+                        <div className="min-w-0">
+                          <dt className="text-slate-400">
+                            {isCustomerView ? "Kecepatan" : "TAT"}
+                          </dt>
+                          <dd className="truncate font-semibold">
+                            {tatLabel(quotation.tatRequested)}
+                          </dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-slate-400">
+                            {isCustomerView ? "Tujuan uji" : "Objective"}
+                          </dt>
+                          <dd className="truncate font-semibold">
+                            {testingObjectiveLabel(quotation.testingObjective)}
+                          </dd>
+                        </div>
                         <div>
                           <dt className="text-slate-400">PO</dt>
                           <dd className="truncate font-semibold">

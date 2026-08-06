@@ -20,6 +20,13 @@ import {
   UserRound,
   Wallet,
 } from "lucide-react";
+import Disclosure from "@/components/ui/Disclosure";
+import DocumentCode from "@/components/ui/DocumentCode";
+import {
+  formatShortDate,
+  humanOrderTitle,
+  parseDocumentNumber,
+} from "@/lib/customer-labels";
 
 type InvoiceMode = "create" | "approve" | "customer";
 
@@ -191,6 +198,9 @@ export default function InvoiceFlowClient({
 }: Props) {
   const reduce = useReducedMotion();
 
+  /** Mode customer memakai bahasa sehari-hari & judulnya ada di header halaman. */
+  const isCustomerMode = mode === "customer";
+
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [readyQuotations, setReadyQuotations] = useState<QuotationReady[]>(
     initialReadyQuotations
@@ -345,100 +355,115 @@ export default function InvoiceFlowClient({
       animate="visible"
       className="space-y-6"
     >
+      {/* Ringkasan angka — dua kolom di mobile supaya empat metrik muat
+          dalam satu layar, bukan empat kartu setinggi layar. */}
       <motion.div
         variants={fadeUpItem}
-        className="grid gap-4 md:grid-cols-4"
+        className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4"
       >
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 inline-flex rounded-2xl bg-emerald-100 p-3 text-emerald-600">
-            <Receipt size={22} />
-          </div>
-          <p className="text-sm text-slate-500">Total Invoice</p>
-          <p className="mt-1 text-3xl font-black text-slate-900">
-            {invoices.length}
-          </p>
-        </div>
+        {[
+          {
+            label: isCustomerMode ? "Total tagihan" : "Total Invoice",
+            value: invoices.length,
+            icon: Receipt,
+            tone: "bg-emerald-100 text-emerald-600",
+          },
+          {
+            label: isCustomerMode ? "Sedang diproses" : "Waiting Approval",
+            value: waitingApprovalCount,
+            icon: FileCheck,
+            tone: "bg-yellow-100 text-yellow-600",
+          },
+          {
+            label: isCustomerMode ? "Perlu dibayar" : "Sent",
+            value: sentCount,
+            icon: Send,
+            tone: "bg-blue-100 text-blue-600",
+          },
+          {
+            label: isCustomerMode ? "Lunas" : "Paid",
+            value: paidCount,
+            icon: CreditCard,
+            tone: "bg-purple-100 text-purple-600",
+          },
+        ].map((stat) => {
+          const Icon = stat.icon;
 
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 inline-flex rounded-2xl bg-yellow-100 p-3 text-yellow-600">
-            <FileCheck size={22} />
-          </div>
-          <p className="text-sm text-slate-500">Waiting Approval</p>
-          <p className="mt-1 text-3xl font-black text-slate-900">
-            {waitingApprovalCount}
-          </p>
-        </div>
-
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 inline-flex rounded-2xl bg-blue-100 p-3 text-blue-600">
-            <Send size={22} />
-          </div>
-          <p className="text-sm text-slate-500">Sent</p>
-          <p className="mt-1 text-3xl font-black text-slate-900">
-            {sentCount}
-          </p>
-        </div>
-
-        <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 inline-flex rounded-2xl bg-purple-100 p-3 text-purple-600">
-            <CreditCard size={22} />
-          </div>
-          <p className="text-sm text-slate-500">Paid</p>
-          <p className="mt-1 text-3xl font-black text-slate-900">
-            {paidCount}
-          </p>
-        </div>
+          return (
+            <div
+              key={stat.label}
+              className="rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:rounded-[1.5rem] sm:p-5"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl ${stat.tone}`}
+                >
+                  <Icon size={18} />
+                </span>
+                <span className="text-2xl font-black leading-none text-slate-900 sm:text-3xl">
+                  {stat.value}
+                </span>
+              </div>
+              <p className="mt-2.5 text-[13px] font-bold leading-tight text-slate-700 sm:text-sm sm:font-normal sm:text-slate-500">
+                {stat.label}
+              </p>
+            </div>
+          );
+        })}
       </motion.div>
 
       <motion.div
         variants={fadeUpItem}
-        className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm"
+        className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm sm:rounded-[2rem] sm:p-6"
       >
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-sm font-semibold text-emerald-600">
-              Finance Flow
-            </p>
-            <h2 className="mt-1 text-2xl font-black text-slate-900">
-              {mode === "create"
-                ? "Create Invoice"
-                : mode === "approve"
-                  ? "Approve Invoice"
-                  : "Customer Invoice"}
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm text-slate-500">
-              {mode === "create"
-                ? "Buat invoice berdasarkan quotation yang sudah memiliki Final COA."
-                : mode === "approve"
-                  ? "Approve invoice, kirim invoice ke customer, dan tandai pembayaran."
-                  : "Customer dapat melihat invoice yang sudah dibuat oleh finance."}
-            </p>
-          </div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          {/* Judul halaman customer sudah ada di header atas; di sini cukup
+              alat bantunya saja supaya tidak ada judul kembar. */}
+          {!isCustomerMode && (
+            <div>
+              <p className="text-sm font-semibold text-emerald-600">
+                Finance Flow
+              </p>
+              <h2 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
+                {mode === "create" ? "Create Invoice" : "Approve Invoice"}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm text-slate-500">
+                {mode === "create"
+                  ? "Buat invoice berdasarkan quotation yang sudah memiliki Final COA."
+                  : "Approve invoice, kirim invoice ke customer, dan tandai pembayaran."}
+              </p>
+            </div>
+          )}
 
           <button
             onClick={refreshData}
-            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:rounded-2xl sm:text-sm"
           >
-            <RefreshCcw size={17} />
+            <RefreshCcw size={16} />
             Refresh
           </button>
         </div>
 
-        <div className="relative mt-5 max-w-md">
+        <div className="relative mt-3 max-w-md sm:mt-5">
           <Search
-            size={18}
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            size={17}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"
           />
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Cari invoice, quotation, customer..."
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-slate-900 outline-none transition focus:border-emerald-500"
+            placeholder={
+              isCustomerMode
+                ? "Cari tagihan, nomor, jenis uji…"
+                : "Cari invoice, quotation, customer..."
+            }
+            aria-label="Cari invoice"
+            className="min-h-11 w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none transition focus:border-emerald-500 sm:rounded-2xl"
           />
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-[13px] text-slate-600 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">
             {message}
           </p>
         )}
@@ -588,51 +613,134 @@ export default function InvoiceFlowClient({
             <motion.div
               key={invoice.id}
               whileHover={reduce ? undefined : { y: -3 }}
-              className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-emerald-200"
+              className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-emerald-200 sm:rounded-[2rem] sm:p-5"
             >
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <span className="text-lg font-black text-slate-900">
-                      {invoice.invoiceNo}
-                    </span>
-
-                    <span
-                      className={[
-                        "rounded-full px-3 py-1 text-xs font-semibold",
-                        getStatusStyle(invoice.status),
-                      ].join(" ")}
-                    >
-                      {getInvoiceStatusText(invoice.status)}
-                    </span>
-                  </div>
-
-                  <div className="grid gap-3 text-sm text-slate-500 md:grid-cols-2 xl:grid-cols-4">
-                    <p>
-                      Quotation:{" "}
-                      <span className="font-semibold text-slate-900">
-                        {quotation.quotationNo}
+                  {isCustomerMode ? (
+                    <>
+                      <h3 className="text-[15px] font-black leading-snug text-slate-900 sm:text-lg">
+                        Tagihan {humanOrderTitle(quotation.coaTemplate?.name)}
+                      </h3>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold text-slate-400 sm:text-xs">
+                        <span className="font-mono text-slate-500">
+                          {parseDocumentNumber(invoice.invoiceNo).short}
+                        </span>
+                        <span>{formatShortDate(invoice.createdAt)}</span>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <span
+                          className={[
+                            "rounded-full px-2.5 py-1 text-[11px] font-bold sm:text-xs",
+                            getStatusStyle(invoice.status),
+                          ].join(" ")}
+                        >
+                          {getInvoiceStatusText(invoice.status)}
+                        </span>
+                        <span className="text-[15px] font-black text-emerald-600 sm:text-base">
+                          {formatRupiah(invoice.amount)}
+                        </span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <span className="text-base font-black text-slate-900 sm:text-lg">
+                        {invoice.invoiceNo}
                       </span>
-                    </p>
 
-                    <p>Invoice Date: {formatDate(invoice.createdAt)}</p>
-
-                    <p>
-                      Customer:{" "}
-                      <span className="font-semibold text-slate-900">
-                        {customer.company || customer.name}
+                      <span
+                        className={[
+                          "rounded-full px-3 py-1 text-xs font-semibold",
+                          getStatusStyle(invoice.status),
+                        ].join(" ")}
+                      >
+                        {getInvoiceStatusText(invoice.status)}
                       </span>
-                    </p>
+                    </div>
+                  )}
 
-                    <p>Final COA: {finalCoa?.coaNo || "-"}</p>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-[12px] sm:text-sm xl:grid-cols-4">
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomerMode ? "Penawaran" : "Quotation"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-900">
+                        {isCustomerMode
+                          ? parseDocumentNumber(quotation.quotationNo).short
+                          : quotation.quotationNo}
+                      </dd>
+                    </div>
 
-                    <p>PO: {quotation.purchaseOrder?.poNumber || "-"}</p>
-                    <p>LTR: {quotation.ltr?.ltrNo || "-"}</p>
-                    <p>COC: {quotation.coc?.cocNo || "-"}</p>
-                    <p>Sample: {finalSample?.sampleNo || "-"}</p>
-                  </div>
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomerMode ? "Tanggal tagihan" : "Invoice Date"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {formatDate(invoice.createdAt)}
+                      </dd>
+                    </div>
 
-                  <div className="mt-4 grid gap-3 text-xs text-slate-600 md:grid-cols-3">
+                    {!isCustomerMode && (
+                      <div className="min-w-0">
+                        <dt className="text-slate-400">Customer</dt>
+                        <dd className="truncate font-semibold text-slate-900">
+                          {customer.company || customer.name}
+                        </dd>
+                      </div>
+                    )}
+
+                    <div className="min-w-0">
+                      <dt className="text-slate-400">
+                        {isCustomerMode ? "Sertifikat" : "Final COA"}
+                      </dt>
+                      <dd className="truncate font-semibold text-slate-700">
+                        {finalCoa
+                          ? isCustomerMode
+                            ? parseDocumentNumber(finalCoa.coaNo).short
+                            : finalCoa.coaNo
+                          : "-"}
+                      </dd>
+                    </div>
+
+                    {!isCustomerMode && (
+                      <>
+                        <div className="min-w-0">
+                          <dt className="text-slate-400">PO</dt>
+                          <dd className="truncate font-semibold text-slate-700">
+                            {quotation.purchaseOrder?.poNumber || "-"}
+                          </dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-slate-400">LTR</dt>
+                          <dd className="truncate font-semibold text-slate-700">
+                            {quotation.ltr?.ltrNo || "-"}
+                          </dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-slate-400">COC</dt>
+                          <dd className="truncate font-semibold text-slate-700">
+                            {quotation.coc?.cocNo || "-"}
+                          </dd>
+                        </div>
+                        <div className="min-w-0">
+                          <dt className="text-slate-400">Sample</dt>
+                          <dd className="truncate font-semibold text-slate-700">
+                            {finalSample?.sampleNo || "-"}
+                          </dd>
+                        </div>
+                      </>
+                    )}
+                  </dl>
+
+                  {isCustomerMode && (
+                    <DocumentCode
+                      code={invoice.invoiceNo}
+                      label="Kode tagihan"
+                      className="mt-3"
+                    />
+                  )}
+
+                  <div className="mt-3 grid gap-2 text-[11px] text-slate-600 sm:mt-4 sm:gap-3 sm:text-xs md:grid-cols-3">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                       <p className="font-bold text-slate-700">Invoice To</p>
                       <p className="mt-1">
@@ -670,7 +778,7 @@ export default function InvoiceFlowClient({
                     </div>
                   </div>
 
-                  <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="mt-3 hidden overflow-hidden rounded-2xl border border-slate-200 sm:mt-4 sm:block">
                     <div className="overflow-auto">
                       <table className="w-full min-w-[900px] text-xs">
                         <thead className="bg-slate-50 text-left text-slate-600">
@@ -710,9 +818,39 @@ export default function InvoiceFlowClient({
                       </table>
                     </div>
                   </div>
+
+                  {/* Mobile: rincian biaya sebagai daftar, tabel 5 kolom
+                      tidak terbaca di layar sempit. */}
+                  <div className="mt-3 sm:hidden">
+                    <Disclosure
+                      label="Rincian biaya"
+                      count={quotation.items.length}
+                    >
+                      <ul className="space-y-1.5">
+                        {quotation.items.map((item) => (
+                          <li
+                            key={item.id}
+                            className="flex items-start justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-[12px] font-bold text-slate-800">
+                                {item.description || item.parameter.name}
+                              </p>
+                              <p className="text-[11px] text-slate-400">
+                                {item.qty} × {formatRupiah(item.price)}
+                              </p>
+                            </div>
+                            <p className="shrink-0 text-[12px] font-black text-slate-900">
+                              {formatRupiah(item.price * item.qty)}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </Disclosure>
+                  </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-col gap-2 lg:items-end">
   {renderInvoiceAction(invoice)}
 
   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-2">
