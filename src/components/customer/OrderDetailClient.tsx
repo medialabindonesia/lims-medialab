@@ -600,11 +600,21 @@ export default function OrderDetailClient({ detail }: { detail: OrderDetail }) {
                     <span className="text-slate-400"> × {it.qty}</span>
                   </span>
                   <span className="shrink-0 font-semibold text-slate-700">
-                    {formatRupiah(it.subtotal)}
+                    {it.subtotal === null ? (
+                      <span className="text-slate-400">Belum ditetapkan</span>
+                    ) : (
+                      formatRupiah(it.subtotal)
+                    )}
                   </span>
                 </div>
               ))}
             </div>
+
+            {detail.cost.hasUnpricedItems && (
+              <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                Sebagian harga belum ditetapkan. Total di bawah belum final.
+              </p>
+            )}
 
             <div className="mt-4 space-y-2 border-t border-slate-100 pt-4 text-sm">
               <div className="flex justify-between text-slate-500">

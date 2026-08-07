@@ -19,6 +19,12 @@ enum QuotationStatus {
   COC_CREATED
 }
 
+enum QuotationPricingStatus {
+  UNPRICED
+  PARTIAL
+  PRICED
+}
+
 enum SampleStatus {
   WAITING_SAMPLE
   SAMPLE_SENT
@@ -270,9 +276,10 @@ model AnalysisParameter {
   price    Float   @default(0)
   isActive Boolean @default(true)
 
-  quotationItems     QuotationItem[]
-  sampleParams       SampleParameter[]
-  templateParameters CoaTemplateParameter[]
+  quotationItems       QuotationItem[]
+  sampleParams         SampleParameter[]
+  templateParameters   CoaTemplateParameter[]
+  regulationParameters RegulationParameter[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -317,16 +324,146 @@ model CoaTemplateParameter {
   @@unique([templateId, parameterId])
 }
 
+/// Pohon matriks pengujian dengan kedalaman bebas.
+/// Contoh 3 tingkat: Air > Air Limbah > Limbah Industri.
+/// Contoh 1 tingkat: Asesmen Ergonomi.
+model Matrix {
+  id       String  @id @default(cuid())
+  parentId String?
+  code     String  @unique
+  name     String
+  note     String?
+  sort     Int     @default(0)
+  isActive Boolean @default(true)
+
+  parent      Matrix?          @relation("MatrixTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children    Matrix[]         @relation("MatrixTree")
+  regulations Regulation[]
+  groups      QuotationGroup[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([isActive, sort])
+}
+
+/// Regulasi/baku mutu yang berlaku untuk sebuah matriks.
+/// Contoh: PP RI No. 22 Tahun 2021 Lampiran VII (Baku Mutu Udara Ambien).
+model Regulation {
+  id        String  @id @default(cuid())
+  matrixId  String
+  code      String  @unique
+  name      String
+  shortName String?
+  note      String? @db.Text
+  sort      Int     @default(0)
+  isActive  Boolean @default(true)
+
+  matrix     Matrix                @relation(fields: [matrixId], references: [id], onDelete: Restrict)
+  parameters RegulationParameter[]
+  groups     QuotationGroup[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([matrixId])
+  @@index([isActive, sort])
+}
+
+/// Master label durasi sampling. `minutes` hanya untuk pengurutan;
+/// GRAB (sesaat) dan Y1 (1 tahun) memakai nilai sentinel.
+model SamplingDuration {
+  id       String  @id @default(cuid())
+  code     String  @unique
+  label    String
+  minutes  Int?
+  sort     Int     @default(0)
+  isActive Boolean @default(true)
+
+  regulationParameters RegulationParameterDuration[]
+  quotationItems       QuotationItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, sort])
+}
+
+/// Parameter uji sebagaimana berlaku di dalam satu regulasi tertentu.
+/// Metode dan baku mutu melekat di sini, bukan di AnalysisParameter,
+/// karena parameter yang sama bisa punya metode berbeda antar regulasi.
+model RegulationParameter {
+  id           String @id @default(cuid())
+  regulationId String
+  parameterId  String
+
+  displayName String?
+  unit        String?
+  method      String?
+  limitValue  String?
+
+  /// Harga dasar. Null berarti belum ditetapkan, berbeda dari 0.
+  basePrice Float?
+
+  /// Parameter tidak terakreditasi dicetak dengan tanda * pada surat penawaran.
+  isAccredited Boolean @default(true)
+
+  /// Ikut tercentang otomatis saat regulasi dipilih di form quotation.
+  defaultSelected Boolean @default(true)
+
+  sort     Int     @default(0)
+  isActive Boolean @default(true)
+
+  regulation     Regulation                    @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  parameter      AnalysisParameter             @relation(fields: [parameterId], references: [id], onDelete: Restrict)
+  durations      RegulationParameterDuration[]
+  quotationItems QuotationItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([regulationId, parameterId])
+  @@index([parameterId])
+}
+
+/// Durasi sampling yang sah untuk sebuah parameter di dalam sebuah regulasi,
+/// beserta baku mutu pada durasi tersebut.
+/// Contoh: CO punya baris untuk 1 jam dan 8 jam, tetapi tidak untuk 1 tahun.
+model RegulationParameterDuration {
+  id                    String  @id @default(cuid())
+  regulationParameterId String
+  durationId            String
+  limitValue            String?
+  isDefault             Boolean @default(false)
+  sort                  Int     @default(0)
+
+  regulationParameter RegulationParameter @relation(fields: [regulationParameterId], references: [id], onDelete: Cascade)
+  duration            SamplingDuration    @relation(fields: [durationId], references: [id], onDelete: Restrict)
+
+  @@unique([regulationParameterId, durationId])
+  @@index([durationId])
+}
+
 model Quotation {
-  id            String          @id @default(cuid())
-  quotationNo   String          @unique
+  id          String @id @default(cuid())
+  quotationNo String @unique
+
+  /// Kode induk yang diwarisi seluruh dokumen turunan (LTR/CoC/CoA/Invoice).
+  /// Contoh: ML-26-0148. Nullable hanya demi data lama; wajib untuk data baru.
+  orderCode String? @unique
+
   customerId    String
   coaTemplateId String?
   status        QuotationStatus @default(REQUESTED)
-  totalAmount   Float           @default(0)
-  note          String?
-  revisionReason String?        @db.Text
-  rejectionReason String?       @db.Text
+
+  /// Gerbang harga. Quotation tidak boleh melewati APPROVED selain saat PRICED.
+  pricingStatus QuotationPricingStatus @default(UNPRICED)
+
+  totalAmount            Float   @default(0)
+  note                   String?
+  revisionReason         String? @db.Text
+  rejectionReason        String? @db.Text
   postApprovalEditReason String? @db.Text
 
   quotationDate DateTime  @default(now())
@@ -350,9 +487,10 @@ model Quotation {
   primaryLtrId  String? @unique
   primaryCocId  String? @unique
 
-  customer       Customer        @relation(fields: [customerId], references: [id])
-  coaTemplate    CoaTemplate?    @relation(fields: [coaTemplateId], references: [id])
+  customer       Customer         @relation(fields: [customerId], references: [id])
+  coaTemplate    CoaTemplate?     @relation(fields: [coaTemplateId], references: [id])
   items          QuotationItem[]
+  groups         QuotationGroup[]
   purchaseOrder  PurchaseOrder?
   ltr            Ltr?             @relation("PrimaryLtr", fields: [primaryLtrId], references: [id], onDelete: SetNull)
   coc            Coc?             @relation("PrimaryCoc", fields: [primaryCocId], references: [id], onDelete: SetNull)
@@ -367,12 +505,74 @@ model Quotation {
   updatedAt DateTime @updatedAt
 }
 
-model QuotationItem {
+/// Satu baris pada surat penawaran resmi: satu paket pekerjaan.
+/// Qty di sini adalah JUMLAH TITIK SAMPLING (mis. Upwind + Downwind = 2),
+/// bukan jumlah pengulangan parameter.
+model QuotationGroup {
   id          String @id @default(cuid())
   quotationId String
+  sort        Int    @default(0)
+
+  /// Label yang dicetak di kolom Deskripsi, mis. "Udara Ambien".
+  /// Disimpan sebagai snapshot agar dokumen lama tidak berubah
+  /// ketika master matriks di kemudian hari diganti namanya.
+  description String?
+
+  matrixId     String?
+  regulationId String?
+
+  qty  Int     @default(1)
+  note String?
+
+  quotation  Quotation                @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  matrix     Matrix?                  @relation(fields: [matrixId], references: [id], onDelete: SetNull)
+  regulation Regulation?              @relation(fields: [regulationId], references: [id], onDelete: SetNull)
+  locations  QuotationGroupLocation[]
+  items      QuotationItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([quotationId])
+  @@index([matrixId])
+  @@index([regulationId])
+}
+
+/// Titik sampling dalam satu grup, mis. "Upwind", "Outlet IPAL".
+/// Jumlah baris di sini menjadi nilai default QuotationGroup.qty.
+model QuotationGroupLocation {
+  id      String @id @default(cuid())
+  groupId String
+
+  label            String
+  customerSampleId String?
+  sort             Int     @default(0)
+
+  group QuotationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@index([groupId])
+}
+
+model QuotationItem {
+  id          String  @id @default(cuid())
+  quotationId String
+  groupId     String?
   parameterId String
-  qty         Int    @default(1)
-  price       Float  @default(0)
+
+  /// Asal parameter di master regulasi. Null untuk item yang dibuat
+  /// sebelum struktur matriks/regulasi diperkenalkan.
+  regulationParameterId String?
+
+  qty Int @default(1)
+
+  /// Null berarti harga BELUM DITETAPKAN. Berbeda maknanya dari 0.
+  price Float?
+
+  /// Harga dasar pada saat item dibuat, disimpan sebagai jejak audit
+  /// agar terlihat apakah sales menaikkan atau menurunkan harga.
+  basePrice Float?
+
+  durationId String?
 
   description      String?
   customerSampleId String?
@@ -381,10 +581,19 @@ model QuotationItem {
   durationSampling String?
   method           String?
 
-  quotation Quotation         @relation(fields: [quotationId], references: [id])
-  parameter AnalysisParameter @relation(fields: [parameterId], references: [id])
-  ltrItems  LtrItem[]
-  cocItems  CocItem[]
+  quotation           Quotation            @relation(fields: [quotationId], references: [id])
+  group               QuotationGroup?      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  parameter           AnalysisParameter    @relation(fields: [parameterId], references: [id])
+  regulationParameter RegulationParameter? @relation(fields: [regulationParameterId], references: [id], onDelete: SetNull)
+  duration            SamplingDuration?    @relation(fields: [durationId], references: [id], onDelete: SetNull)
+  ltrItems            LtrItem[]
+  cocItems            CocItem[]
+
+  @@index([quotationId])
+  @@index([groupId])
+  @@index([parameterId])
+  @@index([regulationParameterId])
+  @@index([durationId])
 }
 
 model PurchaseOrder {
@@ -408,7 +617,7 @@ model Ltr {
   groupLabel  String?
   createdById String?
 
-  quotation Quotation  @relation("QuotationLtrs", fields: [quotationId], references: [id])
+  quotation  Quotation  @relation("QuotationLtrs", fields: [quotationId], references: [id])
   primaryFor Quotation? @relation("PrimaryLtr")
   items      LtrItem[]
   cocs       Coc[]
@@ -426,8 +635,8 @@ model LtrItem {
   quotationItemId String
   sort            Int    @default(0)
 
-  ltr             Ltr           @relation(fields: [ltrId], references: [id], onDelete: Cascade)
-  quotationItem   QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
+  ltr           Ltr           @relation(fields: [ltrId], references: [id], onDelete: Cascade)
+  quotationItem QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
 
   @@unique([ltrId, quotationItemId])
   @@index([quotationItemId])
@@ -460,11 +669,11 @@ model Coc {
   specialInstruction          String?
   deliveryMethod              DeliveryMethod?
 
-  quotation Quotation  @relation("QuotationCocs", fields: [quotationId], references: [id])
+  quotation  Quotation  @relation("QuotationCocs", fields: [quotationId], references: [id])
   primaryFor Quotation? @relation("PrimaryCoc")
-  ltr       Ltr?      @relation(fields: [ltrId], references: [id], onDelete: SetNull)
-  sample    Sample?   @relation(fields: [sampleId], references: [id])
-  items     CocItem[]
+  ltr        Ltr?       @relation(fields: [ltrId], references: [id], onDelete: SetNull)
+  sample     Sample?    @relation(fields: [sampleId], references: [id])
+  items      CocItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -480,8 +689,8 @@ model CocItem {
   quotationItemId String
   sort            Int    @default(0)
 
-  coc             Coc           @relation(fields: [cocId], references: [id], onDelete: Cascade)
-  quotationItem   QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
+  coc           Coc           @relation(fields: [cocId], references: [id], onDelete: Cascade)
+  quotationItem QuotationItem @relation(fields: [quotationItemId], references: [id], onDelete: Cascade)
 
   @@unique([cocId, quotationItemId])
   @@index([quotationItemId])

@@ -33,7 +33,8 @@ export type QuotationRevisionSnapshot = {
     items: Array<{
       parameterId: string;
       qty: number;
-      price: number;
+      /// null berarti harga belum ditetapkan, bukan gratis.
+      price: number | null;
       description: string | null;
       customerSampleId: string | null;
       samplingLocation: string | null;

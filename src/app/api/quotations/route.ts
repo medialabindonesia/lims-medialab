@@ -1,10 +1,40 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { QuotationStatus } from "@prisma/client";
+import { Prisma, QuotationStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
-import { generateDocumentNo } from "@/lib/document-number";
 import { captureQuotationRevision } from "@/lib/revision-audit";
+import { createWithOrderCode, quotationDocumentCode } from "@/lib/order-code";
+import {
+  calculateQuotationTotals,
+  persistQuotationContent,
+  quotationGroupSchema,
+  resolveQuotationContent,
+} from "@/lib/quotation-content";
+
+/** DB di VPS diakses lewat internet; satu quotation bisa berisi banyak grup. */
+const TRANSACTION_OPTIONS = { timeout: 30_000, maxWait: 10_000 };
+
+const QUOTATION_INCLUDE = {
+  customer: true,
+  coaTemplate: true,
+  items: { include: { parameter: true } },
+  groups: {
+    include: {
+      matrix: true,
+      regulation: true,
+      locations: { orderBy: { sort: "asc" } },
+      items: { include: { parameter: true, duration: true } },
+    },
+    orderBy: { sort: "asc" },
+  },
+  purchaseOrder: true,
+  ltr: true,
+  ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
+  coc: true,
+  cocs: { include: { items: true }, orderBy: { sequence: "asc" } },
+  stps: true,
+} satisfies Prisma.QuotationInclude;
 
 const nullableString = z.preprocess(
   (value) => (value === "" ? null : value),
@@ -30,7 +60,13 @@ const quotationItemSchema = z.object({
 
 const quotationCreateSchema = z.object({
   customerId: z.string().optional().nullable(),
-  coaTemplateId: z.string().min(1, "Template COA wajib dipilih"),
+
+  /**
+   * Tidak lagi diisi sales sejak matriks/regulasi dipilih per grup di Step 2.
+   * Dipertahankan nullable agar jalur lama (`items`) tetap bisa dipakai selama
+   * masa transisi.
+   */
+  coaTemplateId: nullableString,
   note: nullableString,
 
   quotationDate: nullableDate,
@@ -52,7 +88,11 @@ const quotationCreateSchema = z.object({
   paymentTerm: nullableString,
   termsNote: nullableString,
 
-  items: z.array(quotationItemSchema).min(1, "Minimal pilih 1 parameter"),
+  /** Struktur baru: satu grup = satu baris pada surat penawaran resmi. */
+  groups: z.array(quotationGroupSchema).optional(),
+
+  /** Jalur lama, dipakai bila `groups` tidak dikirim. */
+  items: z.array(quotationItemSchema).optional(),
 });
 
 function toDate(value?: string | null) {
@@ -244,19 +284,116 @@ export async function POST(request: Request) {
     );
   }
 
-  const coaTemplate = await prisma.coaTemplate.findFirst({
-    where: {
-      id: parsed.data.coaTemplateId,
-      isActive: true,
-    },
-    include: {
-      parameters: {
-        include: {
-          parameter: true,
+  const baseData = {
+    customerId,
+    note: parsed.data.note || null,
+
+    quotationDate: toDate(parsed.data.quotationDate) || new Date(),
+    validUntil: toDate(parsed.data.validUntil),
+
+    samplingBy: parsed.data.samplingBy || "MEDIALAB",
+    testingObjective: parsed.data.testingObjective || "ROUTINE_MONITORING",
+    tatRequested: parsed.data.tatRequested || "NORMAL",
+
+    paymentTerm: parsed.data.paymentTerm || null,
+    termsNote: parsed.data.termsNote || null,
+
+    status: "REQUESTED" as const,
+    requestedById: permission.session?.userId,
+  };
+
+  // ---------- Jalur baru: quotation berbasis grup ----------
+  if (parsed.data.groups?.length) {
+    const resolved = await resolveQuotationContent(prisma, parsed.data.groups);
+
+    if (!resolved.ok) {
+      return NextResponse.json({ message: resolved.message }, { status: 400 });
+    }
+
+    const totals = calculateQuotationTotals({
+      totalAmount: resolved.content.totalAmount,
+      samplingCost: parsed.data.samplingCost,
+      vatPercent: parsed.data.vatPercent,
+    });
+
+    const quotation = await createWithOrderCode(prisma, (orderCode) =>
+      prisma.$transaction(async (tx) => {
+        const created = await tx.quotation.create({
+          data: {
+            ...baseData,
+            orderCode,
+            quotationNo: quotationDocumentCode(orderCode) ?? orderCode,
+            coaTemplateId: parsed.data.coaTemplateId || null,
+
+            pricingStatus: resolved.content.pricingStatus,
+            totalAmount: totals.totalAmount,
+            samplingCost: totals.samplingCost,
+            vatPercent: totals.vatPercent,
+            vatAmount: totals.vatAmount,
+            grandTotal: totals.grandTotal,
+          },
+          select: { id: true, quotationNo: true },
+        });
+
+        await persistQuotationContent(tx, created.id, resolved.content);
+
+        await tx.workflowLog.create({
+          data: {
+            actorId: permission.session?.userId,
+            action: "CREATE_QUOTATION",
+            note: `Quotation ${created.quotationNo} dibuat dengan ${resolved.content.groups.length} grup`,
+          },
+        });
+
+        await captureQuotationRevision(tx, {
+          entityId: created.id,
+          action: "CREATED",
+          session: permission.session!,
+          request,
+          changeSummary: "Quotation pertama dibuat",
+        });
+
+        return tx.quotation.findUniqueOrThrow({
+          where: { id: created.id },
+          include: QUOTATION_INCLUDE,
+        });
+      }, TRANSACTION_OPTIONS)
+    );
+
+    return NextResponse.json({
+      message:
+        resolved.content.unpricedCount > 0
+          ? `Quotation ${quotation.quotationNo} disimpan. ${resolved.content.unpricedCount} parameter belum berharga dan harus dilengkapi sebelum approval.`
+          : `Quotation ${quotation.quotationNo} berhasil dibuat`,
+      quotation,
+    });
+  }
+
+  // ---------- Jalur lama: daftar parameter datar ----------
+  if (!parsed.data.items?.length) {
+    return NextResponse.json(
+      { message: "Minimal buat 1 grup parameter" },
+      { status: 400 }
+    );
+  }
+
+  const legacyItems = parsed.data.items;
+
+  const coaTemplate = parsed.data.coaTemplateId
+    ? await prisma.coaTemplate.findFirst({
+        where: {
+          id: parsed.data.coaTemplateId,
+          isActive: true,
         },
-      },
-    },
-  });
+        include: {
+          parameters: {
+            include: {
+              parameter: true,
+            },
+          },
+        },
+      })
+    : null;
 
   if (!coaTemplate) {
     return NextResponse.json(
@@ -272,7 +409,7 @@ export async function POST(request: Request) {
   );
 
   const parameterIds = [
-    ...new Set(parsed.data.items.map((item) => item.parameterId)),
+    ...new Set(legacyItems.map((item) => item.parameterId)),
   ];
 
   const invalidByTemplate = parameterIds.some(
@@ -311,39 +448,31 @@ export async function POST(request: Request) {
   );
 
   const totals = calculateTotals({
-    items: parsed.data.items,
+    items: legacyItems,
     priceMap,
     samplingCost: parsed.data.samplingCost,
     vatPercent: parsed.data.vatPercent,
   });
 
-  const quotation = await prisma.quotation.create({
+  const quotation = await createWithOrderCode(prisma, (orderCode) =>
+    prisma.quotation.create({
     data: {
-      quotationNo: generateDocumentNo("QT"),
-      customerId,
+      ...baseData,
+      orderCode,
+      quotationNo: quotationDocumentCode(orderCode) ?? orderCode,
       coaTemplateId: parsed.data.coaTemplateId,
-      note: parsed.data.note || null,
 
-      quotationDate: toDate(parsed.data.quotationDate) || new Date(),
-      validUntil: toDate(parsed.data.validUntil),
-
-      samplingBy: parsed.data.samplingBy || "MEDIALAB",
-      testingObjective: parsed.data.testingObjective || "ROUTINE_MONITORING",
-      tatRequested: parsed.data.tatRequested || "NORMAL",
-
+      // Jalur lama selalu menulis harga berupa angka, sehingga tidak pernah
+      // menghasilkan status selain PRICED.
+      pricingStatus: "PRICED",
       totalAmount: totals.totalAmount,
       samplingCost: totals.samplingCost,
       vatPercent: totals.vatPercent,
       vatAmount: totals.vatAmount,
       grandTotal: totals.grandTotal,
 
-      paymentTerm: parsed.data.paymentTerm || null,
-      termsNote: parsed.data.termsNote || null,
-
-      status: "REQUESTED",
-      requestedById: permission.session?.userId,
       items: {
-        create: parsed.data.items.map((item) => {
+        create: legacyItems.map((item) => {
           const templateParameter = templateParameterMap.get(item.parameterId);
           const parameter = parameters.find((param) => param.id === item.parameterId);
 
@@ -368,22 +497,9 @@ export async function POST(request: Request) {
         }),
       },
     },
-    include: {
-      customer: true,
-      coaTemplate: true,
-      items: {
-        include: {
-          parameter: true,
-        },
-      },
-      purchaseOrder: true,
-      ltr: true,
-      ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
-      coc: true,
-      cocs: { include: { items: true }, orderBy: { sequence: "asc" } },
-      stps: true,
-    },
-  });
+      include: QUOTATION_INCLUDE,
+    })
+  );
 
   await prisma.workflowLog.create({
     data: {

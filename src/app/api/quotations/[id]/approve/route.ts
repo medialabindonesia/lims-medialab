@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 import { captureQuotationRevision } from "@/lib/revision-audit";
+import { PRICING_GATE_MESSAGE } from "@/lib/order-code";
 
 type RouteContext = {
   params: Promise<{
@@ -36,11 +37,31 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
+  // Gerbang harga: sales boleh menyusun dan mengirim scope tanpa harga, tetapi
+  // quotation tidak boleh melewati APPROVED selama masih ada harga kosong.
+  // Dihitung ulang dari item, bukan sekadar percaya kolom pricingStatus,
+  // agar tetap benar untuk data yang diubah lewat jalur lain.
+  const unpricedCount = await prisma.quotationItem.count({
+    where: { quotationId: id, price: null },
+  });
+
+  if (unpricedCount > 0) {
+    return NextResponse.json(
+      {
+        message: `${PRICING_GATE_MESSAGE} (${unpricedCount} parameter belum berharga)`,
+        unpricedCount,
+      },
+      { status: 409 }
+    );
+  }
+
   const updated = await prisma.$transaction(async (tx) => {
     const result = await tx.quotation.update({
       where: { id },
       data: {
         status: "APPROVED",
+        // Sudah dipastikan tidak ada item tanpa harga di atas.
+        pricingStatus: "PRICED",
         approvedById: permission.session?.userId,
         rejectionReason: null,
       },

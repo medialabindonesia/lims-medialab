@@ -242,6 +242,46 @@ table {
   font-weight: 800;
 }
 
+/*
+ * Tinggi kalender dikunci. DayPicker merender 4, 5, atau 6 baris minggu
+ * tergantung bulannya, sehingga dialog "melompat" saat berpindah bulan.
+ * Prop `fixedWeeks` sudah memaksa 6 baris; min-height ini menjaga tinggi
+ * tetap stabil selama animasi transisi bulan berjalan.
+ */
+.medialab-day-picker .rdp-month_grid {
+  min-height: 16.8rem;
+}
+
+.medialab-day-picker .rdp-weekday {
+  color: #7d8ea3;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Hari di luar bulan berjalan tetap terbaca, tapi jelas bukan fokus utama. */
+.medialab-day-picker .rdp-outside .rdp-day_button {
+  color: #b6c2d2;
+  font-weight: 500;
+}
+
+.medialab-day-picker .rdp-today:not(.rdp-selected) .rdp-day_button {
+  outline: 1.5px solid var(--brand-blue);
+  outline-offset: -1.5px;
+  color: var(--brand-blue);
+  font-weight: 800;
+}
+
+.medialab-day-picker .rdp-day_button:hover:not([disabled]) {
+  background: #edf5ff;
+}
+
+.medialab-day-picker .rdp-disabled .rdp-day_button {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
 /* Shared application canvas */
 .dashboard-canvas {
   position: relative;

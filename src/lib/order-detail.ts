@@ -164,13 +164,16 @@ export type OrderParameterRow = {
 export type OrderCostItem = {
   description: string;
   qty: number;
-  price: number;
-  subtotal: number;
+  /** null berarti harga belum ditetapkan, bukan gratis. */
+  price: number | null;
+  subtotal: number | null;
 };
 
 export type OrderCost = {
   items: OrderCostItem[];
   itemsSubtotal: number;
+  /** true jika masih ada item tanpa harga; total di bawah belum final. */
+  hasUnpricedItems: boolean;
   samplingCost: number;
   vatPercent: number;
   vatAmount: number;
@@ -495,13 +498,15 @@ export async function getCustomerOrderDetail(
     description: it.description || it.parameter.name,
     qty: it.qty,
     price: it.price,
-    subtotal: it.qty * it.price,
+    subtotal: it.price === null ? null : it.qty * it.price,
   }));
-  const itemsSubtotal = costItems.reduce((sum, it) => sum + it.subtotal, 0);
+  const itemsSubtotal = costItems.reduce((sum, it) => sum + (it.subtotal ?? 0), 0);
+  const hasUnpricedItems = costItems.some((it) => it.subtotal === null);
 
   const cost: OrderCost = {
     items: costItems,
     itemsSubtotal,
+    hasUnpricedItems,
     samplingCost: quotation.samplingCost,
     vatPercent: quotation.vatPercent,
     vatAmount: quotation.vatAmount,

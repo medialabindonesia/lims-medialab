@@ -1,9 +1,39 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 import { generateRevisionQuotationNo } from "@/lib/document-number";
 import { captureQuotationRevision } from "@/lib/revision-audit";
+import { nextQuotationRevisionCode } from "@/lib/order-code";
+import {
+  calculateQuotationTotals,
+  persistQuotationContent,
+  quotationGroupSchema,
+  resolveQuotationContent,
+} from "@/lib/quotation-content";
+
+/** DB di VPS diakses lewat internet; satu quotation bisa berisi banyak grup. */
+const TRANSACTION_OPTIONS = { timeout: 30_000, maxWait: 10_000 };
+
+const QUOTATION_INCLUDE = {
+  customer: true,
+  coaTemplate: true,
+  items: { include: { parameter: true } },
+  groups: {
+    include: {
+      matrix: true,
+      regulation: true,
+      locations: { orderBy: { sort: "asc" } },
+      items: { include: { parameter: true, duration: true } },
+    },
+    orderBy: { sort: "asc" },
+  },
+  purchaseOrder: true,
+  ltr: true,
+  coc: true,
+  stps: true,
+} satisfies Prisma.QuotationInclude;
 
 const nullableString = z.preprocess(
   (value) => (value === "" ? null : value),
@@ -30,7 +60,9 @@ const quotationItemSchema = z.object({
 const quotationUpdateSchema = z.object({
   editReason: z.string().trim().min(8, "Alasan perubahan minimal 8 karakter").max(1000),
   customerId: z.string().min(1, "Customer wajib dipilih"),
-  coaTemplateId: z.string().min(1, "Template COA wajib dipilih"),
+
+  /** Tidak lagi diisi sales; dipertahankan untuk jalur lama. */
+  coaTemplateId: nullableString,
   note: nullableString,
 
   quotationDate: nullableDate,
@@ -52,7 +84,11 @@ const quotationUpdateSchema = z.object({
   paymentTerm: nullableString,
   termsNote: nullableString,
 
-  items: z.array(quotationItemSchema).min(1, "Minimal pilih 1 parameter"),
+  /** Struktur baru: satu grup = satu baris pada surat penawaran resmi. */
+  groups: z.array(quotationGroupSchema).optional(),
+
+  /** Jalur lama, dipakai bila `groups` tidak dikirim. */
+  items: z.array(quotationItemSchema).optional(),
 });
 
 type RouteContext = {
@@ -220,19 +256,148 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const coaTemplate = await prisma.coaTemplate.findFirst({
-    where: {
-      id: parsed.data.coaTemplateId,
-      isActive: true,
-    },
-    include: {
-      parameters: {
-        include: {
-          parameter: true,
+  const nextQuotationNo =
+    nextQuotationRevisionCode(
+      existingQuotation.orderCode,
+      existingQuotation.quotationNo
+    ) ?? generateRevisionQuotationNo(existingQuotation.quotationNo);
+  const isCustomerRevision = existingQuotation.status === "REVISION";
+  const wasApproved = ["APPROVED", "PO_UPLOADED"].includes(
+    existingQuotation.status
+  );
+
+  // ---------- Jalur baru: quotation berbasis grup ----------
+  if (parsed.data.groups?.length) {
+    const resolved = await resolveQuotationContent(prisma, parsed.data.groups);
+
+    if (!resolved.ok) {
+      return NextResponse.json({ message: resolved.message }, { status: 400 });
+    }
+
+    const totals = calculateQuotationTotals({
+      totalAmount: resolved.content.totalAmount,
+      samplingCost: parsed.data.samplingCost,
+      vatPercent: parsed.data.vatPercent,
+    });
+
+    const quotation = await prisma.$transaction(async (tx) => {
+      await captureQuotationRevision(tx, {
+        entityId: id,
+        action: "CREATED",
+        session: permission.session!,
+        request,
+        changeSummary: "Baseline sebelum staff merevisi quotation",
+      });
+
+      // Item dihapus lebih dulu agar item lama yang belum punya grup ikut
+      // tersapu; penghapusan grup sendiri sudah meng-cascade titik sampling.
+      await tx.quotationItem.deleteMany({ where: { quotationId: id } });
+      await tx.quotationGroup.deleteMany({ where: { quotationId: id } });
+
+      await tx.quotation.update({
+        where: { id },
+        data: {
+          quotationNo: nextQuotationNo,
+          customerId: parsed.data.customerId,
+          note: parsed.data.note || existingQuotation.note,
+          revisionReason: parsed.data.editReason,
+          postApprovalEditReason: wasApproved ? parsed.data.editReason : null,
+
+          quotationDate:
+            toDate(parsed.data.quotationDate) ||
+            existingQuotation.quotationDate ||
+            new Date(),
+          validUntil: toDate(parsed.data.validUntil),
+
+          samplingBy: parsed.data.samplingBy || existingQuotation.samplingBy,
+          testingObjective:
+            parsed.data.testingObjective || existingQuotation.testingObjective,
+          tatRequested:
+            parsed.data.tatRequested || existingQuotation.tatRequested,
+
+          pricingStatus: resolved.content.pricingStatus,
+          totalAmount: totals.totalAmount,
+          samplingCost: totals.samplingCost,
+          vatPercent: totals.vatPercent,
+          vatAmount: totals.vatAmount,
+          grandTotal: totals.grandTotal,
+
+          paymentTerm: parsed.data.paymentTerm || null,
+          termsNote: parsed.data.termsNote || null,
+
+          status: isCustomerRevision ? "NEGOTIATION" : "VERIFIED",
+          verifiedById: null,
+          approvedById: null,
         },
-      },
-    },
-  });
+      });
+
+      await persistQuotationContent(tx, id, resolved.content);
+
+      await tx.workflowLog.create({
+        data: {
+          actorId: permission.session?.userId,
+          action: "STAFF_REVISE_QUOTATION",
+          note: `Quotation revised from ${existingQuotation.quotationNo} to ${nextQuotationNo}`,
+        },
+      });
+
+      await captureQuotationRevision(tx, {
+        entityId: id,
+        action: "UPDATED",
+        session: permission.session!,
+        request,
+        reason: parsed.data.editReason,
+        changeSummary: wasApproved
+          ? `Quotation approved diedit menjadi ${nextQuotationNo}; wajib approval ulang`
+          : `Quotation direvisi menjadi ${nextQuotationNo}`,
+      });
+
+      return tx.quotation.findUniqueOrThrow({
+        where: { id },
+        include: QUOTATION_INCLUDE,
+      });
+    }, TRANSACTION_OPTIONS);
+
+    const unpricedNote =
+      resolved.content.unpricedCount > 0
+        ? ` ${resolved.content.unpricedCount} parameter belum berharga.`
+        : "";
+
+    return NextResponse.json({
+      message:
+        (isCustomerRevision
+          ? `Quotation berhasil direvisi dan dikirim ke customer sebagai ${nextQuotationNo}.`
+          : `Quotation berhasil direvisi sebagai ${nextQuotationNo} dan dikirim untuk approval ulang.`) +
+        unpricedNote,
+      quotation,
+    });
+  }
+
+  // ---------- Jalur lama: daftar parameter datar ----------
+  if (!parsed.data.items?.length) {
+    return NextResponse.json(
+      { message: "Minimal buat 1 grup parameter" },
+      { status: 400 }
+    );
+  }
+
+  const legacyItems = parsed.data.items;
+
+  const coaTemplate = parsed.data.coaTemplateId
+    ? await prisma.coaTemplate.findFirst({
+        where: {
+          id: parsed.data.coaTemplateId,
+          isActive: true,
+        },
+        include: {
+          parameters: {
+            include: {
+              parameter: true,
+            },
+          },
+        },
+      })
+    : null;
 
   if (!coaTemplate) {
     return NextResponse.json(
@@ -248,7 +413,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   );
 
   const parameterIds = [
-    ...new Set(parsed.data.items.map((item) => item.parameterId)),
+    ...new Set(legacyItems.map((item) => item.parameterId)),
   ];
 
   const invalidByTemplate = parameterIds.some(
@@ -287,19 +452,11 @@ export async function PATCH(request: Request, context: RouteContext) {
   );
 
   const totals = calculateTotals({
-    items: parsed.data.items,
+    items: legacyItems,
     priceMap,
     samplingCost: parsed.data.samplingCost,
     vatPercent: parsed.data.vatPercent,
   });
-
-  const nextQuotationNo = generateRevisionQuotationNo(
-    existingQuotation.quotationNo
-  );
-  const isCustomerRevision = existingQuotation.status === "REVISION";
-  const wasApproved = ["APPROVED", "PO_UPLOADED"].includes(
-    existingQuotation.status
-  );
 
   const quotation = await prisma.$transaction(async (tx) => {
     await captureQuotationRevision(tx, {
@@ -350,7 +507,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         verifiedById: null,
         approvedById: null,
         items: {
-          create: parsed.data.items.map((item) => {
+          create: legacyItems.map((item) => {
             const templateParameter = templateParameterMap.get(item.parameterId);
             const parameter = parameters.find(
               (param) => param.id === item.parameterId

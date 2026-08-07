@@ -71,6 +71,25 @@ export default function DatePickerField({
   const selected = useMemo(() => parseLocalDate(value), [value]);
   const time = value.split("T")[1]?.slice(0, 5) || "08:00";
 
+  // Bulan yang sedang ditampilkan dikendalikan sendiri agar tombol "Hari ini"
+  // bisa melompat ke bulan berjalan. Disinkronkan saat dialog dibuka.
+  const [month, setMonth] = useState<Date>(() => selected ?? new Date());
+
+  // Rentang dropdown bulan/tahun. Mengikuti min/max bila ada; kalau tidak,
+  // pakai jendela 5 tahun ke belakang dan 5 tahun ke depan.
+  const startMonth = useMemo(
+    () =>
+      parseLocalDate(min ?? "") ??
+      new Date(new Date().getFullYear() - 5, 0, 1),
+    [min]
+  );
+  const endMonth = useMemo(
+    () =>
+      parseLocalDate(max ?? "") ??
+      new Date(new Date().getFullYear() + 5, 11, 31),
+    [max]
+  );
+
   useEffect(() => {
     if (!open) return;
     const previous = document.body.style.overflow;
@@ -140,8 +159,18 @@ export default function DatePickerField({
                 locale={indonesia}
                 weekStartsOn={1}
                 showOutsideDays
+                /*
+                 * Tanpa ini, bulan dengan 5 baris minggu dan bulan dengan 6
+                 * baris menghasilkan tinggi kalender yang berbeda, sehingga
+                 * dialog melompat setiap kali sales berpindah bulan.
+                 */
+                fixedWeeks
+                captionLayout="dropdown"
+                startMonth={startMonth}
+                endMonth={endMonth}
                 selected={selected}
-                defaultMonth={selected || new Date()}
+                month={month}
+                onMonthChange={setMonth}
                 disabled={disabledMatcher}
                 onSelect={(date) => {
                   if (!date) return;
@@ -150,6 +179,42 @@ export default function DatePickerField({
                   if (!includeTime) setOpen(false);
                 }}
               />
+            </div>
+
+            <div className="flex items-center gap-2 border-t border-blue-100 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => {
+                  const today = new Date();
+                  setMonth(today);
+
+                  // Hormati batas min/max: kalau hari ini di luar rentang,
+                  // cukup lompat tampilan bulannya tanpa memilih tanggal.
+                  const iso = toIsoDate(today);
+                  if ((min && iso < min) || (max && iso > max)) return;
+
+                  onChange(includeTime ? `${iso}T${time}` : iso);
+                  if (!includeTime) setOpen(false);
+                }}
+                className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-blue-300 hover:bg-blue-50"
+              >
+                Hari ini
+              </button>
+              {value && !required && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange("");
+                    setOpen(false);
+                  }}
+                  className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+                >
+                  Kosongkan
+                </button>
+              )}
+              <span className="ml-auto text-xs font-medium text-slate-400">
+                {value ? formatValue(value, includeTime) : "Belum dipilih"}
+              </span>
             </div>
 
             {includeTime && (
@@ -194,7 +259,12 @@ export default function DatePickerField({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={open ? dialogId : undefined}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          // Disinkronkan di handler, bukan di useEffect, agar tidak memicu
+          // render berantai saat dialog dibuka.
+          setMonth(selected ?? new Date());
+          setOpen(true);
+        }}
         className="flex min-h-12 w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left outline-none transition duration-200 hover:border-blue-300 hover:bg-blue-50/40 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-60"
       >
         <CalendarDays size={17} className="shrink-0 text-blue-600" />

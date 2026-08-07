@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import bcrypt from "bcryptjs";
+import { seedMarketingMaster } from "./seed-marketing-master";
 
 function createAdapter() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -1229,6 +1230,10 @@ async function main() {
       },
     ],
   });
+
+  console.log("Seeding master marketing (matriks, regulasi, durasi)...");
+
+  await seedMarketingMaster(prisma);
 
   console.log("Seeding FAQ categories & items...");
 

@@ -7,6 +7,17 @@ import { fadeUpItem, staggerContainer, EASE_OUT } from "@/lib/motion";
 import ExportButtons from "@/components/exports/ExportButtons";
 import Select, { type SelectOption } from "@/components/ui/Select";
 import DatePickerField from "@/components/ui/DatePickerField";
+import CustomerSelect, { type CustomerLite } from "@/components/ui/CustomerSelect";
+import QuotationGroupsEditor, {
+  buildGroupsFromQuotation,
+  countUnpricedParams,
+  createEmptyGroup,
+  groupsTotal,
+  toApiGroups,
+  validateGroups,
+  type GroupDraft,
+  type SavedQuotationGroup,
+} from "@/components/quotation/QuotationGroupsEditor";
 import {
   AlertCircle,
   ArrowLeft,
@@ -15,15 +26,12 @@ import {
   Check,
   CheckCircle2,
   ClipboardCheck,
-  Copy,
   Edit3,
   FileCheck,
-  FilePenLine,
   FilePlus,
   FileText,
   Lock,
   Percent,
-  Plus,
   RefreshCcw,
   Save,
   Search,
@@ -95,7 +103,8 @@ type CoaTemplateOption = {
 type QuotationItem = {
   id: string;
   qty: number;
-  price: number;
+  /** null berarti harga belum ditetapkan, bukan gratis. */
+  price: number | null;
   description?: string | null;
   customerSampleId?: string | null;
   samplingLocation?: string | null;
@@ -108,6 +117,10 @@ type QuotationItem = {
 type Quotation = {
   id: string;
   quotationNo: string;
+  /** Kode induk pesanan, mis. ML-26-0148. Kosong untuk data lama. */
+  orderCode?: string | null;
+  pricingStatus?: "UNPRICED" | "PARTIAL" | "PRICED" | null;
+  groups?: SavedQuotationGroup[];
   status: string;
   note?: string | null;
   revisionReason?: string | null;
@@ -190,7 +203,8 @@ type Props = {
 type FormItem = {
   parameterId: string;
   qty: number;
-  customPrice?: number;
+  /** null berarti harga belum ditetapkan, bukan gratis. */
+  customPrice?: number | null;
   description: string;
   customerSampleId: string;
   samplingLocation: string;
@@ -224,6 +238,13 @@ type QuotationForm = {
   paymentTerm: string;
   termsNote: string;
 
+  /** Struktur baru: satu grup = satu baris pada surat penawaran resmi. */
+  groups: GroupDraft[];
+
+  /** Disimpan agar nama customer tetap tampil tanpa memuat ulang daftar. */
+  selectedCustomer: CustomerLite | null;
+
+  /** Jalur lama; tidak lagi diisi form, dipertahankan untuk kompatibilitas. */
   items: FormItem[];
 };
 
@@ -249,7 +270,8 @@ function getStepIssues(step: ModalTab, form: QuotationForm): string[] {
 
   if (step === "detail") {
     if (!form.customerId) issues.push("Pilih customer terlebih dahulu.");
-    if (!form.coaTemplateId) issues.push("Pilih template COA terlebih dahulu.");
+    // Template COA tidak lagi diisi sales: matriks dan regulasi dipilih
+    // per grup pada langkah Parameter.
     if (!form.quotationDate) issues.push("Tanggal quotation wajib diisi.");
     if (!form.validUntil) issues.push("Tanggal valid until wajib diisi.");
     if (
@@ -262,15 +284,9 @@ function getStepIssues(step: ModalTab, form: QuotationForm): string[] {
   }
 
   if (step === "items") {
-    if (form.items.length === 0) {
-      issues.push("Tambahkan minimal satu parameter.");
-    }
-    if (form.items.some((item) => !item.parameterId)) {
-      issues.push("Masih ada baris parameter yang belum dipilih.");
-    }
-    if (form.items.some((item) => !item.qty || Number(item.qty) < 1)) {
-      issues.push("Qty setiap parameter minimal 1.");
-    }
+    // Harga yang belum diisi sengaja TIDAK memblokir: sales boleh menyusun
+    // scope lebih dulu. Yang memblokir hanya saat approval.
+    issues.push(...validateGroups(form.groups));
   }
 
   if (step === "terms") {
@@ -584,7 +600,9 @@ export default function QuotationFlowClient({
 
   const [form, setForm] = useState<QuotationForm>({
     editReason: "",
-    customerId: customers[0]?.id || "",
+    customerId: "",
+    selectedCustomer: null,
+    groups: [createEmptyGroup()],
     coaTemplateId: defaultTemplateId,
     note: "",
 
@@ -670,18 +688,6 @@ export default function QuotationFlowClient({
     return customers.find((customer) => customer.id === form.customerId);
   }, [customers, form.customerId]);
 
-  const selectedTemplate = useMemo(() => {
-    return coaTemplates.find((template) => template.id === form.coaTemplateId);
-  }, [coaTemplates, form.coaTemplateId]);
-
-  const selectedTemplateParameters = useMemo(() => {
-    return selectedTemplate?.parameters || [];
-  }, [selectedTemplate]);
-
-  const parameterMap = useMemo(() => {
-    return new Map(parameters.map((parameter) => [parameter.id, parameter]));
-  }, [parameters]);
-
   const visibleQuotations = useMemo(() => {
     const keyword = search.toLowerCase();
 
@@ -721,14 +727,14 @@ export default function QuotationFlowClient({
     });
   }, [mode, quotations, search]);
 
-  const totalFormAmount = useMemo(() => {
-    return form.items.reduce((total, item) => {
-      const parameter = parameterMap.get(item.parameterId);
-      const price = item.customPrice ?? parameter?.price ?? 0;
-
-      return total + price * item.qty;
-    }, 0);
-  }, [form.items, parameterMap]);
+  // Total dihitung dari grup. Parameter yang harganya belum ditetapkan
+  // dilewati, dan keberadaannya ditandai lewat `hasUnpriced`.
+  const formTotals = useMemo(() => groupsTotal(form.groups), [form.groups]);
+  const totalFormAmount = formTotals.total;
+  const unpricedCount = useMemo(
+    () => countUnpricedParams(form.groups),
+    [form.groups]
+  );
 
   const taxableAmount = totalFormAmount + Number(form.samplingCost || 0);
   const vatAmount = taxableAmount * (Number(form.vatPercent || 0) / 100);
@@ -739,7 +745,11 @@ export default function QuotationFlowClient({
 
     setForm({
       editReason: "",
-      customerId: customers[0]?.id || "",
+      // Tidak lagi dipilihkan otomatis: dengan ratusan customer, memilihkan
+      // yang pertama justru berisiko terkirim ke customer yang salah.
+      customerId: "",
+      selectedCustomer: null,
+      groups: [createEmptyGroup()],
       coaTemplateId: templateId,
       note: "",
 
@@ -775,6 +785,15 @@ export default function QuotationFlowClient({
       id: quotation.id,
       editReason: "",
       customerId: quotation.customer.id,
+      selectedCustomer: {
+        id: quotation.customer.id,
+        name: quotation.customer.name,
+        company: quotation.customer.company ?? null,
+      },
+      // Quotation lama belum punya grup; sales tinggal menyusunnya dari nol.
+      groups: quotation.groups?.length
+        ? buildGroupsFromQuotation(quotation.groups)
+        : [createEmptyGroup()],
       coaTemplateId: templateId,
       note: quotation.note || "",
 
@@ -815,115 +834,7 @@ export default function QuotationFlowClient({
     setOpenForm(true);
   }
 
-  function changeTemplate(templateId: string) {
-    setForm((prev) => ({
-      ...prev,
-      coaTemplateId: templateId,
-      items: buildItemsFromTemplate(templateId),
-    }));
-  }
-
-  function updateItem(
-    index: number,
-    key: keyof FormItem,
-    value: string | number
-  ) {
-    setForm((prev) => ({
-      ...prev,
-      items: prev.items.map((item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              [key]: value,
-            }
-          : item
-      ),
-    }));
-  }
-
-  function changeParameter(index: number, parameterId: string) {
-    const parameter = parameterMap.get(parameterId);
-    const templateParameter = selectedTemplateParameters.find(
-      (item) => item.parameterId === parameterId
-    );
-
-    setForm((prev) => ({
-      ...prev,
-      items: prev.items.map((item, itemIndex) =>
-        itemIndex === index
-          ? {
-              ...item,
-              parameterId,
-              customPrice: parameter?.price || 0,
-              description: templateParameter?.displayName || parameter?.name || "",
-              regulationMatrix: templateParameter?.standard || "",
-              method: templateParameter?.method || parameter?.method || "",
-            }
-          : item
-      ),
-    }));
-  }
-
-  function addItem() {
-    const available = selectedTemplateParameters.find(
-      (templateParameter) =>
-        !form.items.some(
-          (formItem) => formItem.parameterId === templateParameter.parameterId
-        )
-    );
-
-    if (!available) {
-      alert("Semua parameter dari template ini sudah ditambahkan.");
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      items: [
-        ...prev.items,
-        {
-          parameterId: available.parameterId,
-          qty: 1,
-          customPrice: available.parameter.price,
-          description: available.displayName || available.parameter.name,
-          customerSampleId: `SAMPLE-${prev.items.length + 1}`,
-          samplingLocation: "",
-          regulationMatrix: available.standard || "",
-          durationSampling: "",
-          method: available.method || available.parameter.method || "",
-        },
-      ],
-    }));
-  }
-
-  function removeItem(index: number) {
-    setForm((prev) => ({
-      ...prev,
-      items: prev.items.filter((_, itemIndex) => itemIndex !== index),
-    }));
-  }
-
-  function copySamplingAddressToAllItems() {
-    const address = [
-      selectedCustomer?.samplingAddressLine1,
-      selectedCustomer?.samplingAddressLine2,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
-    if (!address) {
-      alert("Customer belum punya alamat sampling.");
-      return;
-    }
-
-    setForm((prev) => ({
-      ...prev,
-      items: prev.items.map((item) => ({
-        ...item,
-        samplingLocation: item.samplingLocation || address,
-      })),
-    }));
-  }
+  // Editor parameter berbasis baris telah digantikan QuotationGroupsEditor.
 
   async function refreshData() {
     const response = await fetch("/api/quotations");
@@ -959,7 +870,14 @@ export default function QuotationFlowClient({
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(form),
+      // `groups` dikirim dalam bentuk payload API; `items` sengaja tidak
+      // disertakan agar server memakai jalur berbasis grup.
+      body: JSON.stringify({
+        ...form,
+        groups: toApiGroups(form.groups),
+        items: undefined,
+        selectedCustomer: undefined,
+      }),
     });
 
     const data = await response.json();
@@ -1302,27 +1220,28 @@ export default function QuotationFlowClient({
             <div className="space-y-5">
               <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="grid gap-4 lg:grid-cols-3">
-                  <SelectField
-                    label="Customer"
-                    value={form.customerId}
-                    onChange={(value) =>
-                      setForm((prev) => ({ ...prev, customerId: value }))
-                    }
-                    options={customers.map((customer) => ({
-                      value: customer.id,
-                      label: `${customer.name}${customer.company ? ` - ${customer.company}` : ""}`,
-                    }))}
-                  />
-
-                  <SelectField
-                    label="Template COA"
-                    value={form.coaTemplateId}
-                    onChange={changeTemplate}
-                    options={coaTemplates.map((template) => ({
-                      value: template.id,
-                      label: `${template.name} - ${template.code}`,
-                    }))}
-                  />
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-slate-600">
+                      Customer
+                    </label>
+                    {/*
+                      Pencarian dilakukan di server. Daftar customer Medialab
+                      berjumlah ratusan mendekati ribuan sehingga tidak lagi
+                      dimuat seluruhnya ke dalam halaman.
+                    */}
+                    <CustomerSelect
+                      value={form.customerId}
+                      selectedCustomer={form.selectedCustomer}
+                      allowCreate
+                      onChange={(customerId, customer) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          customerId,
+                          selectedCustomer: customer,
+                        }))
+                      }
+                    />
+                  </div>
 
                   <DatePickerField
                     label="Quotation Date"
@@ -1470,227 +1389,25 @@ export default function QuotationFlowClient({
 
           {activeTab === "items" && (
             <div className="space-y-5">
-              <div className="flex flex-col gap-3 rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h3 className="text-xl font-black text-slate-900">
-                    Parameter & Pricing
-                  </h3>
-                  <p className="mt-1 text-sm text-slate-500">
-                    Parameter otomatis mengikuti template COA, tetapi detail
-                    lokasi, matrix, durasi, dan method tetap bisa disesuaikan.
-                  </p>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={copySamplingAddressToAllItems}
-                    className="inline-flex items-center gap-2 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-700 transition-colors hover:bg-sky-100"
-                  >
-                    <Copy size={16} />
-                    Copy Lokasi Sampling
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={addItem}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
-                  >
-                    <Plus size={16} />
-                    Tambah Parameter
-                  </button>
-                </div>
+              <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+                <h3 className="text-xl font-black text-slate-900">
+                  Parameter & Pricing
+                </h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Susun pekerjaan per grup, sama seperti baris pada surat
+                  penawaran resmi. Pilih matriks dan regulasinya, lalu hilangkan
+                  centang parameter yang tidak diperlukan customer. Metode
+                  terisi otomatis dan durasi hanya menawarkan pilihan yang punya
+                  baku mutu.
+                </p>
               </div>
 
-              <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
-                <div className="max-h-[56vh] overflow-auto">
-                  <table className="w-full min-w-[1500px] text-sm">
-                    <thead className="sticky top-0 z-10 bg-slate-50 text-left text-slate-600">
-                      <tr>
-                        <th className="px-4 py-3">Parameter</th>
-                        <th className="w-[95px] px-4 py-3">Qty</th>
-                        <th className="w-[150px] px-4 py-3">Harga</th>
-                        <th className="w-[160px] px-4 py-3">Subtotal</th>
-                        <th className="w-[180px] px-4 py-3">Sample ID</th>
-                        <th className="w-[260px] px-4 py-3">Lokasi Sampling</th>
-                        <th className="w-[230px] px-4 py-3">Regulasi / Matrix</th>
-                        <th className="w-[180px] px-4 py-3">Durasi</th>
-                        <th className="w-[230px] px-4 py-3">Method</th>
-                        <th className="w-[110px] px-4 py-3 text-center">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {form.items.map((item, index) => {
-                        const parameter = parameterMap.get(item.parameterId);
-                        const activePrice =
-                          item.customPrice ?? parameter?.price ?? 0;
-                        const canEditPrice = Boolean(form.id);
-
-                        return (
-                          <tr
-                            key={`${item.parameterId}-${index}`}
-                            className="border-t border-slate-200 hover:bg-slate-50"
-                          >
-                            <td className="px-4 py-3">
-                              <Select
-                                value={item.parameterId}
-                                onChange={(value) => changeParameter(index, value)}
-                                options={selectedTemplateParameters.map(
-                                  (templateParameter) => ({
-                                    value: templateParameter.parameterId,
-                                    label:
-                                      templateParameter.displayName ||
-                                      templateParameter.parameter.name,
-                                  })
-                                )}
-                                ariaLabel={`Parameter baris ${index + 1}`}
-                                buttonClassName="flex min-h-12 w-full items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-slate-900 outline-none transition hover:border-blue-300"
-                              />
-
-                              <input
-                                value={item.description}
-                                onChange={(event) =>
-                                  updateItem(
-                                    index,
-                                    "description",
-                                    event.target.value
-                                  )
-                                }
-                                placeholder="Description"
-                                className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs text-slate-900 outline-none transition focus:border-emerald-500"
-                              />
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                min={1}
-                                value={item.qty}
-                                onChange={(event) =>
-                                  updateItem(
-                                    index,
-                                    "qty",
-                                    Number(event.target.value || 1)
-                                  )
-                                }
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-                              />
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <input
-                                type="number"
-                                min={0}
-                                value={activePrice}
-                                disabled={!canEditPrice}
-                                onChange={(event) =>
-                                  updateItem(
-                                    index,
-                                    "customPrice",
-                                    Number(event.target.value || 0)
-                                  )
-                                }
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
-                              />
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-bold text-slate-900">
-                                {formatRupiah(activePrice * item.qty)}
-                              </div>
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <input
-                                value={item.customerSampleId}
-                                onChange={(event) =>
-                                  updateItem(
-                                    index,
-                                    "customerSampleId",
-                                    event.target.value
-                                  )
-                                }
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-                                placeholder="Sample ID"
-                              />
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <input
-                                value={item.samplingLocation}
-                                onChange={(event) =>
-                                  updateItem(
-                                    index,
-                                    "samplingLocation",
-                                    event.target.value
-                                  )
-                                }
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-                                placeholder="Lokasi sampling"
-                              />
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <input
-                                value={item.regulationMatrix}
-                                onChange={(event) =>
-                                  updateItem(
-                                    index,
-                                    "regulationMatrix",
-                                    event.target.value
-                                  )
-                                }
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-                                placeholder="Regulasi / matrix"
-                              />
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <input
-                                value={item.durationSampling}
-                                onChange={(event) =>
-                                  updateItem(
-                                    index,
-                                    "durationSampling",
-                                    event.target.value
-                                  )
-                                }
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-                                placeholder="Contoh: 24 jam"
-                              />
-                            </td>
-
-                            <td className="px-4 py-3">
-                              <input
-                                value={item.method}
-                                onChange={(event) =>
-                                  updateItem(index, "method", event.target.value)
-                                }
-                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-emerald-500"
-                                placeholder="Method"
-                              />
-                            </td>
-
-                            <td className="px-4 py-3 text-center">
-                              <button
-                                type="button"
-                                onClick={() => removeItem(index)}
-                                disabled={form.items.length === 1}
-                                className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                Hapus
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <QuotationGroupsEditor
+                groups={form.groups}
+                onChange={(updater) =>
+                  setForm((prev) => ({ ...prev, groups: updater(prev.groups) }))
+                }
+              />
             </div>
           )}
 
@@ -1761,11 +1478,24 @@ export default function QuotationFlowClient({
                   Summary
                 </h3>
 
+                {formTotals.hasUnpriced && (
+                  <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+                    {unpricedCount} parameter belum berharga. Quotation tetap
+                    bisa disimpan dan dikirim sebagai penawaran scope, tetapi
+                    total di bawah belum final dan belum bisa di-approve.
+                  </p>
+                )}
+
                 <div className="mt-5 space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-500">Parameter Total</span>
                     <span className="font-bold text-slate-900">
                       {formatRupiah(totalFormAmount)}
+                      {formTotals.hasUnpriced && (
+                        <span className="ml-1 font-medium text-amber-600">
+                          +
+                        </span>
+                      )}
                     </span>
                   </div>
 
@@ -2260,7 +1990,10 @@ export default function QuotationFlowClient({
                             className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-600 sm:text-xs"
                           >
                             {item.description || item.parameter.name} ×{" "}
-                            {item.qty} · {formatRupiah(item.price)}
+                            {item.qty} ·{" "}
+                            {item.price === null
+                              ? "harga belum ditetapkan"
+                              : formatRupiah(item.price)}
                           </span>
                         ))}
                       </div>
