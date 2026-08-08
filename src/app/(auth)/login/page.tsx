@@ -301,6 +301,18 @@ export default function LoginPage() {
 
                 <form
                   onSubmit={handleLogin}
+                  /*
+                   * Login ditangani `handleLogin` lewat fetch, jadi method ini
+                   * tidak pernah dipakai dalam kondisi normal. Ia ada sebagai
+                   * jaring pengaman: bila React gagal terhidrasi (JS gagal
+                   * dimuat, koneksi putus, ekstensi browser), browser jatuh ke
+                   * submit native. Dengan default GET, email dan password
+                   * berakhir di URL — lalu masuk riwayat browser dan log akses
+                   * Nginx. POST mengirimnya di body, dan endpoint ini memang
+                   * tidak menerima POST HTML sehingga gagal tanpa membocorkan
+                   * apa pun.
+                   */
+                  method="post"
                   className="mt-7 space-y-5"
                   aria-describedby={message ? "login-error" : undefined}
                 >

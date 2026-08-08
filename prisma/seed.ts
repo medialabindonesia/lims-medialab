@@ -57,6 +57,7 @@ const menus = [
   { name: "Master Customer", key: "master.customers", href: "/master/customers", icon: "Building2", sort: 20 },
   { name: "Master Parameter", key: "master.parameters", href: "/master/parameters", icon: "ListChecks", sort: 21 },
   { name: "Master COA Template", key: "master.coa_templates", href: "/master/coa-templates", icon: "FileBadge", sort: 22 },
+  { name: "Matriks, Regulasi & Harga", key: "master.marketing", href: "/master/marketing", icon: "Layers", sort: 23 },
 
   { name: "Request Quotation", key: "quotation.request", href: "/quotations/request", icon: "FilePlus", sort: 30 },
   { name: "Verify Quotation", key: "quotation.verify", href: "/quotations/verify", icon: "FileCheck", sort: 31 },
@@ -142,6 +143,10 @@ const roleAccess: Record<string, string[]> = {
     "master.customers",
     "master.parameters",
     "master.coa_templates",
+    "master.marketing",
+    // Sales yang menyusun penawaran untuk calon customer, tidak hanya
+    // memverifikasi penawaran yang diajukan customer lewat portal.
+    "quotation.request",
     "quotation.verify",
     "quotation.revise",
     "sales.ltr",
@@ -278,6 +283,17 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
   }
 
   if (roleCode === "SALES_STAFF") {
+    // Menyusun penawaran: membuat baru sekaligus melengkapi harga sebelum
+    // diajukan ke manager.
+    if (menuKey === "quotation.request") {
+      return {
+        ...base,
+        canCreate: true,
+        canUpdate: true,
+        canExport: true,
+      };
+    }
+
     if (menuKey === "master.customers") {
       return {
         ...base,
@@ -290,6 +306,17 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
     if (menuKey === "master.parameters" || menuKey === "master.coa_templates") {
       return {
         ...base,
+        canExport: true,
+      };
+    }
+
+    // Sales yang mengumpulkan harga dasar dari tim internal, jadi mereka juga
+    // yang mengunggah berkas master kembali ke sistem.
+    if (menuKey === "master.marketing") {
+      return {
+        ...base,
+        canCreate: true,
+        canUpdate: true,
         canExport: true,
       };
     }

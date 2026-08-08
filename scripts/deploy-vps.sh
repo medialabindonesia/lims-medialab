@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+# Nilai default sengaja identik dengan produksi yang sudah berjalan: memanggil
+# script ini tanpa argumen ke-4 dan ke-5 berperilaku persis seperti sebelumnya.
 RELEASE_DIR="${1:-}"
 APP_ROOT="${2:-/opt/apps/lims-medialab}"
 RELEASE_ID="${3:-unknown}"
-APP_NAME="lims-medialab"
-HEALTH_URL="http://127.0.0.1:3001/api/health"
+APP_NAME="${4:-lims-medialab}"
+APP_PORT="${5:-3001}"
+APP_ENV="${6:-production}"
+HEALTH_URL="http://127.0.0.1:${APP_PORT}/api/health"
 
 log() {
   printf '[deploy] %s\n' "$*"
@@ -20,6 +24,9 @@ fail() {
 [[ "$APP_ROOT" = /* ]] || fail "APP_ROOT harus berupa absolute path"
 [[ "$APP_ROOT" =~ ^/[A-Za-z0-9._/-]+$ ]] || fail "APP_ROOT mengandung karakter tidak valid"
 [[ "$RELEASE_ID" =~ ^[A-Za-z0-9._-]+$ ]] || fail "RELEASE_ID tidak valid"
+[[ "$APP_NAME" =~ ^[A-Za-z0-9._-]+$ ]] || fail "APP_NAME tidak valid"
+[[ "$APP_PORT" =~ ^[0-9]{2,5}$ ]] || fail "APP_PORT tidak valid"
+[[ "$APP_ENV" =~ ^[a-z0-9-]+$ ]] || fail "APP_ENV tidak valid"
 [[ -d "$RELEASE_DIR" ]] || fail "Direktori release tidak ditemukan: $RELEASE_DIR"
 
 APP_ROOT_REAL="$(readlink -f "$APP_ROOT")"
@@ -58,6 +65,8 @@ ln -sfn "$APP_ROOT/shared/uploads" "$RELEASE_DIR/storage/uploads"
 cd "$RELEASE_DIR"
 export NODE_ENV=production
 
+log "Environment: $APP_ENV (pm2: $APP_NAME, port: $APP_PORT)"
+
 log "Menginstal dependency release $RELEASE_ID"
 pnpm install --frozen-lockfile
 
@@ -77,9 +86,19 @@ activate_release() {
 
 start_application() {
   local version="$1"
-  APP_ROOT="$APP_ROOT" APP_VERSION="$version" \
+
+  APP_ROOT="$APP_ROOT" APP_NAME="$APP_NAME" APP_PORT="$APP_PORT" \
+  APP_ENV="$APP_ENV" APP_VERSION="$version" \
     pm2 startOrReload "$APP_ROOT/current/ecosystem.config.js" --update-env
-  pm2 save
+
+  # Semua environment berjalan sebagai user `deploy` dan berbagi satu dump PM2.
+  # Lock di $APP_ROOT hanya menyerialkan deployment dalam satu environment,
+  # sehingga `pm2 save` dari dua environment sekaligus bisa saling menimpa.
+  (
+    exec 8>"$HOME/.lims-pm2.lock"
+    flock 8
+    pm2 save
+  )
 }
 
 log "Mengaktifkan release baru"
@@ -106,7 +125,11 @@ if [[ "$healthy" != true ]]; then
   else
     log "Belum ada release sebelumnya; menghentikan proses yang gagal"
     pm2 delete "$APP_NAME" || true
-    pm2 save || true
+    (
+      exec 8>"$HOME/.lims-pm2.lock"
+      flock 8
+      pm2 save
+    ) || true
     rm -f "$APP_ROOT/current"
   fi
 

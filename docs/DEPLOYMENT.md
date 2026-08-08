@@ -1,5 +1,8 @@
 # Deployment Ubuntu 24.04 dengan GitHub Actions
 
+> Dokumen ini membahas environment **produksi**. Untuk menambahkan environment
+> development/marketing/coa di VPS yang sama, lihat [ENVIRONMENTS.md](./ENVIRONMENTS.md).
+
 Untuk handoff ke Codex yang berjalan langsung di VPS, gunakan
 [`vps-codex/KNOWLEDGE.md`](vps-codex/KNOWLEDGE.md) dan prompt siap-tempel di
 [`vps-codex/PROMPT.md`](vps-codex/PROMPT.md).

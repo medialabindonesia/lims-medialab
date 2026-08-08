@@ -172,22 +172,16 @@ export async function GET(request: Request) {
   const quotations = await prisma.quotation.findMany({
     where,
     include: {
-      customer: true,
-      coaTemplate: true,
-      items: {
-        include: {
-          parameter: true,
-        },
-      },
-      purchaseOrder: true,
-      ltr: true,
+      // Wajib memakai QUOTATION_INCLUDE agar `groups` ikut terkirim. Endpoint
+      // ini yang memuat ulang daftar di browser; kalau isinya berbeda dari
+      // render awal server, label "Jenis uji" berubah jadi "-" begitu daftar
+      // di-refresh.
+      ...QUOTATION_INCLUDE,
       ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
-      coc: true,
       cocs: {
         include: { items: true, ltr: true, sample: true },
         orderBy: { sequence: "asc" },
       },
-      stps: true,
       invoice: true,
       samples: {
         include: {
@@ -302,9 +296,16 @@ export async function POST(request: Request) {
     requestedById: permission.session?.userId,
   };
 
+  // Pengajuan dari portal customer: seluruh angka harga ditentukan Medialab,
+  // bukan diambil dari payload. Lihat ResolveOptions.ignoreSubmittedPrices.
+  const isCustomerSubmission =
+    permission.session?.roleCode === "CUSTOMER_ENGAGEMENT";
+
   // ---------- Jalur baru: quotation berbasis grup ----------
   if (parsed.data.groups?.length) {
-    const resolved = await resolveQuotationContent(prisma, parsed.data.groups);
+    const resolved = await resolveQuotationContent(prisma, parsed.data.groups, {
+      ignoreSubmittedPrices: isCustomerSubmission,
+    });
 
     if (!resolved.ok) {
       return NextResponse.json({ message: resolved.message }, { status: 400 });
@@ -312,8 +313,9 @@ export async function POST(request: Request) {
 
     const totals = calculateQuotationTotals({
       totalAmount: resolved.content.totalAmount,
-      samplingCost: parsed.data.samplingCost,
-      vatPercent: parsed.data.vatPercent,
+      // Biaya sampling dan PPN juga bagian dari harga, jadi ikut dikunci.
+      samplingCost: isCustomerSubmission ? 0 : parsed.data.samplingCost,
+      vatPercent: isCustomerSubmission ? undefined : parsed.data.vatPercent,
     });
 
     const quotation = await createWithOrderCode(prisma, (orderCode) =>

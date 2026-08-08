@@ -77,6 +77,16 @@ enum SamplingBy {
   THIRD_PARTY
 }
 
+/// Saluran tempat customer menyampaikan persetujuannya di luar aplikasi.
+enum OfflineConfirmationChannel {
+  EMAIL
+  WHATSAPP
+  PHONE
+  MEETING
+  SIGNED_DOCUMENT
+  OTHER
+}
+
 enum TatRequest {
   NORMAL
   URGENT
@@ -484,6 +494,17 @@ model Quotation {
   requestedById String?
   verifiedById  String?
   approvedById  String?
+
+  /// Persetujuan customer atas scope penawaran.
+  confirmedAt   DateTime?
+  confirmedById String?
+
+  /// true bila ACC diterima di luar sistem (telepon, email, rapat) lalu
+  /// dicatatkan oleh sales — bukan customer yang menekan tombol sendiri.
+  /// Dipisah agar jejak audit tidak menyamakan keduanya.
+  confirmedOffline           Boolean                     @default(false)
+  offlineConfirmationChannel OfflineConfirmationChannel?
+  offlineConfirmationNote    String?                     @db.Text
   primaryLtrId  String? @unique
   primaryCocId  String? @unique
 

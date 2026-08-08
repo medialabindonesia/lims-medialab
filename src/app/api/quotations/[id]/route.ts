@@ -58,7 +58,12 @@ const quotationItemSchema = z.object({
 });
 
 const quotationUpdateSchema = z.object({
-  editReason: z.string().trim().min(8, "Alasan perubahan minimal 8 karakter").max(1000),
+  /**
+   * Wajib hanya saat mengubah dokumen yang sudah beredar. Menyunting draft
+   * sendiri (status REQUESTED) tidak perlu alasan — divalidasi di handler
+   * setelah status quotation diketahui.
+   */
+  editReason: z.string().trim().max(1000).optional(),
   customerId: z.string().min(1, "Customer wajib dipilih"),
 
   /** Tidak lagi diisi sales; dipertahankan untuk jalur lama. */
@@ -234,11 +239,30 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const editableStatuses = ["REVISION", "REJECTED", "APPROVED", "PO_UPLOADED"];
+  /*
+   * REQUESTED ikut dibuka karena quotation yang baru dibuat masih berupa
+   * draft sales: scope dan harga memang disusun bertahap sebelum dikirim ke
+   * customer. Sebelumnya sales sama sekali tidak bisa menyunting hasil
+   * buatannya sendiri, sehingga skenario "harga menyusul" tidak punya jalan
+   * selain menunggu quotation ditolak lebih dulu.
+   *
+   * CONFIRMED dan VERIFIED sengaja TIDAK dibuka: pada titik itu customer
+   * sudah menyetujui scope tertentu, dan mengubahnya diam-diam berarti
+   * dokumen yang disetujui berbeda dari yang dikerjakan.
+   */
+  const editableStatuses = [
+    "REQUESTED",
+    "REVISION",
+    "NEGOTIATION",
+    "REJECTED",
+    "APPROVED",
+    "PO_UPLOADED",
+  ];
+
   if (!editableStatuses.includes(existingQuotation.status)) {
     return NextResponse.json(
       {
-        message: "Quotation pada status ini tidak dapat direvisi oleh sales",
+        message: `Quotation berstatus ${existingQuotation.status} tidak dapat diubah. Minta manager menolak atau meminta revisi lebih dulu bila ada yang harus diperbaiki.`,
       },
       { status: 400 }
     );
@@ -256,19 +280,55 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  const nextQuotationNo =
-    nextQuotationRevisionCode(
-      existingQuotation.orderCode,
-      existingQuotation.quotationNo
-    ) ?? generateRevisionQuotationNo(existingQuotation.quotationNo);
+  // Menyunting draft sendiri bukan "revisi": nomor tidak boleh naik ke -R1
+  // setiap kali sales menyimpan, dan statusnya tetap menunggu customer.
+  const isDraftEdit = existingQuotation.status === "REQUESTED";
+
+  const editReason = parsed.data.editReason?.trim() || "";
+
+  // Dokumen yang sudah beredar wajib punya jejak alasan perubahan.
+  if (!isDraftEdit && editReason.length < 8) {
+    return NextResponse.json(
+      { message: "Alasan perubahan minimal 8 karakter" },
+      { status: 400 }
+    );
+  }
+
   const isCustomerRevision = existingQuotation.status === "REVISION";
   const wasApproved = ["APPROVED", "PO_UPLOADED"].includes(
     existingQuotation.status
   );
 
+  const nextQuotationNo = isDraftEdit
+    ? existingQuotation.quotationNo
+    : (nextQuotationRevisionCode(
+        existingQuotation.orderCode,
+        existingQuotation.quotationNo
+      ) ?? generateRevisionQuotationNo(existingQuotation.quotationNo));
+
+  /**
+   * Status setelah penyuntingan.
+   *
+   * Draft tetap REQUESTED — melompat ke VERIFIED akan melewati persetujuan
+   * customer sepenuhnya. Balasan atas permintaan revisi customer masuk ke
+   * NEGOTIATION. Sisanya (ditolak / sudah approved) wajib melewati approval
+   * ulang, jadi kembali ke VERIFIED.
+   */
+  const nextStatus = isDraftEdit
+    ? "REQUESTED"
+    : isCustomerRevision
+      ? "NEGOTIATION"
+      : "VERIFIED";
+
+  // Revisi dari portal customer: harga tetap milik Medialab.
+  const isCustomerSubmission =
+    permission.session?.roleCode === "CUSTOMER_ENGAGEMENT";
+
   // ---------- Jalur baru: quotation berbasis grup ----------
   if (parsed.data.groups?.length) {
-    const resolved = await resolveQuotationContent(prisma, parsed.data.groups);
+    const resolved = await resolveQuotationContent(prisma, parsed.data.groups, {
+      ignoreSubmittedPrices: isCustomerSubmission,
+    });
 
     if (!resolved.ok) {
       return NextResponse.json({ message: resolved.message }, { status: 400 });
@@ -276,8 +336,12 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     const totals = calculateQuotationTotals({
       totalAmount: resolved.content.totalAmount,
-      samplingCost: parsed.data.samplingCost,
-      vatPercent: parsed.data.vatPercent,
+      samplingCost: isCustomerSubmission
+        ? existingQuotation.samplingCost
+        : parsed.data.samplingCost,
+      vatPercent: isCustomerSubmission
+        ? existingQuotation.vatPercent
+        : parsed.data.vatPercent,
     });
 
     const quotation = await prisma.$transaction(async (tx) => {
@@ -300,8 +364,8 @@ export async function PATCH(request: Request, context: RouteContext) {
           quotationNo: nextQuotationNo,
           customerId: parsed.data.customerId,
           note: parsed.data.note || existingQuotation.note,
-          revisionReason: parsed.data.editReason,
-          postApprovalEditReason: wasApproved ? parsed.data.editReason : null,
+          revisionReason: editReason || existingQuotation.revisionReason,
+          postApprovalEditReason: wasApproved ? editReason : null,
 
           quotationDate:
             toDate(parsed.data.quotationDate) ||
@@ -325,7 +389,7 @@ export async function PATCH(request: Request, context: RouteContext) {
           paymentTerm: parsed.data.paymentTerm || null,
           termsNote: parsed.data.termsNote || null,
 
-          status: isCustomerRevision ? "NEGOTIATION" : "VERIFIED",
+          status: nextStatus,
           verifiedById: null,
           approvedById: null,
         },
@@ -346,7 +410,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         action: "UPDATED",
         session: permission.session!,
         request,
-        reason: parsed.data.editReason,
+        reason: editReason || undefined,
         changeSummary: wasApproved
           ? `Quotation approved diedit menjadi ${nextQuotationNo}; wajib approval ulang`
           : `Quotation direvisi menjadi ${nextQuotationNo}`,
@@ -480,8 +544,8 @@ export async function PATCH(request: Request, context: RouteContext) {
         customerId: parsed.data.customerId,
         coaTemplateId: parsed.data.coaTemplateId,
         note: parsed.data.note || existingQuotation.note,
-        revisionReason: parsed.data.editReason,
-        postApprovalEditReason: wasApproved ? parsed.data.editReason : null,
+        revisionReason: editReason || existingQuotation.revisionReason,
+        postApprovalEditReason: wasApproved ? editReason : null,
 
         quotationDate:
           toDate(parsed.data.quotationDate) ||
@@ -503,7 +567,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         paymentTerm: parsed.data.paymentTerm || null,
         termsNote: parsed.data.termsNote || null,
 
-        status: isCustomerRevision ? "NEGOTIATION" : "VERIFIED",
+        status: nextStatus,
         verifiedById: null,
         approvedById: null,
         items: {
@@ -565,7 +629,7 @@ export async function PATCH(request: Request, context: RouteContext) {
       action: "UPDATED",
       session: permission.session!,
       request,
-      reason: parsed.data.editReason,
+      reason: editReason || undefined,
       changeSummary: wasApproved
         ? `Quotation approved diedit menjadi ${nextQuotationNo}; wajib approval ulang`
         : `Quotation direvisi menjadi ${nextQuotationNo}`,

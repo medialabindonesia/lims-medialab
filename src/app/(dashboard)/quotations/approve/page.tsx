@@ -24,8 +24,6 @@ export default async function ApproveQuotationPage() {
       <QuotationFlowClient
         mode="approve"
         customers={data.customers}
-        parameters={data.parameters}
-        coaTemplates={data.coaTemplates}
         initialQuotations={data.quotations}
         viewerRole={session.roleCode}
       />

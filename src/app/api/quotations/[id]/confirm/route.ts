@@ -8,12 +8,32 @@ type RouteContext = {
   }>;
 };
 
+/**
+ * ACC customer atas scope penawaran — ditekan CUSTOMER SENDIRI lewat portal.
+ *
+ * Endpoint ini sengaja tidak bisa dipakai staf. Izinnya hanya bersandar pada
+ * `quotation.request` + canUpdate, dan izin itu kini juga dipegang sales agar
+ * mereka bisa menyusun penawaran; tanpa penguncian di bawah, sales bisa
+ * meng-ACC atas nama customer sementara log mencatatnya sebagai persetujuan
+ * customer. Persetujuan yang diterima di luar aplikasi dicatat lewat
+ * `/confirm-offline`, yang menyimpan siapa yang mencatat dan buktinya.
+ */
 export async function PATCH(_request: Request, context: RouteContext) {
   const permission = await requireAnyApiPermission([
     { menuKey: "quotation.request", action: "canUpdate" },
   ]);
 
   if (!permission.allowed) return permission.response;
+
+  if (permission.session?.roleCode !== "CUSTOMER_ENGAGEMENT") {
+    return NextResponse.json(
+      {
+        message:
+          "Hanya customer yang bisa meng-ACC penawarannya sendiri. Bila persetujuan diterima lewat telepon, email, atau rapat, gunakan 'Tandai ACC di luar sistem'.",
+      },
+      { status: 403 }
+    );
+  }
 
   const { id } = await context.params;
 
@@ -50,6 +70,12 @@ export async function PATCH(_request: Request, context: RouteContext) {
     where: { id },
     data: {
       status: "CONFIRMED",
+      confirmedAt: new Date(),
+      confirmedById: permission.session?.userId,
+      // Customer menekannya sendiri, jadi bukan konfirmasi tangan kedua.
+      confirmedOffline: false,
+      offlineConfirmationChannel: null,
+      offlineConfirmationNote: null,
     },
   });
 

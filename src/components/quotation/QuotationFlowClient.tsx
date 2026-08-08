@@ -80,25 +80,8 @@ type ParameterOption = {
   price: number;
 };
 
-type TemplateParameterOption = {
-  id: string;
-  parameterId: string;
-  displayName?: string | null;
-  unit?: string | null;
-  method?: string | null;
-  standard?: string | null;
-  limitValue?: string | null;
-  sort: number;
-  isActive: boolean;
-  parameter: ParameterOption;
-};
-
-type CoaTemplateOption = {
-  id: string;
-  name: string;
-  code: string;
-  parameters: TemplateParameterOption[];
-};
+// TemplateParameterOption & CoaTemplateOption dibuang: template COA tidak lagi
+// dipilih di form quotation.
 
 type QuotationItem = {
   id: string;
@@ -119,6 +102,10 @@ type Quotation = {
   quotationNo: string;
   /** Kode induk pesanan, mis. ML-26-0148. Kosong untuk data lama. */
   orderCode?: string | null;
+  /** ACC dicatatkan staf, bukan ditekan customer lewat portal. */
+  confirmedOffline?: boolean | null;
+  offlineConfirmationChannel?: string | null;
+  offlineConfirmationNote?: string | null;
   pricingStatus?: "UNPRICED" | "PARTIAL" | "PRICED" | null;
   groups?: SavedQuotationGroup[];
   status: string;
@@ -192,9 +179,12 @@ type Quotation = {
 
 type Props = {
   mode: FlowMode;
+  /**
+   * Hanya terisi untuk role customer (satu baris, dirinya sendiri). Sales dan
+   * admin memakai pencarian server lewat CustomerSelect, sehingga daftar
+   * lengkapnya tidak pernah dikirim ke halaman.
+   */
   customers: CustomerOption[];
-  parameters: ParameterOption[];
-  coaTemplates: CoaTemplateOption[];
   initialQuotations: Quotation[];
   /** Role pemakai halaman — menentukan apakah istilah internal diterjemahkan. */
   viewerRole?: string;
@@ -216,8 +206,9 @@ type FormItem = {
 type QuotationForm = {
   id?: string;
   editReason: string;
+  /** Status quotation yang sedang disunting; menentukan apakah alasan wajib. */
+  editingStatus?: string;
   customerId: string;
-  coaTemplateId: string;
   note: string;
 
   quotationDate: string;
@@ -291,7 +282,12 @@ function getStepIssues(step: ModalTab, form: QuotationForm): string[] {
 
   if (step === "terms") {
     if (!form.paymentTerm.trim()) issues.push("Payment term wajib diisi.");
-    if (form.id && form.editReason.trim().length < 8) {
+
+    // Menyunting draft sendiri tidak perlu alasan; yang wajib beralasan hanya
+    // perubahan atas dokumen yang sudah beredar ke customer.
+    const isDraftEdit = form.editingStatus === "REQUESTED";
+
+    if (form.id && !isDraftEdit && form.editReason.trim().length < 8) {
       issues.push("Alasan revisi minimal 8 karakter.");
     }
   }
@@ -377,6 +373,43 @@ function formatDate(value?: string | null) {
     month: "short",
     year: "numeric",
   }).format(new Date(value));
+}
+
+/**
+ * Label jenis uji sebuah quotation, dibaca dari grup pekerjaannya.
+ *
+ * Sebelumnya diambil dari `coaTemplate.name`, padahal sejak matriks dipilih
+ * per grup di Step 2 template COA tidak lagi diisi sales — akibatnya SEMUA
+ * quotation tampil sebagai template pertama di database, apa pun matriksnya.
+ * Nilai coaTemplate hanya dipakai sebagai cadangan untuk data lama.
+ */
+function quotationScopeLabel(quotation: Quotation) {
+  const names = [
+    ...new Set(
+      (quotation.groups ?? [])
+        .map((group) => group.description || group.regulation?.shortName)
+        .filter((name): name is string => Boolean(name))
+    ),
+  ];
+
+  if (names.length === 0) return quotation.coaTemplate?.name || "-";
+  if (names.length <= 2) return names.join(", ");
+
+  return `${names[0]}, ${names[1]} +${names.length - 2} lainnya`;
+}
+
+const OFFLINE_CHANNEL_LABELS: Record<string, string> = {
+  EMAIL: "Email",
+  WHATSAPP: "WhatsApp",
+  PHONE: "Telepon",
+  MEETING: "Rapat / tatap muka",
+  SIGNED_DOCUMENT: "Dokumen bertanda tangan",
+  OTHER: "Lainnya",
+};
+
+function offlineChannelLabel(channel?: string | null) {
+  if (!channel) return "Di luar sistem";
+  return OFFLINE_CHANNEL_LABELS[channel] || channel;
 }
 
 function formatRupiah(value: number) {
@@ -544,8 +577,6 @@ function TextAreaField({
 export default function QuotationFlowClient({
   mode,
   customers,
-  parameters,
-  coaTemplates,
   initialQuotations,
   viewerRole,
 }: Props) {
@@ -563,47 +594,16 @@ export default function QuotationFlowClient({
   const [documentLabel, setDocumentLabel] = useState("");
   const [documentItemIds, setDocumentItemIds] = useState<string[]>([]);
 
-  function buildItemsFromTemplate(templateId: string): FormItem[] {
-    const template = coaTemplates.find((item) => item.id === templateId);
-    const templateParameters = template?.parameters || [];
-
-    if (templateParameters.length > 0) {
-      return templateParameters.map((item, index) => ({
-        parameterId: item.parameterId,
-        qty: 1,
-        customPrice: item.parameter.price,
-        description: item.displayName || item.parameter.name,
-        customerSampleId: `SAMPLE-${index + 1}`,
-        samplingLocation: "",
-        regulationMatrix: item.standard || "",
-        durationSampling: "",
-        method: item.method || item.parameter.method || "",
-      }));
-    }
-
-    return [
-      {
-        parameterId: parameters[0]?.id || "",
-        qty: 1,
-        customPrice: parameters[0]?.price || 0,
-        description: parameters[0]?.name || "",
-        customerSampleId: "SAMPLE-1",
-        samplingLocation: "",
-        regulationMatrix: "",
-        durationSampling: "",
-        method: parameters[0]?.method || "",
-      },
-    ];
-  }
-
-  const defaultTemplateId = coaTemplates[0]?.id || "";
+  // Pembangun item dari template COA sudah dibuang: parameter kini berasal
+  // dari matriks/regulasi per grup, bukan dari template.
+  // Role customer tidak memilih customer: hanya ada satu, yakni dirinya.
+  const lockedCustomerId = isCustomerView ? customers[0]?.id || "" : "";
 
   const [form, setForm] = useState<QuotationForm>({
     editReason: "",
-    customerId: "",
+    customerId: lockedCustomerId,
     selectedCustomer: null,
     groups: [createEmptyGroup()],
-    coaTemplateId: defaultTemplateId,
     note: "",
 
     quotationDate: getTodayInputDate(),
@@ -620,7 +620,8 @@ export default function QuotationFlowClient({
     termsNote:
       "Harga belum termasuk biaya tambahan di luar lingkup pekerjaan yang disepakati.",
 
-    items: buildItemsFromTemplate(defaultTemplateId),
+    // Jalur lama; tidak pernah dikirim ke server sejak form memakai grup.
+    items: [],
   });
 
   useEffect(() => {
@@ -684,9 +685,51 @@ export default function QuotationFlowClient({
     setMessage("");
   }
 
+  /**
+   * Detail lengkap customer terpilih — alamat billing, lokasi sampling, dan
+   * penerima dokumen. Diambil per-id karena daftar customer tidak lagi dimuat
+   * seluruhnya ke halaman; prop `customers` kini hanya terisi untuk role
+   * customer (satu baris miliknya sendiri).
+   */
+  const [customerDetail, setCustomerDetail] = useState<CustomerOption | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!form.customerId) return;
+    if (customers.some((customer) => customer.id === form.customerId)) return;
+
+    let active = true;
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/master/customers/${form.customerId}`
+        );
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (active) setCustomerDetail(data.customer);
+      } catch {
+        // Panel info customer bersifat pelengkap; kegagalan memuatnya tidak
+        // boleh menghalangi sales menyusun quotation.
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [form.customerId, customers]);
+
   const selectedCustomer = useMemo(() => {
-    return customers.find((customer) => customer.id === form.customerId);
-  }, [customers, form.customerId]);
+    const local = customers.find(
+      (customer) => customer.id === form.customerId
+    );
+    if (local) return local;
+
+    // Cegah detail customer sebelumnya sempat tampil selama fetch berjalan.
+    return customerDetail?.id === form.customerId ? customerDetail : undefined;
+  }, [customers, customerDetail, form.customerId]);
 
   const visibleQuotations = useMemo(() => {
     const keyword = search.toLowerCase();
@@ -741,16 +784,13 @@ export default function QuotationFlowClient({
   const grandTotal = taxableAmount + vatAmount;
 
   function resetForm() {
-    const templateId = coaTemplates[0]?.id || "";
-
     setForm({
       editReason: "",
-      // Tidak lagi dipilihkan otomatis: dengan ratusan customer, memilihkan
-      // yang pertama justru berisiko terkirim ke customer yang salah.
-      customerId: "",
+      // Untuk sales tidak dipilihkan otomatis: dengan ratusan customer,
+      // memilihkan yang pertama berisiko terkirim ke customer yang salah.
+      customerId: lockedCustomerId,
       selectedCustomer: null,
       groups: [createEmptyGroup()],
-      coaTemplateId: templateId,
       note: "",
 
       quotationDate: getTodayInputDate(),
@@ -767,7 +807,8 @@ export default function QuotationFlowClient({
       termsNote:
         "Harga belum termasuk biaya tambahan di luar lingkup pekerjaan yang disepakati.",
 
-      items: buildItemsFromTemplate(templateId),
+      // Jalur lama; tidak pernah dikirim ke server sejak form memakai grup.
+      items: [],
     });
   }
 
@@ -779,11 +820,10 @@ export default function QuotationFlowClient({
   }
 
   function handleEdit(quotation: Quotation) {
-    const templateId = quotation.coaTemplate?.id || coaTemplates[0]?.id || "";
-
     setForm({
       id: quotation.id,
       editReason: "",
+      editingStatus: quotation.status,
       customerId: quotation.customer.id,
       selectedCustomer: {
         id: quotation.customer.id,
@@ -794,7 +834,6 @@ export default function QuotationFlowClient({
       groups: quotation.groups?.length
         ? buildGroupsFromQuotation(quotation.groups)
         : [createEmptyGroup()],
-      coaTemplateId: templateId,
       note: quotation.note || "",
 
       quotationDate: toInputDate(quotation.quotationDate) || getTodayInputDate(),
@@ -962,6 +1001,56 @@ export default function QuotationFlowClient({
     await runAction(`/api/quotations/${quotation.id}/reject`, "PATCH", { reason });
   }
 
+  /**
+   * Mencatat ACC customer yang diterima di luar aplikasi.
+   *
+   * Saluran dan bukti diminta terpisah dan keduanya wajib: catatan ini akan
+   * menjadi satu-satunya jejak bahwa penawaran benar-benar disetujui, karena
+   * tidak ada klik customer yang bisa dirujuk.
+   */
+  async function recordOfflineConfirmation(quotation: Quotation) {
+    const channels = [
+      "1. Email",
+      "2. WhatsApp",
+      "3. Telepon",
+      "4. Rapat / tatap muka",
+      "5. Dokumen bertanda tangan",
+      "6. Lainnya",
+    ].join("\n");
+
+    const choice = window.prompt(
+      `ACC customer untuk ${quotation.quotationNo} diterima lewat mana?\n\n${channels}\n\nKetik angkanya:`
+    );
+    if (!choice) return;
+
+    const channelByChoice: Record<string, string> = {
+      "1": "EMAIL",
+      "2": "WHATSAPP",
+      "3": "PHONE",
+      "4": "MEETING",
+      "5": "SIGNED_DOCUMENT",
+      "6": "OTHER",
+    };
+
+    const channel = channelByChoice[choice.trim()];
+
+    if (!channel) {
+      setMessage("Pilihan saluran tidak dikenal. Ketik angka 1 sampai 6.");
+      return;
+    }
+
+    const note = window.prompt(
+      "Tulis buktinya — siapa yang memberi ACC, kapan, dan rujukannya.\nContoh: \"Bu Lia (Purchasing) via email 8 Agu 2026, subjek 'Approval penawaran'\"\n\nMinimal 10 karakter:"
+    );
+    if (!note) return;
+
+    await runAction(
+      `/api/quotations/${quotation.id}/confirm-offline`,
+      "PATCH",
+      { channel, note }
+    );
+  }
+
   function openLtrGrouping(quotation: Quotation) {
     const usedIds = new Set(
       (quotation.ltrs || []).flatMap((ltr) =>
@@ -1009,25 +1098,39 @@ export default function QuotationFlowClient({
       return (
         <div className="flex flex-wrap justify-end gap-2">
           {(quotation.status === "REQUESTED" ||
-            quotation.status === "NEGOTIATION") && (
-            <>
-              <button
-                onClick={() => requestRevision(quotation)}
-                className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-semibold text-yellow-700 transition-colors hover:bg-yellow-100"
-              >
-                Minta Revisi
-              </button>
+            quotation.status === "NEGOTIATION") &&
+            (isCustomerView ? (
+              <>
+                <button
+                  onClick={() => requestRevision(quotation)}
+                  className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-semibold text-yellow-700 transition-colors hover:bg-yellow-100"
+                >
+                  Minta Revisi
+                </button>
 
+                <button
+                  onClick={() =>
+                    runAction(`/api/quotations/${quotation.id}/confirm`, "PATCH")
+                  }
+                  className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
+                >
+                  ACC Quotation
+                </button>
+              </>
+            ) : (
+              /*
+                Staf tidak boleh menekan "ACC Quotation" milik customer.
+                Persetujuan yang datang lewat telepon, email, atau rapat
+                dicatatkan lewat jalur terpisah yang menyimpan buktinya.
+              */
               <button
-                onClick={() =>
-                  runAction(`/api/quotations/${quotation.id}/confirm`, "PATCH")
-                }
-                className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
+                onClick={() => recordOfflineConfirmation(quotation)}
+                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-100"
               >
-                ACC Quotation
+                <ClipboardCheck size={16} />
+                Tandai ACC di luar sistem
               </button>
-            </>
-          )}
+            ))}
 
           {quotation.status === "APPROVED" && (
             <button
@@ -1224,23 +1327,30 @@ export default function QuotationFlowClient({
                     <label className="mb-2 block text-sm font-medium text-slate-600">
                       Customer
                     </label>
-                    {/*
-                      Pencarian dilakukan di server. Daftar customer Medialab
-                      berjumlah ratusan mendekati ribuan sehingga tidak lagi
-                      dimuat seluruhnya ke dalam halaman.
-                    */}
-                    <CustomerSelect
-                      value={form.customerId}
-                      selectedCustomer={form.selectedCustomer}
-                      allowCreate
-                      onChange={(customerId, customer) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          customerId,
-                          selectedCustomer: customer,
-                        }))
-                      }
-                    />
+                    {isCustomerView ? (
+                      // Role customer hanya punya satu customer: dirinya.
+                      <p className="flex min-h-12 items-center rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold text-slate-700">
+                        {selectedCustomer?.name || "Akun Anda"}
+                      </p>
+                    ) : (
+                      /*
+                        Pencarian dilakukan di server. Daftar customer Medialab
+                        berjumlah ratusan mendekati ribuan sehingga tidak lagi
+                        dimuat seluruhnya ke dalam halaman.
+                      */
+                      <CustomerSelect
+                        value={form.customerId}
+                        selectedCustomer={form.selectedCustomer}
+                        allowCreate
+                        onChange={(customerId, customer) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            customerId,
+                            selectedCustomer: customer,
+                          }))
+                        }
+                      />
+                    )}
                   </div>
 
                   <DatePickerField
@@ -1596,13 +1706,10 @@ export default function QuotationFlowClient({
 
             {(isLastStep || isEditing) && (
               <motion.button
-                disabled={
-                  loading ||
-                  customers.length === 0 ||
-                  parameters.length === 0 ||
-                  coaTemplates.length === 0 ||
-                  allStepIssues.length > 0
-                }
+                // Kelengkapan sudah dijaga getStepIssues; daftar customer dan
+                // parameter tidak lagi dimuat penuh sehingga tak bisa dipakai
+                // sebagai syarat di sini.
+                disabled={loading || allStepIssues.length > 0}
                 whileHover={reduce || loading ? undefined : { scale: 1.01 }}
                 whileTap={reduce || loading ? undefined : { scale: 0.98 }}
                 className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-2xl sm:text-sm"
@@ -1793,11 +1900,6 @@ export default function QuotationFlowClient({
                 whileHover={reduce ? undefined : { scale: 1.02 }}
                 whileTap={reduce ? undefined : { scale: 0.97 }}
                 onClick={handleCreate}
-                disabled={
-                  customers.length === 0 ||
-                  parameters.length === 0 ||
-                  coaTemplates.length === 0
-                }
                 className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:rounded-2xl sm:text-sm"
               >
                 <FilePlus size={16} />
@@ -1914,11 +2016,12 @@ export default function QuotationFlowClient({
                     )}
 
                     <div className="min-w-0">
-                      <dt className="text-slate-400">
-                        {isCustomerView ? "Jenis uji" : "Template"}
-                      </dt>
-                      <dd className="truncate font-semibold text-slate-700">
-                        {quotation.coaTemplate?.name || "-"}
+                      <dt className="text-slate-400">Jenis uji</dt>
+                      <dd
+                        className="truncate font-semibold text-slate-700"
+                        title={quotationScopeLabel(quotation)}
+                      >
+                        {quotationScopeLabel(quotation)}
                       </dd>
                     </div>
 
@@ -1949,6 +2052,28 @@ export default function QuotationFlowClient({
                       </dd>
                     </div>
                   </dl>
+
+                  {/*
+                    Ditampilkan terus-menerus, bukan hanya saat pencatatan.
+                    Siapa pun yang membaca dokumen ini nanti — lab, finance,
+                    auditor — harus tahu persetujuannya tidak berasal dari
+                    portal customer.
+                  */}
+                  {quotation.confirmedOffline && (
+                    <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+                      <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+                        ACC dicatat staf ·{" "}
+                        {offlineChannelLabel(
+                          quotation.offlineConfirmationChannel
+                        )}
+                      </p>
+                      {quotation.offlineConfirmationNote && (
+                        <p className="mt-1 text-sm text-amber-800">
+                          {quotation.offlineConfirmationNote}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {quotation.note && (
                     <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-[13px] text-slate-500 sm:rounded-2xl sm:px-4 sm:py-3 sm:text-sm">

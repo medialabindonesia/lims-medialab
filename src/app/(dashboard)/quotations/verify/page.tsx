@@ -24,8 +24,6 @@ export default async function VerifyQuotationPage() {
       <QuotationFlowClient
         mode="verify"
         customers={data.customers}
-        parameters={data.parameters}
-        coaTemplates={data.coaTemplates}
         initialQuotations={data.quotations}
         viewerRole={session.roleCode}
       />

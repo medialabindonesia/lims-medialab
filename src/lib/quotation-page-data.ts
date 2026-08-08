@@ -11,61 +11,30 @@ export async function getQuotationPageData() {
         }
       : undefined;
 
-  const customerWhere =
-    session?.roleCode === "CUSTOMER_ENGAGEMENT" && session.customerId
-      ? {
-          id: session.customerId,
-          isActive: true,
-        }
-      : {
-          isActive: true,
-        };
+  /**
+   * Hanya role customer yang daftar customer-nya ikut dikirim, dan itu pun
+   * satu baris miliknya sendiri agar bisa dikunci otomatis di form.
+   *
+   * Untuk sales dan admin daftarnya sengaja dikosongkan: customer Medialab
+   * berjumlah ratusan mendekati ribuan, dan sejak form memakai CustomerSelect
+   * pencarian sudah dilakukan di server lewat /api/master/customers/search.
+   */
+  const isCustomerViewer =
+    session?.roleCode === "CUSTOMER_ENGAGEMENT" && Boolean(session.customerId);
 
-  const [customers, parameters, coaTemplates, quotations] = await Promise.all([
-    prisma.customer.findMany({
-      where: customerWhere,
-      include: {
-        users: {
-          include: {
-            role: true,
-          },
-        },
-      },
-      orderBy: {
-        name: "asc",
-      },
-    }),
-
-    prisma.analysisParameter.findMany({
-      where: {
-        isActive: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    }),
-
-    prisma.coaTemplate.findMany({
-      where: {
-        isActive: true,
-      },
-      include: {
-        parameters: {
-          where: {
-            isActive: true,
-          },
-          include: {
-            parameter: true,
-          },
-          orderBy: {
-            sort: "asc",
-          },
-        },
-      },
-      orderBy: {
-        name: "asc",
-      },
-    }),
+  /*
+   * Daftar parameter dan template COA tidak lagi diambil di sini. Form
+   * quotation memuat parameter per regulasi lewat
+   * /api/master/regulations/[id]/parameters, dan template COA sudah tidak
+   * dipilih sales sama sekali.
+   */
+  const [customers, quotations] = await Promise.all([
+    isCustomerViewer
+      ? prisma.customer.findMany({
+          where: { id: session!.customerId!, isActive: true },
+          orderBy: { name: "asc" },
+        })
+      : Promise.resolve([]),
 
     prisma.quotation.findMany({
       where: quotationWhere,
@@ -76,6 +45,17 @@ export async function getQuotationPageData() {
           include: {
             parameter: true,
           },
+        },
+        // Dipakai untuk label "Jenis uji" dan untuk memuat ulang grup saat
+        // quotation dibuka kembali untuk direvisi.
+        groups: {
+          include: {
+            matrix: true,
+            regulation: true,
+            locations: { orderBy: { sort: "asc" } },
+            items: { include: { parameter: true, duration: true } },
+          },
+          orderBy: { sort: "asc" },
         },
         purchaseOrder: true,
         ltr: true,
@@ -137,8 +117,6 @@ export async function getQuotationPageData() {
 
   return JSON.parse(JSON.stringify({
     customers,
-    parameters,
-    coaTemplates,
     quotations: quotations.map((quotation) => ({
       ...quotation,
       requestedBy: quotation.requestedById

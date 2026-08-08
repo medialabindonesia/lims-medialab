@@ -1,17 +1,29 @@
-name: CI/CD Production
+name: CI/CD
+
+# Satu branch = satu environment di VPS yang sama.
+#
+#   main           -> production  port 3001  /opt/apps/lims-medialab
+#   development    -> development port 3002  /opt/apps/lims-medialab-development
+#   marketing-dev  -> marketing   port 3003  /opt/apps/lims-medialab-marketing
+#   coa-dev        -> coa         port 3004  /opt/apps/lims-medialab-coa
+#
+# Tiap environment punya database dan shared/.env sendiri di VPS, jadi tidak
+# ada secret tambahan yang perlu disimpan di GitHub.
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, development]
   push:
-    branches: [main]
+    branches: [main, development, marketing-dev, coa-dev]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: production-deployment
+  # Per-branch: deployment marketing tidak lagi memblokir deployment produksi,
+  # tetapi dua deployment ke environment yang sama tetap berurutan.
+  group: deployment-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -64,17 +76,58 @@ jobs:
       - name: Build
         run: pnpm build
 
-  deploy:
-    name: Deploy to production VPS
+  resolve:
+    name: Resolve target environment
     needs: quality
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      env_slug: ${{ steps.map.outputs.env_slug }}
+      app_name: ${{ steps.map.outputs.app_name }}
+      app_port: ${{ steps.map.outputs.app_port }}
+      deploy_path: ${{ steps.map.outputs.deploy_path }}
+    steps:
+      - name: Map branch to environment
+        id: map
+        run: |
+          case "$GITHUB_REF_NAME" in
+            main)
+              slug=production;  name=lims-medialab;             port=3001; path=/opt/apps/lims-medialab ;;
+            development)
+              slug=development; name=lims-medialab-development; port=3002; path=/opt/apps/lims-medialab-development ;;
+            marketing-dev)
+              slug=marketing;   name=lims-medialab-marketing;   port=3003; path=/opt/apps/lims-medialab-marketing ;;
+            coa-dev)
+              slug=coa;         name=lims-medialab-coa;         port=3004; path=/opt/apps/lims-medialab-coa ;;
+            *)
+              echo "Branch '$GITHUB_REF_NAME' tidak dipetakan ke environment mana pun." >&2
+              exit 1 ;;
+          esac
+
+          {
+            echo "env_slug=$slug"
+            echo "app_name=$name"
+            echo "app_port=$port"
+            echo "deploy_path=$path"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Branch $GITHUB_REF_NAME -> environment $slug (port $port)"
+
+  deploy:
+    name: Deploy to ${{ needs.resolve.outputs.env_slug }}
+    needs: [quality, resolve]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
-      name: production
+      name: ${{ needs.resolve.outputs.env_slug }}
       url: ${{ vars.APP_URL }}
     env:
-      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/apps/lims-medialab' }}
+      DEPLOY_PATH: ${{ needs.resolve.outputs.deploy_path }}
+      APP_NAME: ${{ needs.resolve.outputs.app_name }}
+      APP_PORT: ${{ needs.resolve.outputs.app_port }}
+      APP_ENV: ${{ needs.resolve.outputs.env_slug }}
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
       VPS_USER: ${{ vars.VPS_USER || 'deploy' }}
@@ -93,6 +146,9 @@ jobs:
           test -n "$VPS_SSH_KEY"
           [[ "$VPS_PORT" =~ ^[0-9]+$ ]]
           [[ "$DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]]
+          [[ "$APP_NAME" =~ ^[A-Za-z0-9._-]+$ ]]
+          [[ "$APP_PORT" =~ ^[0-9]{2,5}$ ]]
+          [[ "$APP_ENV" =~ ^[a-z0-9-]+$ ]]
 
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/deploy_key"
@@ -147,4 +203,4 @@ jobs:
           ssh -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$VPS_USER@$VPS_HOST" \
-            "bash '$DEPLOY_PATH/releases/$GITHUB_SHA/scripts/deploy-vps.sh' '$DEPLOY_PATH/releases/$GITHUB_SHA' '$DEPLOY_PATH' '$GITHUB_SHA'"
+            "bash '$DEPLOY_PATH/releases/$GITHUB_SHA/scripts/deploy-vps.sh' '$DEPLOY_PATH/releases/$GITHUB_SHA' '$DEPLOY_PATH' '$GITHUB_SHA' '$APP_NAME' '$APP_PORT' '$APP_ENV'"

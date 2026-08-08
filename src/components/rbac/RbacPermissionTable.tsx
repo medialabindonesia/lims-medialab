@@ -104,6 +104,16 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  /** Langkah alur kerja yang akan kehilangan pemegang bila simpanan diteruskan. */
+  const [blocked, setBlocked] = useState<
+    Array<{ label: string; stage: string; consequence: string }>
+  >([]);
+
+  /** Langkah yang kini hanya bisa dikerjakan Super Admin — tidak memblokir. */
+  const [warnings, setWarnings] = useState<
+    Array<{ label: string; message: string }>
+  >([]);
+
   const selectedRole = roles.find((role) => role.id === selectedRoleId);
 
   const groupedMenus = useMemo(() => {
@@ -204,13 +214,27 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
     const data = await response.json();
 
     setLoading(false);
+    setBlocked([]);
+    setWarnings([]);
 
     if (!response.ok) {
       setMessage(data.message || "Gagal update permission");
+
+      // 409 berarti perubahan ini akan membuat langkah alur kerja tidak
+      // dipegang role mana pun. Rinciannya ditampilkan agar admin tahu
+      // persis kotak mana yang harus dicentang kembali.
+      if (Array.isArray(data.blockedCapabilities)) {
+        setBlocked(data.blockedCapabilities);
+      }
+
       return;
     }
 
     setMessage("Permission berhasil disimpan.");
+
+    if (Array.isArray(data.warnings)) {
+      setWarnings(data.warnings);
+    }
   }
 
   if (!selectedRole) {
@@ -252,9 +276,55 @@ export default function RbacPermissionTable({ roles, menus }: Props) {
         </div>
 
         {message && (
-          <p className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p
+            className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+              blocked.length > 0
+                ? "border-rose-200 bg-rose-50 font-semibold text-rose-700"
+                : "border-slate-200 bg-slate-50 text-slate-600"
+            }`}
+          >
             {message}
           </p>
+        )}
+
+        {/*
+          Penolakan simpanan. Ditampilkan lengkap dengan akibatnya, karena
+          "Forbidden" saja tidak memberi tahu admin kotak mana yang harus
+          dicentang kembali.
+        */}
+        {blocked.length > 0 && (
+          <ul className="mt-2 space-y-2">
+            {blocked.map((item) => (
+              <li
+                key={`${item.stage}-${item.label}`}
+                className="rounded-2xl border border-rose-200 bg-white px-4 py-3"
+              >
+                <p className="text-sm font-black text-rose-700">
+                  {item.stage} · {item.label}
+                </p>
+                <p className="mt-0.5 text-xs text-slate-600">
+                  {item.consequence}
+                </p>
+              </li>
+            ))}
+            <li className="px-1 text-xs text-slate-500">
+              Centang kembali langkah di atas pada role ini, atau berikan ke
+              role lain lebih dahulu, lalu simpan ulang.
+            </li>
+          </ul>
+        )}
+
+        {warnings.length > 0 && (
+          <ul className="mt-2 space-y-1">
+            {warnings.map((item) => (
+              <li
+                key={item.label}
+                className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs font-medium text-amber-800"
+              >
+                {item.message}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 

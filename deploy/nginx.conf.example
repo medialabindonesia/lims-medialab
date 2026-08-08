@@ -1,4 +1,15 @@
-# Ganti YOUR_DOMAIN, lalu simpan sebagai /etc/nginx/sites-available/lims-medialab.
+# Template blok server LIMS Medialab.
+#
+# Satu file per environment. Ganti tiga nilai berikut, lalu simpan sebagai
+# /etc/nginx/sites-available/<APP_NAME>:
+#
+#   environment  server_name                        proxy_pass  app root
+#   -----------  --------------------------------   ----------  -----------------------------------
+#   production   lims.medialab.co.id                3001        /opt/apps/lims-medialab
+#   development  dev.lims.medialab.co.id            3002        /opt/apps/lims-medialab-development
+#   marketing    marketing.lims.medialab.co.id      3003        /opt/apps/lims-medialab-marketing
+#   coa          coa.lims.medialab.co.id            3004        /opt/apps/lims-medialab-coa
+
 server {
     listen 80;
     listen [::]:80;
@@ -7,6 +18,8 @@ server {
     client_max_body_size 260M;
 
     # Lampiran support persisten dan dilayani langsung oleh Nginx.
+    # Path ini WAJIB mengikuti app root environment yang bersangkutan —
+    # kalau salah, environment dev akan menyajikan lampiran milik produksi.
     location /uploads/ {
         alias /opt/apps/lims-medialab/shared/uploads/;
         autoindex off;
@@ -29,3 +42,13 @@ server {
         proxy_send_timeout 300s;
     }
 }
+
+# Environment non-produksi sebaiknya tidak terindeks mesin pencari.
+# Tambahkan di dalam blok server dev/marketing/coa:
+#
+#     add_header X-Robots-Tag "noindex, nofollow" always;
+#
+#     location = /robots.txt {
+#         add_header Content-Type text/plain;
+#         return 200 "User-agent: *\nDisallow: /\n";
+#     }

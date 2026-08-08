@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
-import { requireApiPermission } from "@/lib/api-permission";
+import {
+  requireAnyApiPermission,
+  requireApiPermission,
+} from "@/lib/api-permission";
+import { quotationChecks } from "@/lib/quotation-access";
 
 const nullableString = z.preprocess(
   (value) => (value === "" ? null : value),
@@ -66,17 +70,40 @@ type RouteContext = {
 };
 
 export async function GET(_request: Request, context: RouteContext) {
-  const permission = await requireApiPermission("master.customers", "canView");
+  // Form quotation ikut memakai endpoint ini untuk mengisi panel Customer
+  // Information / Sampling Location / Document Receiver, sehingga sales yang
+  // tidak punya menu Master Data tetap harus bisa membacanya.
+  const permission = await requireAnyApiPermission([
+    ...quotationChecks("canView"),
+    { menuKey: "master.customers", action: "canView" },
+  ]);
+
   if (!permission.allowed) return permission.response;
 
   const { id } = await context.params;
 
+  const session = permission.session;
+
+  // Role customer hanya boleh membaca dirinya sendiri.
+  if (
+    session?.roleCode === "CUSTOMER_ENGAGEMENT" &&
+    session.customerId !== id
+  ) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
+
   const customer = await prisma.customer.findUnique({
     where: { id },
     include: {
+      // Field user dipilih eksplisit: `include` polos ikut mengirim kolom
+      // `password` (hash bcrypt) ke browser.
       users: {
-        include: {
-          role: true,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isActive: true,
+          role: { select: { id: true, code: true, name: true } },
         },
       },
     },

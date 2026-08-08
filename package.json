@@ -13,7 +13,8 @@
     "lint": "eslint",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "check:workbook": "tsx scripts/check-marketing-workbook.ts"
   },
   "dependencies": {
     "@daypicker/react": "^10.0.1",

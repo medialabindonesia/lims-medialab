@@ -4,60 +4,9 @@ import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
+import { getCell, readHeaderMap, yes } from "@/lib/excel-import";
 
 export const runtime = "nodejs";
-
-function clean(value: unknown) {
-  if (value === null || value === undefined) return null;
-
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-
-  if (typeof value === "object") {
-    const objectValue = value as Record<string, unknown>;
-
-    if (typeof objectValue.text === "string") {
-      return objectValue.text.trim() || null;
-    }
-
-    if (Array.isArray(objectValue.richText)) {
-      const text = objectValue.richText
-        .map((item) => {
-          if (!item || typeof item !== "object") return "";
-          const textValue = (item as Record<string, unknown>).text;
-          return typeof textValue === "string" ? textValue : "";
-        })
-        .join("")
-        .trim();
-
-      return text || null;
-    }
-
-    if (objectValue.result !== undefined) {
-      return clean(objectValue.result);
-    }
-  }
-
-  const text = String(value).trim();
-
-  return text.length > 0 ? text : null;
-}
-
-function yes(value: unknown) {
-  const text = String(value || "")
-    .trim()
-    .toLowerCase();
-
-  return ["yes", "y", "true", "1", "aktif", "active"].includes(text);
-}
-
-function getCell(row: ExcelJS.Row, headerMap: Map<string, number>, key: string) {
-  const col = headerMap.get(key);
-  if (!col) return null;
-
-  return clean(row.getCell(col).value);
-}
 
 export async function POST(request: Request) {
   const permission = await requireAnyApiPermission([
@@ -95,12 +44,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const headerMap = new Map<string, number>();
-
-    sheet.getRow(1).eachCell((cell, colNumber) => {
-      const key = String(cell.value || "").trim();
-      if (key) headerMap.set(key, colNumber);
-    });
+    const headerMap = readHeaderMap(sheet);
 
     const requiredHeaders = ["name", "email"];
 

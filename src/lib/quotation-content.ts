@@ -37,8 +37,13 @@ const groupItemSchema = z.object({
   /**
    * null berarti harga BELUM DITETAPKAN (berbeda dari 0).
    * Bila field tidak dikirim sama sekali, harga dasar master yang dipakai.
+   *
+   * `.nullable()` WAJIB berada di luar `coerce`. Ditulis sebagai
+   * `z.union([z.coerce.number(), z.null()])`, cabang coerce dicoba lebih dulu
+   * dan `Number(null)` bernilai 0 — sehingga harga yang sengaja dikosongkan
+   * diam-diam tersimpan sebagai nol dan quotation dianggap sudah berharga.
    */
-  price: z.union([z.coerce.number().min(0), z.null()]).optional(),
+  price: z.coerce.number().min(0).nullable().optional(),
   /** Bila kosong, mengikuti qty grup (jumlah titik sampling). */
   qty: z.coerce.number().int().min(1).optional(),
   method: nullableString,
@@ -114,9 +119,24 @@ function legacyBasePrice(price: number | undefined) {
   return price && price > 0 ? price : null;
 }
 
+export type ResolveOptions = {
+  /**
+   * Abaikan harga yang dikirim klien dan pakai harga dasar master.
+   *
+   * Dinyalakan untuk pengajuan dari portal customer. Tanpa ini customer bisa
+   * mengirim harga karangannya sendiri lewat payload; harga itu tersimpan apa
+   * adanya, quotation dianggap PRICED, dan gerbang harga di approval ikut
+   * lolos — sehingga satu-satunya penahan tinggal kejelian manusia.
+   *
+   * Customer menentukan APA yang diuji; Medialab yang menentukan harganya.
+   */
+  ignoreSubmittedPrices?: boolean;
+};
+
 export async function resolveQuotationContent(
   db: DbClient,
-  groups: QuotationGroupInput[]
+  groups: QuotationGroupInput[],
+  options: ResolveOptions = {}
 ): Promise<ResolveResult> {
   if (groups.length === 0) {
     return { ok: false, message: "Minimal buat 1 grup parameter" };
@@ -307,7 +327,12 @@ export async function resolveQuotationContent(
 
       // price tidak dikirim  -> pakai harga dasar (boleh null)
       // price dikirim null   -> sengaja dikosongkan
-      const price = item.price === undefined ? basePrice : item.price;
+      // pengajuan customer   -> harga kiriman diabaikan sepenuhnya
+      const price = options.ignoreSubmittedPrices
+        ? basePrice
+        : item.price === undefined
+          ? basePrice
+          : item.price;
 
       const qty = item.qty ?? group.qty;
 
