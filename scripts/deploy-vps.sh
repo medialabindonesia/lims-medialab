@@ -73,8 +73,27 @@ pnpm install --frozen-lockfile
 log "Membangun aplikasi"
 pnpm build
 
-log "Menerapkan migrasi database produksi"
+log "Menerapkan migrasi database"
 pnpm exec prisma migrate deploy
+
+# Seed hanya untuk environment uji coba, supaya environment baru langsung bisa
+# dipakai tanpa langkah manual.
+#
+# Dijaga BERLAPIS dan sengaja tidak bergantung pada satu variabel saja:
+# APP_ENV bisa saja salah diketik atau lupa dikirim, sedangkan APP_ROOT
+# ditentukan workflow. Seed menulis role, menu, akun demo, dan master data —
+# menjalankannya di produksi akan menimpa data sungguhan.
+PRODUCTION_ROOT="/opt/apps/lims-medialab"
+
+if [[ "$APP_ENV" != "production" &&
+      "$APP_ROOT_REAL" != "$PRODUCTION_ROOT" &&
+      "$APP_NAME" != "lims-medialab" ]]; then
+  log "Menjalankan seed untuk environment $APP_ENV"
+  # Seed bersifat upsert sehingga aman diulang tiap deployment.
+  pnpm db:seed
+else
+  log "Environment produksi: seed dilewati"
+fi
 
 activate_release() {
   local target="$1"

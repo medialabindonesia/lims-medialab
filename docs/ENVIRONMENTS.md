@@ -10,9 +10,9 @@ tanpa mengganggu produksi.
 | Branch | Environment | Port | App root | Database | PM2 |
 |---|---|---|---|---|---|
 | `main` | production | 3001 | `/opt/apps/lims-medialab` | `lims_medialab` | `lims-medialab` |
-| `development` | development | 3002 | `/opt/apps/lims-medialab-development` | `lims_development` | `lims-medialab-development` |
-| `marketing-dev` | marketing | 3003 | `/opt/apps/lims-medialab-marketing` | `lims_marketing` | `lims-medialab-marketing` |
-| `coa-dev` | coa | 3004 | `/opt/apps/lims-medialab-coa` | `lims_coa` | `lims-medialab-coa` |
+| `development` | development | 3011 | `/opt/apps/lims-medialab-development` | `lims_development` | `lims-medialab-development` |
+| `marketing-dev` | marketing | 3012 | `/opt/apps/lims-medialab-marketing` | `lims_marketing` | `lims-medialab-marketing` |
+| `coa-dev` | coa | 3013 | `/opt/apps/lims-medialab-coa` | `lims_coa` | `lims-medialab-coa` |
 
 Push ke salah satu branch memicu deployment ke environment pasangannya.
 Branch di luar daftar itu tidak akan ter-deploy — job `resolve` sengaja gagal
@@ -50,6 +50,18 @@ tidak akan ditimpa.
 Yang **tidak** dikerjakan script, dan memang disengaja: Nginx, DNS, SSL, dan
 firewall tidak disentuh sama sekali. Langkah-langkah itu dicetak sebagai
 instruksi di akhir eksekusi untuk Anda kerjakan manual.
+
+### Catatan VPS Medialab
+
+Server ini memakai **aaPanel**, jadi Nginx dikonfigurasi lewat panel
+(`/www/server/panel/vhost/nginx`), bukan `/etc/nginx/sites-available`.
+Buat situs baru bertipe *reverse proxy* ke `http://127.0.0.1:<port>`, lalu
+tambahkan `location /uploads/` dan `client_max_body_size 260M` pada
+konfigurasi situs tersebut.
+
+Port 3000, 3001, dan 3002 sudah terpakai aplikasi lain di VPS ini — itulah
+sebabnya environment LIMS memakai 3011 ke atas. Periksa dulu dengan
+`ss -ltn` sebelum menambah environment baru.
 
 Setelah subdomain aktif, push ke branch terkait. Deployment pertama akan
 menjalankan `prisma migrate deploy` sendiri; seed dijalankan manual:

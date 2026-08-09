@@ -3,9 +3,9 @@ name: CI/CD
 # Satu branch = satu environment di VPS yang sama.
 #
 #   main           -> production  port 3001  /opt/apps/lims-medialab
-#   development    -> development port 3002  /opt/apps/lims-medialab-development
-#   marketing-dev  -> marketing   port 3003  /opt/apps/lims-medialab-marketing
-#   coa-dev        -> coa         port 3004  /opt/apps/lims-medialab-coa
+#   development    -> development port 3011  /opt/apps/lims-medialab-development
+#   marketing-dev  -> marketing   port 3012  /opt/apps/lims-medialab-marketing
+#   coa-dev        -> coa         port 3013  /opt/apps/lims-medialab-coa
 #
 # Tiap environment punya database dan shared/.env sendiri di VPS, jadi tidak
 # ada secret tambahan yang perlu disimpan di GitHub.
@@ -95,11 +95,11 @@ jobs:
             main)
               slug=production;  name=lims-medialab;             port=3001; path=/opt/apps/lims-medialab ;;
             development)
-              slug=development; name=lims-medialab-development; port=3002; path=/opt/apps/lims-medialab-development ;;
+              slug=development; name=lims-medialab-development; port=3011; path=/opt/apps/lims-medialab-development ;;
             marketing-dev)
-              slug=marketing;   name=lims-medialab-marketing;   port=3003; path=/opt/apps/lims-medialab-marketing ;;
+              slug=marketing;   name=lims-medialab-marketing;   port=3012; path=/opt/apps/lims-medialab-marketing ;;
             coa-dev)
-              slug=coa;         name=lims-medialab-coa;         port=3004; path=/opt/apps/lims-medialab-coa ;;
+              slug=coa;         name=lims-medialab-coa;         port=3013; path=/opt/apps/lims-medialab-coa ;;
             *)
               echo "Branch '$GITHUB_REF_NAME' tidak dipetakan ke environment mana pun." >&2
               exit 1 ;;
@@ -177,6 +177,46 @@ jobs:
             exit 1
           fi
           chmod 600 "$HOME/.ssh/known_hosts"
+
+      # Environment baru harus di-provision sebagai root di VPS lebih dulu.
+      # Tanpa langkah ini, kegagalannya muncul sebagai `mkdir: Permission
+      # denied` yang tidak memberi tahu apa pun tentang cara memperbaikinya.
+      - name: Verify environment is provisioned
+        run: |
+          set +e
+          output="$(ssh -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$VPS_USER@$VPS_HOST" \
+            "test -d '$DEPLOY_PATH' && test -w '$DEPLOY_PATH' && test -f '$DEPLOY_PATH/shared/.env' && echo READY" 2>&1)"
+          set -e
+
+          if [[ "$output" == *READY* ]]; then
+            echo "Environment '$APP_ENV' siap di $DEPLOY_PATH"
+            exit 0
+          fi
+
+          cat >&2 <<MESSAGE
+          ================================================================
+          Environment '$APP_ENV' belum disiapkan di VPS.
+
+          $DEPLOY_PATH belum ada, tidak bisa ditulis user '$VPS_USER',
+          atau shared/.env belum dibuat. User deploy memang tidak berhak
+          membuat direktori baru di /opt/apps — itu milik root.
+
+          Jalankan SEKALI sebagai root di VPS:
+
+            cd /opt/apps/lims-medialab/current
+            DB_PASSWORD="\$(openssl rand -base64 32)" \\
+            JWT_SECRET="\$(openssl rand -base64 48)" \\
+              bash deploy/provision-environment.sh $APP_ENV
+
+          Lalu pasang blok Nginx dan sertifikatnya sesuai instruksi yang
+          dicetak script tersebut. Rinciannya: docs/ENVIRONMENTS.md
+
+          Setelah itu jalankan ulang workflow ini.
+          ================================================================
+          MESSAGE
+          exit 1
 
       - name: Create release directory
         run: |

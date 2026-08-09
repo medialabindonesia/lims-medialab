@@ -1,14 +1,21 @@
 # Template blok server LIMS Medialab.
 #
-# Satu file per environment. Ganti tiga nilai berikut, lalu simpan sebagai
+# PENTING: VPS produksi Medialab memakai aaPanel, yang mengelola konfigurasi
+# Nginx sendiri di /www/server/panel/vhost/nginx. Di sana berkas ini hanya
+# menjadi ACUAN — situs dibuat lewat panel (reverse proxy ke port aplikasi),
+# lalu location /uploads/ dan client_max_body_size ditambahkan pada
+# konfigurasi situs tersebut. Menaruh berkas di /etc/nginx/sites-available
+# tidak akan berefek dan bisa tertimpa panel.
+#
+# Untuk server tanpa aaPanel: ganti tiga nilai berikut, lalu simpan sebagai
 # /etc/nginx/sites-available/<APP_NAME>:
 #
 #   environment  server_name                        proxy_pass  app root
 #   -----------  --------------------------------   ----------  -----------------------------------
 #   production   lims.medialab.co.id                3001        /opt/apps/lims-medialab
-#   development  dev.lims.medialab.co.id            3002        /opt/apps/lims-medialab-development
-#   marketing    marketing.lims.medialab.co.id      3003        /opt/apps/lims-medialab-marketing
-#   coa          coa.lims.medialab.co.id            3004        /opt/apps/lims-medialab-coa
+#   development  dev.lims.medialab.co.id            3011        /opt/apps/lims-medialab-development
+#   marketing    marketing.lims.medialab.co.id      3012        /opt/apps/lims-medialab-marketing
+#   coa          coa.lims.medialab.co.id            3013        /opt/apps/lims-medialab-coa
 
 server {
     listen 80;

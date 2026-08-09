@@ -29,9 +29,9 @@ log() { printf '[provision] %s\n' "$*"; }
 fail() { printf '[provision] ERROR: %s\n' "$*" >&2; exit 1; }
 
 case "$SLUG" in
-  development) PORT=3002 ;;
-  marketing)   PORT=3003 ;;
-  coa)         PORT=3004 ;;
+  development) PORT=3011 ;;
+  marketing)   PORT=3012 ;;
+  coa)         PORT=3013 ;;
   production)
     fail "Environment produksi sudah ada dan tidak boleh di-provision ulang." ;;
   *)
@@ -61,10 +61,30 @@ install -d -o "$DEPLOY_USER" -g "$DEPLOY_USER" -m 0755 \
   "$APP_ROOT/shared/uploads"
 
 # ----------------------------------------------------------------- database
+#
+# Sebagian server (termasuk yang dikelola aaPanel) mengharuskan root MariaDB
+# login dengan password, bukan lewat socket auth. Sediakan lewat
+# MYSQL_ROOT_PASSWORD bila `mariadb` polos tidak bisa connect.
+#
+# MYSQL_PWD dipakai alih-alih argumen -p agar password tidak muncul di `ps`.
+db_client() {
+  if [[ -n "${MYSQL_ROOT_PASSWORD:-}" ]]; then
+    MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mariadb -u "${MYSQL_ROOT_USER:-root}" "$@"
+  else
+    mariadb "$@"
+  fi
+}
+
+if ! db_client -e "SELECT 1;" >/dev/null 2>&1; then
+  fail "Tidak bisa terhubung ke MariaDB sebagai root.
+  Bila root memerlukan password, jalankan ulang dengan:
+    MYSQL_ROOT_PASSWORD='...' DB_PASSWORD='...' JWT_SECRET='...' \\
+      bash provision-environment.sh $SLUG"
+fi
+
 log "Menyiapkan database $DB_NAME"
 
-# Password dikirim lewat stdin, bukan argumen, agar tidak muncul di `ps`.
-mariadb <<SQL
+db_client <<SQL
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER IF NOT EXISTS '${DB_USER}'@'localhost'
@@ -124,27 +144,35 @@ printf '\n'
 cat <<NGINX
 Langkah berikutnya dikerjakan manual — script ini sengaja tidak menyentuh Nginx.
 
-1. Buat /etc/nginx/sites-available/${APP_NAME} dari deploy/nginx.conf.example
-   dengan penyesuaian:
+VPS ini memakai aaPanel, jadi Nginx TIDAK dikonfigurasi lewat
+/etc/nginx/sites-available. Menaruh berkas di sana tidak akan berefek, dan
+suntingan manual berisiko tertimpa saat aaPanel menulis ulang konfigurasinya.
 
-     server_name  ${SLUG}.lims.medialab.co.id;
-     proxy_pass   http://127.0.0.1:${PORT};
-     location /uploads/ -> alias ${APP_ROOT}/shared/uploads/;
+1. Di panel aaPanel, tambahkan Website baru:
 
-2. Aktifkan, uji, lalu muat ulang:
+     domain    : ${SLUG}.lims.medialab.co.id
+     tipe      : reverse proxy
+     target    : http://127.0.0.1:${PORT}
 
-     ln -s /etc/nginx/sites-available/${APP_NAME} /etc/nginx/sites-enabled/
-     nginx -t && systemctl reload nginx
+2. Pada konfigurasi situs tersebut, tambahkan location untuk lampiran:
 
-3. Terbitkan sertifikat:
+     location /uploads/ {
+         alias ${APP_ROOT}/shared/uploads/;
+         add_header X-Content-Type-Options nosniff always;
+     }
 
-     certbot --nginx -d ${SLUG}.lims.medialab.co.id
+   dan naikkan batas upload:  client_max_body_size 260M;
 
-4. Push ke branch terkait; GitHub Actions yang akan melakukan deploy pertama.
+3. Terbitkan SSL lewat menu SSL aaPanel (Let's Encrypt).
 
-Environment ini BELUM punya tabel. Migrasi dijalankan otomatis oleh
-scripts/deploy-vps.sh pada deployment pertama. Seed dijalankan manual:
+4. Arahkan DNS ${SLUG}.lims.medialab.co.id ke IP VPS ini.
 
-     sudo -H -u ${DEPLOY_USER} bash -lc \\
-       'cd ${APP_ROOT}/current && pnpm db:seed'
+5. Push ke branch terkait; GitHub Actions yang akan melakukan deploy pertama.
+
+Environment ini BELUM punya tabel. Pada deployment pertama,
+scripts/deploy-vps.sh menjalankan migrasi DAN seed secara otomatis untuk
+environment non-produksi, jadi akun demo dan master data langsung tersedia.
+
+Seed bersifat upsert sehingga aman diulang tiap deployment, dan dijaga
+berlapis agar tidak pernah berjalan di produksi.
 NGINX
