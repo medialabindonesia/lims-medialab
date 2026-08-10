@@ -9,6 +9,10 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+> Baru bergabung? Ikuti [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) — termasuk cara
+> membuat `.env` lokal sendiri. Jangan menyalin `.env` dari VPS.
+
+
 First, run the development server:
 
 ```bash
