@@ -1,17 +1,17 @@
-name: CI/CD Production
+name: CI/CD
 
 on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    branches: [main, coa-dev]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: production-deployment
+  group: deploy-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -65,19 +65,24 @@ jobs:
         run: pnpm build
 
   deploy:
-    name: Deploy to production VPS
+    name: Deploy to VPS
     needs: quality
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/coa-dev')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment:
-      name: production
+      # Environment "production" (branch main) dan "coa" (branch coa-dev) dikonfigurasi
+      # terpisah di GitHub Settings > Environments, masing-masing dengan vars sendiri.
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'coa' }}
       url: ${{ vars.APP_URL }}
     env:
-      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || '/opt/apps/lims-medialab' }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || (github.ref == 'refs/heads/main' && '/opt/apps/lims-medialab' || '/opt/apps/lims-medialab-coa') }}
+      APP_PORT: ${{ vars.APP_PORT || (github.ref == 'refs/heads/main' && '3001' || '3013') }}
+      RUN_SEED: ${{ vars.RUN_SEED || (github.ref == 'refs/heads/main' && 'false' || 'true') }}
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_PORT: ${{ secrets.VPS_PORT || '22' }}
       VPS_USER: ${{ vars.VPS_USER || 'deploy' }}
+      # Deploy key dan host sama dengan produksi (satu VPS, satu user "deploy").
       VPS_HOST_FINGERPRINT: SHA256:Tvef6HALOMqP74Hd1zXMoTQE5ZJlIVQ7/HgQcfqfbrs
       VPS_DEPLOY_KEY_FINGERPRINT: SHA256:SiNqsXM3YlbQhLL14ZVdWQQdbcw2VW756vc6FJNx+Qo
     steps:
@@ -93,6 +98,7 @@ jobs:
           test -n "$VPS_SSH_KEY"
           [[ "$VPS_PORT" =~ ^[0-9]+$ ]]
           [[ "$DEPLOY_PATH" =~ ^/[A-Za-z0-9._/-]+$ ]]
+          [[ "$APP_PORT" =~ ^[0-9]+$ ]]
 
           install -d -m 700 "$HOME/.ssh"
           printf '%s\n' "$VPS_SSH_KEY" > "$HOME/.ssh/deploy_key"
@@ -147,4 +153,4 @@ jobs:
           ssh -i "$HOME/.ssh/deploy_key" -p "$VPS_PORT" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$VPS_USER@$VPS_HOST" \
-            "bash '$DEPLOY_PATH/releases/$GITHUB_SHA/scripts/deploy-vps.sh' '$DEPLOY_PATH/releases/$GITHUB_SHA' '$DEPLOY_PATH' '$GITHUB_SHA'"
+            "bash '$DEPLOY_PATH/releases/$GITHUB_SHA/scripts/deploy-vps.sh' '$DEPLOY_PATH/releases/$GITHUB_SHA' '$DEPLOY_PATH' '$GITHUB_SHA' '$APP_PORT' '$RUN_SEED'"

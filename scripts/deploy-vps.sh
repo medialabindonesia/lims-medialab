@@ -4,8 +4,10 @@ set -Eeuo pipefail
 RELEASE_DIR="${1:-}"
 APP_ROOT="${2:-/opt/apps/lims-medialab}"
 RELEASE_ID="${3:-unknown}"
-APP_NAME="lims-medialab"
-HEALTH_URL="http://127.0.0.1:3001/api/health"
+PORT="${4:-3001}"
+RUN_SEED="${5:-false}"
+APP_NAME="$(basename "$APP_ROOT")"
+HEALTH_URL="http://127.0.0.1:${PORT}/api/health"
 
 log() {
   printf '[deploy] %s\n' "$*"
@@ -20,6 +22,8 @@ fail() {
 [[ "$APP_ROOT" = /* ]] || fail "APP_ROOT harus berupa absolute path"
 [[ "$APP_ROOT" =~ ^/[A-Za-z0-9._/-]+$ ]] || fail "APP_ROOT mengandung karakter tidak valid"
 [[ "$RELEASE_ID" =~ ^[A-Za-z0-9._-]+$ ]] || fail "RELEASE_ID tidak valid"
+[[ "$PORT" =~ ^[0-9]+$ ]] || fail "PORT tidak valid: $PORT"
+[[ "$RUN_SEED" == "true" || "$RUN_SEED" == "false" ]] || fail "RUN_SEED harus 'true' atau 'false'"
 [[ -d "$RELEASE_DIR" ]] || fail "Direktori release tidak ditemukan: $RELEASE_DIR"
 
 APP_ROOT_REAL="$(readlink -f "$APP_ROOT")"
@@ -64,8 +68,13 @@ pnpm install --frozen-lockfile
 log "Membangun aplikasi"
 pnpm build
 
-log "Menerapkan migrasi database produksi"
+log "Menerapkan migrasi database"
 pnpm exec prisma migrate deploy
+
+if [[ "$RUN_SEED" == "true" ]]; then
+  log "Menjalankan seed (RUN_SEED=true)"
+  pnpm db:seed
+fi
 
 activate_release() {
   local target="$1"
@@ -77,7 +86,7 @@ activate_release() {
 
 start_application() {
   local version="$1"
-  APP_ROOT="$APP_ROOT" APP_VERSION="$version" \
+  APP_ROOT="$APP_ROOT" APP_NAME="$APP_NAME" PORT="$PORT" APP_VERSION="$version" \
     pm2 startOrReload "$APP_ROOT/current/ecosystem.config.js" --update-env
   pm2 save
 }

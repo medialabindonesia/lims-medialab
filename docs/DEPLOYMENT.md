@@ -1,5 +1,8 @@
 # Deployment Ubuntu 24.04 dengan GitHub Actions
 
+Untuk setup lokal sehari-hari (tidak butuh VPS), lihat
+[`DEVELOPMENT.md`](DEVELOPMENT.md).
+
 Untuk handoff ke Codex yang berjalan langsung di VPS, gunakan
 [`vps-codex/KNOWLEDGE.md`](vps-codex/KNOWLEDGE.md) dan prompt siap-tempel di
 [`vps-codex/PROMPT.md`](vps-codex/PROMPT.md).
@@ -235,3 +238,46 @@ Jika sebelumnya aplikasi dipasang langsung di `/opt/apps/lims-medialab`, pindah
 atau arsipkan instalasi lama terlebih dahulu. Path
 `/opt/apps/lims-medialab/current` harus kosong atau berupa symlink agar aktivasi
 release aman.
+
+## Environment tambahan (mis. `coa`) di VPS yang sama
+
+Untuk kebutuhan demo/showcase yang terpisah dari produksi (misalnya branch
+`coa-dev` yang di-deploy ke `coa.lims.medialab.co.id`), provisioning direktori,
+database, dan `shared/.env` dilakukan lewat
+[`deploy/provision-environment.sh`](../deploy/provision-environment.sh) --
+langkah lengkapnya ada di [`ENVIRONMENTS.md`](ENVIRONMENTS.md). Bagian di
+bawah ini melengkapi dokumen tersebut dengan sisi GitHub Actions-nya.
+
+### 1. Konfigurasi GitHub Environment `coa`
+
+Di **Settings → Environments**, buat environment `coa` (selain `production`
+yang sudah ada), lalu isi variables berikut:
+
+| Nama | Isi |
+| --- | --- |
+| `DEPLOY_PATH` | `/opt/apps/lims-medialab-coa` |
+| `APP_PORT` | `3013` |
+| `APP_URL` | `https://coa.lims.medialab.co.id` |
+| `RUN_SEED` | `true` (migrasi + seed berjalan otomatis tiap deploy) |
+| `VPS_USER` | Opsional; default `deploy` |
+
+`VPS_HOST`, `VPS_PORT`, dan `VPS_SSH_KEY` memakai VPS dan deploy key yang sama
+dengan produksi. Kalau secret-secret itu sebelumnya ditambahkan sebagai
+*environment secret* pada environment `production` (bukan *repository
+secret*), duplikasikan ke environment `coa` juga -- environment baru tidak
+otomatis mewarisi secret environment lain.
+
+### 2. Deploy
+
+Push ke branch `coa-dev`. Workflow `.github/workflows/deploy.yml` mendeteksi
+branch ini secara otomatis, deploy ke environment `coa`, lalu menjalankan
+migrasi dan seed (`RUN_SEED=true`) sehingga environment langsung berisi akun
+demo dan master data.
+
+Yang tidak perlu dilakukan: menyentuh `.env` di VPS secara manual --
+`provision-environment.sh` sudah membuatnya, dan deployment membacanya
+sendiri.
+
+Untuk kerja coding sehari-hari, environment VPS ini **tidak dibutuhkan**.
+Environment VPS baru relevan saat pekerjaan mau ditunjukkan lewat browser ke
+orang lain -- lihat [`DEVELOPMENT.md`](DEVELOPMENT.md) untuk setup lokal.
