@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { fadeUpItem, staggerContainer, EASE_OUT } from "@/lib/motion";
 import ExportButtons from "@/components/exports/ExportButtons";
@@ -193,6 +194,8 @@ type Props = {
   initialQuotations: Quotation[];
   /** Role pemakai halaman — menentukan apakah istilah internal diterjemahkan. */
   viewerRole?: string;
+  /** Halaman create memakai kanvas penuh; mode lain masih dapat memakai dialog revisi. */
+  formPresentation?: "modal" | "page";
   initialLead?: {
     id: string;
     requestedTests: string;
@@ -593,13 +596,16 @@ export default function QuotationFlowClient({
   initialQuotations,
   viewerRole,
   initialLead,
+  formPresentation = "modal",
 }: Props) {
+  const router = useRouter();
   const reduce = useReducedMotion();
   const isCustomerView = viewerRole === "CUSTOMER_ENGAGEMENT";
+  const isPageEditor = formPresentation === "page";
 
   const [mounted, setMounted] = useState(false);
   const [quotations, setQuotations] = useState<Quotation[]>(initialQuotations);
-  const [openForm, setOpenForm] = useState(Boolean(initialLead));
+  const [openForm, setOpenForm] = useState(isPageEditor || Boolean(initialLead));
   const [activeTab, setActiveTab] = useState<ModalTab>("detail");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -642,11 +648,12 @@ export default function QuotationFlowClient({
   });
 
   useEffect(() => {
-    setMounted(true);
+    const frame = window.requestAnimationFrame(() => setMounted(true));
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
-    if (!openForm && !documentQuotation && !emailQuotation) return;
+    if ((!openForm || isPageEditor) && !documentQuotation && !emailQuotation) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -654,7 +661,7 @@ export default function QuotationFlowClient({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [openForm, documentQuotation, emailQuotation]);
+  }, [openForm, documentQuotation, emailQuotation, isPageEditor]);
 
   const config = modeConfig[mode];
 
@@ -833,20 +840,12 @@ export default function QuotationFlowClient({
     });
   }
 
-  function handleCreate() {
-    resetForm();
-    if (initialLead) {
-      setForm((current) => ({
-        ...current,
-        leadId: initialLead.id,
-        customerId: initialLead.customer.id,
-        selectedCustomer: initialLead.customer,
-        note: initialLead.requestedTests,
-      }));
+  function closeEditor() {
+    if (isPageEditor) {
+      router.push("/quotations/request");
+      return;
     }
-    setActiveTab("detail");
-    setMessage("");
-    setOpenForm(true);
+    setOpenForm(false);
   }
 
   function handleEdit(quotation: Quotation) {
@@ -960,6 +959,11 @@ export default function QuotationFlowClient({
     }
 
     setMessage(data.message || "Quotation berhasil disimpan");
+    if (isPageEditor) {
+      router.push("/quotations/request");
+      router.refresh();
+      return;
+    }
     setOpenForm(false);
     resetForm();
     await refreshData();
@@ -1319,14 +1323,16 @@ export default function QuotationFlowClient({
     return null;
   }
 
-  const modal = (
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-md">
+  const quotationEditor = (
+    <div className={isPageEditor ? "w-full" : "fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-md"}>
       <motion.form
         onSubmit={submitQuotation}
         initial={reduce ? false : { opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease: EASE_OUT }}
-        className="flex h-[94dvh] w-full max-w-7xl flex-col overflow-hidden rounded-[1.25rem] border border-slate-200 bg-slate-50 shadow-2xl sm:h-[92vh] sm:rounded-[2rem]"
+        className={isPageEditor
+          ? "flex min-h-[calc(100dvh-4rem)] w-full flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 shadow-sm sm:rounded-[2rem]"
+          : "flex h-[94dvh] w-full max-w-7xl flex-col overflow-hidden rounded-[1.25rem] border border-slate-200 bg-slate-50 shadow-2xl sm:h-[92vh] sm:rounded-[2rem]"}
       >
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-6 sm:py-5">
           <div className="min-w-0">
@@ -1345,8 +1351,8 @@ export default function QuotationFlowClient({
 
           <button
             type="button"
-            onClick={() => setOpenForm(false)}
-            aria-label="Tutup form quotation"
+            onClick={closeEditor}
+            aria-label={isPageEditor ? "Kembali ke daftar quotation" : "Tutup form quotation"}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:rounded-2xl"
           >
             <X size={20} />
@@ -1779,7 +1785,7 @@ export default function QuotationFlowClient({
             <button
               type="button"
               onClick={() =>
-                stepIndex === 0 ? setOpenForm(false) : goToStep(stepIndex - 1)
+                stepIndex === 0 ? closeEditor() : goToStep(stepIndex - 1)
               }
               className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 text-[13px] font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:rounded-2xl sm:text-sm"
             >
@@ -2007,6 +2013,19 @@ export default function QuotationFlowClient({
     </div>
   ) : null;
 
+  if (isPageEditor) {
+    return (
+      <motion.div
+        initial={reduce ? false : { opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: EASE_OUT }}
+        className="w-full"
+      >
+        {quotationEditor}
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       variants={staggerContainer(0.08)}
@@ -2025,7 +2044,7 @@ export default function QuotationFlowClient({
               <motion.button
                 whileHover={reduce ? undefined : { scale: 1.02 }}
                 whileTap={reduce ? undefined : { scale: 0.97 }}
-                onClick={handleCreate}
+                onClick={() => router.push("/quotations/request/new")}
                 className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:rounded-2xl sm:text-sm"
               >
                 <FilePlus size={16} />
@@ -2428,7 +2447,7 @@ export default function QuotationFlowClient({
         )}
       </motion.div>
 
-      {mounted && openForm ? createPortal(modal, document.body) : null}
+      {mounted && openForm ? createPortal(quotationEditor, document.body) : null}
       {mounted && emailQuotation ? createPortal(emailModal, document.body) : null}
       {mounted && documentQuotation ? createPortal(ltrModal, document.body) : null}
     </motion.div>

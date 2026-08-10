@@ -16,6 +16,7 @@ import {
   CalendarRange,
   CheckCheck,
   ClipboardCheck,
+  ClipboardList,
   ClipboardPen,
   FileBadge,
   FileCheck,
@@ -35,6 +36,8 @@ import {
   Menu as MenuIcon,
   Microscope,
   PackageCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
   Receipt,
   RefreshCcw,
   SearchCheck,
@@ -84,6 +87,7 @@ const iconMap: Record<string, ElementType> = {
   CalendarRange,
   CheckCheck,
   ClipboardCheck,
+  ClipboardList,
   ClipboardPen,
   FileBadge,
   FileCheck,
@@ -114,15 +118,16 @@ const groupConfig: Record<string, { label: string; sort: number }> = {
   dashboard: { label: "Dashboard", sort: 1 },
   admin: { label: "Administration", sort: 2 },
   master: { label: "Master Data", sort: 3 },
-  quotation: { label: "Quotation", sort: 4 },
-  sales: { label: "Sales", sort: 5 },
-  technical: { label: "Technical", sort: 6 },
-  lab: { label: "Laboratory", sort: 7 },
-  audit: { label: "Quality & Audit", sort: 8 },
-  coa: { label: "Certificate / COA", sort: 9 },
-  finance: { label: "Finance", sort: 10 },
-  support: { label: "Support", sort: 11 },
-  customer: { label: "Customer Area", sort: 12 },
+  marketing: { label: "Marketing", sort: 4 },
+  quotation: { label: "Quotation", sort: 5 },
+  sales: { label: "Sales", sort: 6 },
+  technical: { label: "Technical", sort: 7 },
+  lab: { label: "Laboratory", sort: 8 },
+  audit: { label: "Quality & Audit", sort: 9 },
+  coa: { label: "Certificate / COA", sort: 10 },
+  finance: { label: "Finance", sort: 11 },
+  support: { label: "Support", sort: 12 },
+  customer: { label: "Customer Area", sort: 13 },
 };
 
 function getMenuGroupKey(menuKey: string) {
@@ -238,11 +243,13 @@ function SidebarContent({
   session,
   onClose,
   supportBadge,
+  collapsed = false,
 }: {
   menus: DashboardMenuItem[];
   session: DashboardSession;
   onClose?: () => void;
   supportBadge?: { key: string; count: number };
+  collapsed?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -286,13 +293,13 @@ function SidebarContent({
 
   return (
     <div className="flex h-full flex-col bg-brand-navy text-white">
-      <div className="shrink-0 border-b border-white/10 px-4 py-4 lg:px-5 lg:py-5">
+      <div className={collapsed ? "shrink-0 border-b border-white/10 px-3 pb-4 pt-16" : "shrink-0 border-b border-white/10 px-4 pb-4 pt-16 lg:px-5 lg:pb-5"}>
         <Link
           href="/dashboard"
           onClick={onClose}
           className="group block rounded-2xl"
         >
-          <div className="relative overflow-hidden rounded-2xl border border-white/20 bg-white px-3.5 py-2.5 shadow-[0_16px_40px_rgba(2,17,47,0.25)] transition duration-300 group-hover:-translate-y-0.5 lg:rounded-[1.4rem] lg:border-white/15 lg:bg-[linear-gradient(135deg,#ffffff_0%,#edf7ff_68%,#f3fae8_100%)] lg:px-4 lg:py-3 lg:shadow-[0_18px_48px_rgba(2,17,47,0.32)] lg:ring-1 lg:ring-white/10">
+          <div className={collapsed ? "grid h-12 place-items-center rounded-2xl bg-white shadow-lg" : "relative overflow-hidden rounded-2xl border border-white/20 bg-white px-3.5 py-2.5 shadow-[0_16px_40px_rgba(2,17,47,0.25)] transition duration-300 group-hover:-translate-y-0.5 lg:rounded-[1.4rem] lg:border-white/15 lg:bg-[linear-gradient(135deg,#ffffff_0%,#edf7ff_68%,#f3fae8_100%)] lg:px-4 lg:py-3 lg:shadow-[0_18px_48px_rgba(2,17,47,0.32)] lg:ring-1 lg:ring-white/10"}>
             <span
               className="pointer-events-none absolute inset-y-3 left-0 hidden w-1 rounded-r-full bg-gradient-to-b from-brand-sky via-blue-500 to-brand-lime lg:block"
               aria-hidden="true"
@@ -307,11 +314,11 @@ function SidebarContent({
               width={220}
               height={66}
               priority
-              className="relative z-10 h-auto w-40 lg:w-48"
+              className={collapsed ? "relative z-10 h-auto w-12 object-contain" : "relative z-10 h-auto w-40 lg:w-48"}
             />
           </div>
 
-          <div className="mt-3 flex items-center justify-between px-1">
+          <div className={collapsed ? "hidden" : "mt-3 flex items-center justify-between px-1"}>
             <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-sky">
               LIMS Workspace
             </p>
@@ -323,14 +330,14 @@ function SidebarContent({
         </Link>
       </div>
 
-      <div className="shrink-0 px-5 py-4">
-        <div className="rounded-[1.5rem] border border-white/12 bg-white/[0.07] p-4 shadow-inner shadow-white/[0.03]">
+      <div className={collapsed ? "shrink-0 px-3 py-4" : "shrink-0 px-5 py-4"}>
+        <div className={collapsed ? "rounded-2xl border border-white/12 bg-white/[0.07] p-2" : "rounded-[1.5rem] border border-white/12 bg-white/[0.07] p-4 shadow-inner shadow-white/[0.03]"} title={collapsed ? `${session.name} · ${session.roleName}` : undefined}>
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-lime text-sm font-black text-brand-navy shadow-[0_10px_25px_rgba(2,17,47,0.25)]">
               {getInitials(session.name)}
             </div>
 
-            <div className="min-w-0 flex-1">
+            <div className={collapsed ? "hidden" : "min-w-0 flex-1"}>
               <p className="truncate text-sm font-extrabold text-white">
                 {session.name}
               </p>
@@ -340,7 +347,7 @@ function SidebarContent({
             </div>
           </div>
 
-          {session.customerName && (
+          {session.customerName && !collapsed && (
             <p className="mt-3 truncate rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2 text-xs font-medium text-white/70">
               Customer: {session.customerName}
             </p>
@@ -350,14 +357,14 @@ function SidebarContent({
 
       <nav
         aria-label="Navigasi utama"
-        className="flex-1 overflow-y-auto px-4 pb-4 pr-3"
+        className={collapsed ? "flex-1 overflow-y-auto px-2 pb-4" : "flex-1 overflow-y-auto px-4 pb-4 pr-3"}
       >
         <div className="space-y-5">
           {groups.map((group) => (
             <div key={group.key} className="space-y-2">
-              <div className="sticky top-0 z-10 bg-brand-navy/95 px-3 py-2 backdrop-blur">
+              <div className={collapsed ? "mx-2 border-t border-white/10" : "sticky top-0 z-10 bg-brand-navy/95 px-3 py-2 backdrop-blur"}>
                 <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-sky/75">
-                  {group.label}
+                  {collapsed ? <span className="sr-only">{group.label}</span> : group.label}
                 </p>
               </div>
 
@@ -373,8 +380,10 @@ function SidebarContent({
                       href={item.href}
                       onClick={onClose}
                       aria-current={active ? "page" : undefined}
+                      title={collapsed ? item.name : undefined}
                       className={[
-                        "group relative flex min-h-11 items-center gap-3 overflow-hidden rounded-2xl px-3.5 py-3 text-sm font-semibold transition-all",
+                        "group relative flex min-h-11 items-center overflow-hidden rounded-2xl text-sm font-semibold transition-all",
+                        collapsed ? "justify-center px-2 py-3" : "gap-3 px-3.5 py-3",
                         active
                           ? "bg-gradient-to-r from-brand-blue to-brand-deep text-white shadow-[0_12px_28px_rgba(2,17,47,0.25)]"
                           : "text-white/70 hover:bg-white/10 hover:text-white",
@@ -394,14 +403,14 @@ function SidebarContent({
                         ].join(" ")}
                       />
 
-                      <span className="truncate">{item.name}</span>
+                      <span className={collapsed ? "sr-only" : "truncate"}>{item.name}</span>
 
                       {supportBadge &&
                         supportBadge.key === item.key &&
                         supportBadge.count > 0 && (
                           <span
                             className={[
-                              "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
+                              collapsed ? "absolute right-1 top-1 min-w-4 rounded-full px-1 text-center text-[9px] font-bold" : "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
                               active
                                 ? "bg-brand-lime text-brand-navy"
                                 : "bg-red-500 text-white shadow-sm",
@@ -419,17 +428,18 @@ function SidebarContent({
         </div>
       </nav>
 
-      <div className="shrink-0 border-t border-white/10 bg-[#062660] p-4">
+      <div className={collapsed ? "shrink-0 border-t border-white/10 bg-[#062660] p-3" : "shrink-0 border-t border-white/10 bg-[#062660] p-4"}>
         <button
           type="button"
           onClick={handleLogout}
-          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-bold text-red-100 transition-colors hover:border-red-200/30 hover:bg-red-400/20 hover:text-white"
+          title={collapsed ? "Keluar" : undefined}
+          className={collapsed ? "flex min-h-11 w-full items-center justify-center rounded-2xl border border-red-300/20 bg-red-400/10 px-2 py-3 text-red-100" : "flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-bold text-red-100 transition-colors hover:border-red-200/30 hover:bg-red-400/20 hover:text-white"}
         >
           <LogOut size={17} />
-          Keluar
+          {collapsed ? <span className="sr-only">Keluar</span> : "Keluar"}
         </button>
 
-        <p className="mt-3 text-center text-[11px] font-medium text-white/60">
+        <p className={collapsed ? "hidden" : "mt-3 text-center text-[11px] font-medium text-white/60"}>
           &copy; 2026 Medialab Indonesia
         </p>
       </div>
@@ -447,6 +457,7 @@ export default function Sidebar({
   const reduce = useReducedMotion();
   const pathname = usePathname();
   const [openMobile, setOpenMobile] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const openButtonRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -468,6 +479,25 @@ export default function Sidebar({
     () => pickMobilePrimary(menus, session.roleCode),
     [menus, session.roleCode]
   );
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("medialab.sidebar.collapsed");
+    const frame = window.requestAnimationFrame(() => {
+      if (saved === "true") setCollapsed(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      collapsed ? "6rem" : "20rem"
+    );
+    window.localStorage.setItem(
+      "medialab.sidebar.collapsed",
+      String(collapsed)
+    );
+  }, [collapsed]);
 
   useEffect(() => {
     if (!openMobile) return;
@@ -492,11 +522,22 @@ export default function Sidebar({
 
   return (
     <>
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-80 overflow-hidden bg-brand-navy shadow-[16px_0_45px_rgba(7,43,107,0.12)] lg:block">
+      <aside className={`fixed inset-y-0 left-0 z-40 hidden overflow-hidden bg-brand-navy shadow-[16px_0_45px_rgba(7,43,107,0.12)] transition-[width] duration-300 lg:block ${collapsed ? "w-24" : "w-80"}`}>
+        <button
+          type="button"
+          onClick={() => setCollapsed((value) => !value)}
+          aria-label={collapsed ? "Perluas sidebar" : "Ringkas sidebar"}
+          aria-pressed={collapsed}
+          title={collapsed ? "Perluas sidebar" : "Ringkas sidebar"}
+          className="absolute right-3 top-3 z-30 grid h-9 w-9 place-items-center rounded-xl border border-white/15 bg-white/10 text-brand-sky transition hover:bg-white/20 hover:text-white"
+        >
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
         <SidebarContent
           menus={menus}
           session={session}
           supportBadge={supportBadge}
+          collapsed={collapsed}
         />
       </aside>
 

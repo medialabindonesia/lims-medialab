@@ -100,7 +100,7 @@ export default function LeadSurveyClient({ initialLeads, customers, staff, viewe
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               {canCreate && lead.status === "SURVEY_REQUIRED" ? <button onClick={() => createSurvey(lead)} className="flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white"><MapPinned size={15} /> Rekomendasikan Survey</button> : null}
-              {lead.status === "READY_FOR_QUOTATION" ? <Link href={`/quotations/request?leadId=${lead.id}&customerId=${lead.customer.id}`} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white"><ClipboardList size={15} /> Buat Quotation</Link> : null}
+              {lead.status === "READY_FOR_QUOTATION" ? <Link href={`/quotations/request/new?leadId=${lead.id}&customerId=${lead.customer.id}`} className="flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white"><ClipboardList size={15} /> Buat Quotation</Link> : null}
               {lead.quotation ? <span className="rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700">{lead.quotation.quotationNo} · {lead.quotation.status}</span> : null}
             </div>
             {lead.surveys.map((survey) => (

@@ -2,6 +2,7 @@
 
 :root {
   color-scheme: light;
+  --sidebar-width: 20rem;
 
   /* Medialab brand palette */
   --brand-navy: #072b6b;
