@@ -1,0 +1,4 @@
+# Script shell dijalankan di VPS Ubuntu. Dengan core.autocrlf=true di Windows,
+# tanpa aturan ini sebuah script bisa ikut terbawa CRLF dan gagal di server
+# dengan pesan menyesatkan: "/usr/bin/env: 'bash\r': No such file or directory".
+*.sh text eol=lf
