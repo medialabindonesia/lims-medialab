@@ -54,11 +54,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
-  if (quotation.status !== "REQUESTED" && quotation.status !== "NEGOTIATION") {
+  if (quotation.status !== "SENT") {
     return NextResponse.json(
       {
         message:
-          "Customer hanya bisa minta revisi saat quotation masih REQUESTED / NEGOTIATION",
+          "Customer hanya bisa meminta revisi setelah quotation dikirim (SENT)",
       },
       { status: 400 }
     );

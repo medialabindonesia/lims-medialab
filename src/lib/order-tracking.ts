@@ -34,6 +34,7 @@ const QUOTATION_RANK: Record<string, number> = {
   CONFIRMED: 1,
   VERIFIED: 1,
   APPROVED: 1,
+  SENT: 1,
   PO_UPLOADED: 1,
   LTR_CREATED: 1,
   COC_CREATED: 1,

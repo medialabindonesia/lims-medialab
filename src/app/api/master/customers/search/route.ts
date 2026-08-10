@@ -47,6 +47,7 @@ export async function GET(request: Request) {
           { company: { contains: rawQuery } },
           { city: { contains: rawQuery } },
           { contactPerson: { contains: rawQuery } },
+          { customerCode: { contains: rawQuery } },
         ],
       }
     : {};
@@ -65,6 +66,8 @@ export async function GET(request: Request) {
         contactPerson: true,
         email: true,
         phone: true,
+        customerCode: true,
+        customerType: true,
       },
       orderBy: { name: "asc" },
       take: limit,

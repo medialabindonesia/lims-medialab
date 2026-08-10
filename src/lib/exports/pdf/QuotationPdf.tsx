@@ -208,12 +208,13 @@ export default function QuotationPdf({
   const customer = quotation.customer;
   const parameterTotal = quotation.totalAmount || 0;
   const samplingCost = quotation.samplingCost || 0;
+  const tatSurcharge = quotation.tatSurchargeAmount || 0;
   const vatPercent = quotation.vatPercent || 0;
   const vatAmount = quotation.vatAmount || 0;
   const grandTotal =
     quotation.grandTotal && quotation.grandTotal > 0
       ? quotation.grandTotal
-      : parameterTotal + samplingCost + vatAmount;
+      : parameterTotal + tatSurcharge + samplingCost + vatAmount;
 
   return (
     <Document>
@@ -320,7 +321,9 @@ export default function QuotationPdf({
 
             <View style={styles.col}>
               <Text style={styles.label}>TAT Requested</Text>
-              <Text style={styles.value}>{tatLabel(quotation.tatRequested)}</Text>
+              <Text style={styles.value}>
+                {tatLabel(quotation.tatRequested)} · {quotation.tatBusinessDays || 10} hari kerja
+              </Text>
             </View>
           </View>
 
@@ -396,6 +399,13 @@ export default function QuotationPdf({
               <Text style={styles.summaryValue}>
                 {formatRupiah(parameterTotal)}
               </Text>
+            </View>
+
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>
+                Surcharge TAT ({Math.round(((quotation.tatPriceMultiplier || 1) - 1) * 100)}%)
+              </Text>
+              <Text style={styles.summaryValue}>{formatRupiah(tatSurcharge)}</Text>
             </View>
 
             <View style={styles.summaryRow}>

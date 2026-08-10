@@ -47,8 +47,8 @@ async function main() {
       { code: "PP22_2021_L7", name: "PP RI No. 22 Tahun 2021 Lampiran VII", shortName: "PP 22/2021 Lamp VII", matrixCode: "UDARA_AMBIEN", note: null, sort: 1, isActive: true },
     ],
     parameters: [
-      { regulationCode: "PP22_2021_L7", parameterName: "Sulfur Dioksida (SO2)", displayName: "Sulfur Dioksida (SO₂)", unit: "µg/m³", method: "MASA 704B", limitValue: null, basePrice: 150000, durations: parsed, isAccredited: true, defaultSelected: true, sort: 1, isActive: true },
-      { regulationCode: "PP22_2021_L7", parameterName: "Timbal (Pb)", displayName: null, unit: "µg/m³", method: "AAS", limitValue: null, basePrice: null, durations: [], isAccredited: false, defaultSelected: true, sort: 2, isActive: true },
+      { regulationCode: "PP22_2021_L7", parameterName: "Sulfur Dioksida (SO2)", displayName: "Sulfur Dioksida (SO₂)", unit: "µg/m³", method: "MASA 704B", limitValue: null, limitValue2: null, samplingMethod: "Impinger", sampleMatrix: "ULK", sampleSize: "Absorben", basePrice: 150000, durations: parsed, isAccredited: true, defaultSelected: true, sort: 1, isActive: true },
+      { regulationCode: "PP22_2021_L7", parameterName: "Timbal (Pb)", displayName: null, unit: "µg/m³", method: "AAS", limitValue: null, limitValue2: null, samplingMethod: null, sampleMatrix: null, sampleSize: null, basePrice: null, durations: [], isAccredited: false, defaultSelected: true, sort: 2, isActive: true },
     ],
   });
 

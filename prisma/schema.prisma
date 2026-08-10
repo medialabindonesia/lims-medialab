@@ -13,6 +13,7 @@ enum QuotationStatus {
   REJECTED
   NEGOTIATION
   APPROVED
+  SENT
   CONFIRMED
   PO_UPLOADED
   LTR_CREATED
@@ -91,6 +92,45 @@ enum TatRequest {
   NORMAL
   URGENT
   TOP_URGENT
+}
+
+enum CustomerType {
+  DIRECT
+  CONSULTANT
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFYING
+  SURVEY_REQUIRED
+  SURVEY_IN_PROGRESS
+  READY_FOR_QUOTATION
+  QUOTATION_CREATED
+  NOT_SUPPORTED
+  LOST
+}
+
+enum CapabilityStatus {
+  PENDING
+  SUPPORTED
+  NEEDS_SURVEY
+  NOT_SUPPORTED
+}
+
+enum SurveyStatus {
+  RECOMMENDED
+  SCHEDULED
+  IN_PROGRESS
+  RESUME_READY
+  COMPLETED
+  CANCELLED
+}
+
+enum QuotationEmailStatus {
+  DRAFT
+  SENDING
+  SENT
+  FAILED
 }
 
 enum TestingObjective {
@@ -187,6 +227,12 @@ model User {
   supportMessages        SupportMessage[]
   cannedReplies          CannedReply[]
   auditRevisions         AuditRevision[]  @relation("RevisionActor")
+  leadsCreated           Lead[]           @relation("LeadCreatedBy")
+  leadsAssigned          Lead[]           @relation("LeadAssignedTo")
+  surveysRecommended     Survey[]         @relation("SurveyRecommendedBy")
+  surveysAssigned        Survey[]         @relation("SurveyAssignedTo")
+  quotationEmailsCreated QuotationEmail[] @relation("QuotationEmailCreatedBy")
+  quotationEmailsSent    QuotationEmail[] @relation("QuotationEmailSentBy")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -229,13 +275,40 @@ model RoleMenu {
   @@unique([roleId, menuId])
 }
 
+/// Perusahaan konsultan yang membawa banyak tenant/client ke Medialab.
+/// `code` selalu tiga digit, misalnya 021.
+model Consultant {
+  id            String  @id @default(cuid())
+  code          String  @unique @db.Char(3)
+  name          String
+  company       String?
+  email         String?
+  phone         String?
+  contactPerson String?
+  address       String? @db.Text
+  isActive      Boolean @default(true)
+
+  customers Customer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, name])
+}
+
 model Customer {
-  id       String  @id @default(cuid())
-  name     String
-  company  String?
-  email    String?
-  phone    String?
-  isActive Boolean @default(true)
+  id           String       @id @default(cuid())
+  customerCode String?      @unique
+  customerType CustomerType @default(DIRECT)
+  centerCode   String       @default("001") @db.Char(3)
+  joinYear     Int?
+  sequenceNo   Int?
+  consultantId String?
+  name         String
+  company      String?
+  email        String?
+  phone        String?
+  isActive     Boolean      @default(true)
 
   contactPerson String?
   addressLine1  String?
@@ -269,13 +342,102 @@ model Customer {
   recipientEmail3 String?
   recipientEmail4 String?
 
+  consultant     Consultant?     @relation(fields: [consultantId], references: [id], onDelete: Restrict)
   users          User[]
   quotations     Quotation[]
+  leads          Lead[]
   samples        Sample[]
   supportTickets SupportTicket[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([customerType, centerCode, joinYear])
+  @@index([consultantId])
+}
+
+/// Kontak/kebutuhan awal yang belum menjadi penawaran formal.
+model Lead {
+  id               String           @id @default(cuid())
+  leadNo           String           @unique
+  customerId       String
+  status           LeadStatus       @default(NEW)
+  capabilityStatus CapabilityStatus @default(PENDING)
+
+  requestedTests     String  @db.Text
+  customerKnowsScope Boolean @default(false)
+  contactName        String?
+  contactEmail       String?
+  contactPhone       String?
+  source             String?
+  note               String? @db.Text
+
+  createdById  String?
+  assignedToId String?
+  quotationId  String? @unique
+
+  customer   Customer   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy  User?      @relation("LeadCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedTo User?      @relation("LeadAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  quotation  Quotation? @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  surveys    Survey[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId, status])
+  @@index([assignedToId, status])
+}
+
+/// Survey teknis yang direkomendasikan CS ketika kebutuhan customer belum
+/// cukup jelas untuk langsung dibuatkan quotation.
+model Survey {
+  id       String       @id @default(cuid())
+  surveyNo String       @unique
+  leadId   String
+  status   SurveyStatus @default(RECOMMENDED)
+
+  scope         String    @db.Text
+  location      String?
+  scheduledAt   DateTime?
+  conductedAt   DateTime?
+  resumeSummary String?   @db.Text
+  resumeFileUrl String?
+
+  recommendedById String?
+  assignedToId    String?
+
+  lead          Lead              @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  recommendedBy User?             @relation("SurveyRecommendedBy", fields: [recommendedById], references: [id], onDelete: SetNull)
+  assignedTo    User?             @relation("SurveyAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  parameters    SurveyParameter[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([leadId, status])
+  @@index([assignedToId, status])
+}
+
+/// Parameter hasil Resume Survey. Snapshot tetap disimpan agar resume lama
+/// tidak berubah ketika master katalog diperbarui.
+model SurveyParameter {
+  id                    String  @id @default(cuid())
+  surveyId              String
+  regulationParameterId String?
+  parameterName         String
+  regulationName        String?
+  method                String?
+  duration              String?
+  samplingLocation      String?
+  note                  String? @db.Text
+  sort                  Int     @default(0)
+
+  survey              Survey               @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  regulationParameter RegulationParameter? @relation(fields: [regulationParameterId], references: [id], onDelete: SetNull)
+
+  @@index([surveyId, sort])
+  @@index([regulationParameterId])
 }
 
 model AnalysisParameter {
@@ -408,10 +570,14 @@ model RegulationParameter {
   regulationId String
   parameterId  String
 
-  displayName String?
-  unit        String?
-  method      String?
-  limitValue  String?
+  displayName    String?
+  unit           String?
+  method         String?
+  limitValue     String?
+  limitValue2    String?
+  samplingMethod String?
+  sampleMatrix   String?
+  sampleSize     String?
 
   /// Harga dasar. Null berarti belum ditetapkan, berbeda dari 0.
   basePrice Float?
@@ -425,10 +591,11 @@ model RegulationParameter {
   sort     Int     @default(0)
   isActive Boolean @default(true)
 
-  regulation     Regulation                    @relation(fields: [regulationId], references: [id], onDelete: Cascade)
-  parameter      AnalysisParameter             @relation(fields: [parameterId], references: [id], onDelete: Restrict)
-  durations      RegulationParameterDuration[]
-  quotationItems QuotationItem[]
+  regulation       Regulation                    @relation(fields: [regulationId], references: [id], onDelete: Cascade)
+  parameter        AnalysisParameter             @relation(fields: [parameterId], references: [id], onDelete: Restrict)
+  durations        RegulationParameterDuration[]
+  quotationItems   QuotationItem[]
+  surveyParameters SurveyParameter[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -483,6 +650,11 @@ model Quotation {
   testingObjective TestingObjective?
   tatRequested     TatRequest?
 
+  /// Snapshot kebijakan TAT saat quotation dibuat.
+  tatBusinessDays    Int   @default(10)
+  tatPriceMultiplier Float @default(1)
+  tatSurchargeAmount Float @default(0)
+
   samplingCost Float @default(0)
   vatPercent   Float @default(11)
   vatAmount    Float @default(0)
@@ -505,8 +677,8 @@ model Quotation {
   confirmedOffline           Boolean                     @default(false)
   offlineConfirmationChannel OfflineConfirmationChannel?
   offlineConfirmationNote    String?                     @db.Text
-  primaryLtrId  String? @unique
-  primaryCocId  String? @unique
+  primaryLtrId               String?                     @unique
+  primaryCocId               String?                     @unique
 
   customer       Customer         @relation(fields: [customerId], references: [id])
   coaTemplate    CoaTemplate?     @relation(fields: [coaTemplateId], references: [id])
@@ -521,9 +693,42 @@ model Quotation {
   samples        Sample[]
   stps           Stps[]
   supportTickets SupportTicket[]
+  emailDrafts    QuotationEmail[]
+  lead           Lead?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Draft dan riwayat pengiriman email quotation. Isi disimpan sebagai
+/// snapshot sehingga sales/manager dapat mengaudit apa yang benar-benar
+/// dikirim, bukan hanya melihat template terbaru.
+model QuotationEmail {
+  id          String               @id @default(cuid())
+  quotationId String
+  status      QuotationEmailStatus @default(DRAFT)
+
+  toEmail            String
+  ccEmails           Json?
+  subject            String
+  bodyText           String @db.Text
+  attachmentManifest Json?
+
+  createdById       String?
+  sentById          String?
+  sentAt            DateTime?
+  providerMessageId String?
+  lastError         String?   @db.Text
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  createdBy User?     @relation("QuotationEmailCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  sentBy    User?     @relation("QuotationEmailSentBy", fields: [sentById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([quotationId, createdAt])
+  @@index([status, createdAt])
 }
 
 /// Satu baris pada surat penawaran resmi: satu paket pekerjaan.

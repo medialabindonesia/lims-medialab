@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/db";
 import { requireApiPermission } from "@/lib/api-permission";
+import { createWithCustomerCode } from "@/lib/customer-code";
 
 const nullableString = z.preprocess(
   (value) => (value === "" ? null : value),
@@ -15,6 +16,9 @@ const nullableEmail = z.preprocess(
 );
 
 const customerSchema = z.object({
+  customerType: z.enum(["DIRECT", "CONSULTANT"]).default("DIRECT"),
+  centerCode: z.string().regex(/^\d{3}$/, "Kode pusat harus 3 digit").default("001"),
+  consultantId: nullableString,
   name: z.string().min(1, "Nama customer wajib diisi"),
   company: nullableString,
   email: nullableEmail,
@@ -64,6 +68,7 @@ export async function GET() {
 
   const customers = await prisma.customer.findMany({
     include: {
+      consultant: true,
       users: {
         include: {
           role: true,
@@ -158,9 +163,23 @@ export async function POST(request: Request) {
     );
   }
 
+  const consultant = parsed.data.customerType === "CONSULTANT"
+    ? await prisma.consultant.findFirst({ where: { id: parsed.data.consultantId || "", isActive: true } })
+    : null;
+  if (parsed.data.customerType === "CONSULTANT" && !consultant) {
+    return NextResponse.json({ message: "Consultant wajib dipilih dan harus aktif" }, { status: 400 });
+  }
+
   const result = await prisma.$transaction(async (tx) => {
-    const customer = await tx.customer.create({
+    const customer = await createWithCustomerCode(tx, {
+      customerType: parsed.data.customerType,
+      centerCode: parsed.data.centerCode,
+      consultantCode: consultant?.code,
+    }, (generated) => tx.customer.create({
       data: {
+        ...generated,
+        customerType: parsed.data.customerType,
+        consultantId: consultant?.id || null,
         name: parsed.data.name,
         company: parsed.data.company || null,
         email,
@@ -199,7 +218,7 @@ export async function POST(request: Request) {
         recipientEmail3: parsed.data.recipientEmail3?.toLowerCase() || null,
         recipientEmail4: parsed.data.recipientEmail4?.toLowerCase() || null,
       },
-    });
+    }));
 
     if (parsed.data.createLoginAccount && customerRole && loginEmail) {
       const hashedPassword = await bcrypt.hash(parsed.data.loginPassword || "", 10);
@@ -221,6 +240,7 @@ export async function POST(request: Request) {
         id: customer.id,
       },
       include: {
+        consultant: true,
         users: {
           include: {
             role: true,

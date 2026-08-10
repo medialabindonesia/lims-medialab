@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import CustomerImportExcel from "@/components/master/CustomerImportExcel";
 import MasterCustomerClient from "@/components/master/MasterCustomerClient";
+import ConsultantManager from "@/components/master/ConsultantManager";
 
 export default async function MasterCustomerPage() {
   const session = await getSession();
@@ -20,6 +21,7 @@ export default async function MasterCustomerPage() {
 
   const customers = await prisma.customer.findMany({
     include: {
+      consultant: true,
       users: {
         include: {
           role: true,
@@ -32,6 +34,10 @@ export default async function MasterCustomerPage() {
     orderBy: {
       createdAt: "desc",
     },
+  });
+  const consultants = await prisma.consultant.findMany({
+    where: { isActive: true },
+    orderBy: { code: "asc" },
   });
 
   return (
@@ -49,10 +55,13 @@ export default async function MasterCustomerPage() {
         </p>
       </div>
 
+      <ConsultantManager initialConsultants={JSON.parse(JSON.stringify(consultants))} />
+
       <CustomerImportExcel />
 
       <MasterCustomerClient
         initialCustomers={JSON.parse(JSON.stringify(customers))}
+        consultants={JSON.parse(JSON.stringify(consultants))}
       />
     </section>
   );

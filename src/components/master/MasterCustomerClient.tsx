@@ -41,6 +41,11 @@ type CustomerUser = {
 
 type CustomerRow = {
   id: string;
+  customerCode?: string | null;
+  customerType?: "DIRECT" | "CONSULTANT";
+  centerCode?: string;
+  consultantId?: string | null;
+  consultant?: { id: string; code: string; name: string } | null;
   name: string;
   company?: string | null;
   email?: string | null;
@@ -87,6 +92,7 @@ type CustomerRow = {
 
 type Props = {
   initialCustomers: CustomerRow[];
+  consultants: Array<{ id: string; code: string; name: string; company?: string | null }>;
 };
 
 type CustomerForm = Omit<
@@ -109,6 +115,11 @@ type TabKey =
   | "account";
 
 const emptyForm: CustomerForm = {
+  customerCode: "",
+  customerType: "DIRECT",
+  centerCode: "001",
+  consultantId: "",
+  consultant: null,
   name: "",
   company: "",
   email: "",
@@ -179,6 +190,11 @@ function cleanForm(customer: CustomerRow): CustomerForm {
 
   return {
     id: customer.id,
+    customerCode: customer.customerCode || "",
+    customerType: customer.customerType || "DIRECT",
+    centerCode: customer.centerCode || "001",
+    consultantId: customer.consultantId || "",
+    consultant: customer.consultant || null,
     name: customer.name || "",
     company: customer.company || "",
     email: customer.email || "",
@@ -296,7 +312,7 @@ function TextAreaField({
   );
 }
 
-export default function MasterCustomerClient({ initialCustomers }: Props) {
+export default function MasterCustomerClient({ initialCustomers, consultants }: Props) {
   const reduce = useReducedMotion();
 
   const [mounted, setMounted] = useState(false);
@@ -331,6 +347,7 @@ export default function MasterCustomerClient({ initialCustomers }: Props) {
 
       return (
         customer.name.toLowerCase().includes(keyword) ||
+        (customer.customerCode || "").toLowerCase().includes(keyword) ||
         (customer.company || "").toLowerCase().includes(keyword) ||
         (customer.email || "").toLowerCase().includes(keyword) ||
         (customer.phone || "").toLowerCase().includes(keyword) ||
@@ -482,6 +499,53 @@ export default function MasterCustomerClient({ initialCustomers }: Props) {
     if (activeTab === "basic") {
       return (
         <div className="grid gap-4 lg:grid-cols-2">
+          <label className="space-y-2">
+            <span className="text-sm font-bold text-slate-700">Jenis Customer</span>
+            <select
+              value={form.customerType || "DIRECT"}
+              disabled={Boolean(form.id)}
+              onChange={(event) => updateForm("customerType", event.target.value as "DIRECT" | "CONSULTANT")}
+              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500 disabled:bg-slate-100"
+            >
+              <option value="DIRECT">Direct (DC)</option>
+              <option value="CONSULTANT">Melalui Consultant (CC)</option>
+            </select>
+          </label>
+
+          {form.customerType === "CONSULTANT" ? (
+            <label className="space-y-2">
+              <span className="text-sm font-bold text-slate-700">Consultant</span>
+              <select
+                value={form.consultantId || ""}
+                disabled={Boolean(form.id)}
+                onChange={(event) => updateForm("consultantId", event.target.value)}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-900 outline-none focus:border-emerald-500 disabled:bg-slate-100"
+              >
+                <option value="">Pilih consultant</option>
+                {consultants.map((consultant) => (
+                  <option key={consultant.id} value={consultant.id}>
+                    {consultant.code} — {consultant.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <Field
+              label="Kode Pusat"
+              value={form.centerCode || "001"}
+              onChange={(value) => updateForm("centerCode", value.replace(/\D/g, "").slice(0, 3))}
+              placeholder="001"
+              icon={Building2}
+            />
+          )}
+
+          {form.customerCode ? (
+            <div className="lg:col-span-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Kode Customer</p>
+              <p className="mt-1 font-mono text-lg font-black text-emerald-900">{form.customerCode}</p>
+            </div>
+          ) : null}
+
           <Field
             label="Nama Customer"
             value={form.name}
@@ -973,6 +1037,12 @@ export default function MasterCustomerClient({ initialCustomers }: Props) {
                     <h3 className="text-xl font-black text-slate-900">
                       {customer.name}
                     </h3>
+
+                    {customer.customerCode ? (
+                      <span className="rounded-full bg-cyan-50 px-3 py-1 font-mono text-xs font-bold text-cyan-700">
+                        {customer.customerCode}
+                      </span>
+                    ) : null}
 
                     <span
                       className={[

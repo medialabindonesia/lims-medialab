@@ -40,6 +40,28 @@ export default async function MarketingMasterPage() {
           name: true,
           isActive: true,
           _count: { select: { parameters: true } },
+          parameters: {
+            where: { isActive: true },
+            orderBy: [{ sort: "asc" }, { displayName: "asc" }],
+            select: {
+              id: true,
+              displayName: true,
+              unit: true,
+              method: true,
+              limitValue: true,
+              limitValue2: true,
+              samplingMethod: true,
+              sampleMatrix: true,
+              sampleSize: true,
+              basePrice: true,
+              isAccredited: true,
+              parameter: { select: { name: true, unit: true, method: true } },
+              durations: {
+                orderBy: { sort: "asc" },
+                select: { limitValue: true, isDefault: true, duration: { select: { label: true } } },
+              },
+            },
+          },
         },
       }),
       prisma.regulationParameter.count({
@@ -69,6 +91,24 @@ export default async function MarketingMasterPage() {
       name: regulation.name,
       isActive: regulation.isActive,
       parameterCount: regulation._count.parameters,
+      parameters: regulation.parameters.map((item) => ({
+        id: item.id,
+        name: item.displayName || item.parameter.name,
+        unit: item.unit || item.parameter.unit,
+        method: item.method || item.parameter.method,
+        limitValue: item.limitValue,
+        limitValue2: item.limitValue2,
+        samplingMethod: item.samplingMethod,
+        sampleMatrix: item.sampleMatrix,
+        sampleSize: item.sampleSize,
+        basePrice: item.basePrice,
+        isAccredited: item.isAccredited,
+        durations: item.durations.map((duration) => ({
+          label: duration.duration.label,
+          limitValue: duration.limitValue,
+          isDefault: duration.isDefault,
+        })),
+      })),
     });
   }
 

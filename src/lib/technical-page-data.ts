@@ -4,7 +4,7 @@ export async function getTechnicalCocPageData() {
   const quotations = await prisma.quotation.findMany({
     where: {
       status: {
-        in: ["APPROVED", "PO_UPLOADED", "LTR_CREATED", "COC_CREATED"],
+        in: ["PO_UPLOADED", "LTR_CREATED", "COC_CREATED"],
       },
     },
     include: {

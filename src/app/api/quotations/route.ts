@@ -93,6 +93,8 @@ const quotationCreateSchema = z.object({
 
   /** Jalur lama, dipakai bila `groups` tidak dikirim. */
   items: z.array(quotationItemSchema).optional(),
+  /** Lead asal, bila quotation dibuat dari hasil kualifikasi CS. */
+  leadId: nullableString,
 });
 
 function toDate(value?: string | null) {
@@ -114,25 +116,19 @@ function calculateTotals(input: {
   priceMap: Map<string, number>;
   samplingCost?: number;
   vatPercent?: number;
+  tatRequested?: "NORMAL" | "URGENT" | "TOP_URGENT" | null;
 }) {
   const totalAmount = input.items.reduce((total, item) => {
     const price = item.customPrice ?? input.priceMap.get(item.parameterId) ?? 0;
     return total + price * item.qty;
   }, 0);
 
-  const samplingCost = input.samplingCost || 0;
-  const vatPercent = input.vatPercent ?? 11;
-  const taxableAmount = totalAmount + samplingCost;
-  const vatAmount = taxableAmount * (vatPercent / 100);
-  const grandTotal = taxableAmount + vatAmount;
-
-  return {
+  return calculateQuotationTotals({
     totalAmount,
-    samplingCost,
-    vatPercent,
-    vatAmount,
-    grandTotal,
-  };
+    samplingCost: input.samplingCost,
+    vatPercent: input.vatPercent,
+    tatRequested: input.tatRequested,
+  });
 }
 
 export async function GET(request: Request) {
@@ -278,6 +274,20 @@ export async function POST(request: Request) {
     );
   }
 
+  const sourceLead = parsed.data.leadId
+    ? await prisma.lead.findFirst({
+        where: { id: parsed.data.leadId, customerId },
+        select: { id: true, status: true },
+      })
+    : null;
+
+  if (parsed.data.leadId && !sourceLead) {
+    return NextResponse.json(
+      { message: "Lead tidak ditemukan atau bukan milik customer tersebut" },
+      { status: 400 }
+    );
+  }
+
   const baseData = {
     customerId,
     note: parsed.data.note || null,
@@ -316,6 +326,7 @@ export async function POST(request: Request) {
       // Biaya sampling dan PPN juga bagian dari harga, jadi ikut dikunci.
       samplingCost: isCustomerSubmission ? 0 : parsed.data.samplingCost,
       vatPercent: isCustomerSubmission ? undefined : parsed.data.vatPercent,
+      tatRequested: parsed.data.tatRequested || "NORMAL",
     });
 
     const quotation = await createWithOrderCode(prisma, (orderCode) =>
@@ -329,6 +340,9 @@ export async function POST(request: Request) {
 
             pricingStatus: resolved.content.pricingStatus,
             totalAmount: totals.totalAmount,
+            tatBusinessDays: totals.tatBusinessDays,
+            tatPriceMultiplier: totals.tatPriceMultiplier,
+            tatSurchargeAmount: totals.tatSurchargeAmount,
             samplingCost: totals.samplingCost,
             vatPercent: totals.vatPercent,
             vatAmount: totals.vatAmount,
@@ -338,6 +352,13 @@ export async function POST(request: Request) {
         });
 
         await persistQuotationContent(tx, created.id, resolved.content);
+
+        if (sourceLead) {
+          await tx.lead.update({
+            where: { id: sourceLead.id },
+            data: { quotationId: created.id, status: "QUOTATION_CREATED" },
+          });
+        }
 
         await tx.workflowLog.create({
           data: {
@@ -454,6 +475,7 @@ export async function POST(request: Request) {
     priceMap,
     samplingCost: parsed.data.samplingCost,
     vatPercent: parsed.data.vatPercent,
+    tatRequested: parsed.data.tatRequested || "NORMAL",
   });
 
   const quotation = await createWithOrderCode(prisma, (orderCode) =>
@@ -468,6 +490,9 @@ export async function POST(request: Request) {
       // menghasilkan status selain PRICED.
       pricingStatus: "PRICED",
       totalAmount: totals.totalAmount,
+      tatBusinessDays: totals.tatBusinessDays,
+      tatPriceMultiplier: totals.tatPriceMultiplier,
+      tatSurchargeAmount: totals.tatSurchargeAmount,
       samplingCost: totals.samplingCost,
       vatPercent: totals.vatPercent,
       vatAmount: totals.vatAmount,
@@ -510,6 +535,12 @@ export async function POST(request: Request) {
       note: `Quotation ${quotation.quotationNo} created with template ${coaTemplate.code}`,
     },
   });
+  if (sourceLead) {
+    await prisma.lead.update({
+      where: { id: sourceLead.id },
+      data: { quotationId: quotation.id, status: "QUOTATION_CREATED" },
+    });
+  }
   await prisma.$transaction((tx) =>
     captureQuotationRevision(tx, {
       entityId: quotation.id,

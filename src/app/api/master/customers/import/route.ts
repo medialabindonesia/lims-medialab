@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import bcrypt from "bcryptjs";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { createWithCustomerCode } from "@/lib/customer-code";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 import { getCell, readHeaderMap, yes } from "@/lib/excel-import";
 
@@ -143,9 +144,11 @@ export async function POST(request: Request) {
             },
             data,
           })
-        : await prisma.customer.create({
-            data,
-          });
+        : await createWithCustomerCode(
+            prisma,
+            { customerType: "DIRECT", centerCode: "001" },
+            (generated) => prisma.customer.create({ data: { ...data, ...generated } })
+          );
 
       if (existing) updated++;
       else created++;

@@ -163,7 +163,7 @@ export async function POST(request: Request, context: RouteContext) {
     if (!quotation) {
       return NextResponse.json({ message: "Quotation tidak ditemukan" }, { status: 404 });
     }
-    if (!["APPROVED", "PO_UPLOADED", "LTR_CREATED", "COC_CREATED"].includes(quotation.status)) {
+    if (!["PO_UPLOADED", "LTR_CREATED", "COC_CREATED"].includes(quotation.status)) {
       return NextResponse.json(
         { message: "COC dapat dibuat langsung setelah quotation disetujui" },
         { status: 400 }

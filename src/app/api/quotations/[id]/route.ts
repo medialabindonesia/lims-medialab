@@ -121,25 +121,19 @@ function calculateTotals(input: {
   priceMap: Map<string, number>;
   samplingCost?: number;
   vatPercent?: number;
+  tatRequested?: "NORMAL" | "URGENT" | "TOP_URGENT" | null;
 }) {
   const totalAmount = input.items.reduce((total, item) => {
     const price = item.customPrice ?? input.priceMap.get(item.parameterId) ?? 0;
     return total + price * item.qty;
   }, 0);
 
-  const samplingCost = input.samplingCost || 0;
-  const vatPercent = input.vatPercent ?? 11;
-  const taxableAmount = totalAmount + samplingCost;
-  const vatAmount = taxableAmount * (vatPercent / 100);
-  const grandTotal = taxableAmount + vatAmount;
-
-  return {
+  return calculateQuotationTotals({
     totalAmount,
-    samplingCost,
-    vatPercent,
-    vatAmount,
-    grandTotal,
-  };
+    samplingCost: input.samplingCost,
+    vatPercent: input.vatPercent,
+    tatRequested: input.tatRequested,
+  });
 }
 
 export async function GET(_request: Request, context: RouteContext) {
@@ -314,11 +308,10 @@ export async function PATCH(request: Request, context: RouteContext) {
    * NEGOTIATION. Sisanya (ditolak / sudah approved) wajib melewati approval
    * ulang, jadi kembali ke VERIFIED.
    */
-  const nextStatus = isDraftEdit
-    ? "REQUESTED"
-    : isCustomerRevision
-      ? "NEGOTIATION"
-      : "VERIFIED";
+  // Setiap perubahan scope/harga wajib mengulang verifikasi internal dan
+  // approval manager. Setelah disimpan selalu kembali ke REQUESTED; tidak ada
+  // revisi yang boleh langsung dianggap sudah dikirim ke customer.
+  const nextStatus = "REQUESTED" as const;
 
   // Revisi dari portal customer: harga tetap milik Medialab.
   const isCustomerSubmission =
@@ -342,6 +335,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       vatPercent: isCustomerSubmission
         ? existingQuotation.vatPercent
         : parsed.data.vatPercent,
+      tatRequested:
+        parsed.data.tatRequested || existingQuotation.tatRequested || "NORMAL",
     });
 
     const quotation = await prisma.$transaction(async (tx) => {
@@ -381,6 +376,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 
           pricingStatus: resolved.content.pricingStatus,
           totalAmount: totals.totalAmount,
+          tatBusinessDays: totals.tatBusinessDays,
+          tatPriceMultiplier: totals.tatPriceMultiplier,
+          tatSurchargeAmount: totals.tatSurchargeAmount,
           samplingCost: totals.samplingCost,
           vatPercent: totals.vatPercent,
           vatAmount: totals.vatAmount,
@@ -430,8 +428,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     return NextResponse.json({
       message:
         (isCustomerRevision
-          ? `Quotation berhasil direvisi dan dikirim ke customer sebagai ${nextQuotationNo}.`
-          : `Quotation berhasil direvisi sebagai ${nextQuotationNo} dan dikirim untuk approval ulang.`) +
+          ? `Quotation berhasil direvisi sebagai ${nextQuotationNo} dan dikirim untuk verifikasi internal ulang.`
+          : `Quotation berhasil direvisi sebagai ${nextQuotationNo} dan dikirim untuk verifikasi internal ulang.`) +
         unpricedNote,
       quotation,
     });
@@ -520,6 +518,8 @@ export async function PATCH(request: Request, context: RouteContext) {
     priceMap,
     samplingCost: parsed.data.samplingCost,
     vatPercent: parsed.data.vatPercent,
+    tatRequested:
+      parsed.data.tatRequested || existingQuotation.tatRequested || "NORMAL",
   });
 
   const quotation = await prisma.$transaction(async (tx) => {
@@ -559,6 +559,9 @@ export async function PATCH(request: Request, context: RouteContext) {
         tatRequested: parsed.data.tatRequested || existingQuotation.tatRequested,
 
         totalAmount: totals.totalAmount,
+        tatBusinessDays: totals.tatBusinessDays,
+        tatPriceMultiplier: totals.tatPriceMultiplier,
+        tatSurchargeAmount: totals.tatSurchargeAmount,
         samplingCost: totals.samplingCost,
         vatPercent: totals.vatPercent,
         vatAmount: totals.vatAmount,
@@ -639,9 +642,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   });
 
   return NextResponse.json({
-    message: isCustomerRevision
-      ? `Quotation berhasil direvisi dan dikirim ke customer sebagai ${nextQuotationNo}`
-      : `Quotation berhasil direvisi sebagai ${nextQuotationNo} dan dikirim untuk approval ulang`,
+    message: `Quotation berhasil direvisi sebagai ${nextQuotationNo} dan dikirim untuk verifikasi internal ulang`,
     quotation,
   });
 }

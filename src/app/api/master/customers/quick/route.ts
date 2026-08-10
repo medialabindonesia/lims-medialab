@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
+import { createWithCustomerCode } from "@/lib/customer-code";
 
 /**
  * Pembuatan customer ringkas dari dalam form quotation.
@@ -67,8 +68,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const customer = await prisma.customer.create({
+  const customer = await createWithCustomerCode(prisma, {
+    customerType: "DIRECT",
+    centerCode: "001",
+  }, (generated) => prisma.customer.create({
     data: {
+      ...generated,
       name: data.name,
       company: data.name,
       contactPerson: data.contactPerson ?? null,
@@ -85,8 +90,9 @@ export async function POST(request: Request) {
       contactPerson: true,
       email: true,
       phone: true,
+      customerCode: true,
     },
-  });
+  }));
 
   return NextResponse.json({ customer }, { status: 201 });
 }

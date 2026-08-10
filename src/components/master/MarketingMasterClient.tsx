@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -32,6 +33,20 @@ export type MatrixTreeNode = {
     name: string;
     isActive: boolean;
     parameterCount: number;
+    parameters: Array<{
+      id: string;
+      name: string;
+      unit?: string | null;
+      method?: string | null;
+      limitValue?: string | null;
+      limitValue2?: string | null;
+      samplingMethod?: string | null;
+      sampleMatrix?: string | null;
+      sampleSize?: string | null;
+      basePrice?: number | null;
+      isAccredited: boolean;
+      durations: Array<{ label: string; limitValue?: string | null; isDefault: boolean }>;
+    }>;
   }>;
   children: MatrixTreeNode[];
 };
@@ -84,35 +99,18 @@ function MatrixBranch({ node, depth }: { node: MatrixTreeNode; depth: number }) 
         <span className="font-mono text-[11px] text-slate-400">{node.code}</span>
       </div>
 
+      <AnimatePresence initial={false}>
       {open && (
-        <>
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: "auto", opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          transition={{ duration: 0.24, ease: "easeInOut" }}
+          className="overflow-hidden"
+        >
           {node.regulations.length > 0 && (
             <ul style={{ paddingLeft: `${(depth + 1) * 1.15 + 1.4}rem` }}>
-              {node.regulations.map((regulation) => (
-                <li
-                  key={regulation.id}
-                  className="flex flex-wrap items-center gap-x-2 gap-y-0.5 py-1"
-                >
-                  <span
-                    className={`text-xs font-semibold ${
-                      regulation.isActive
-                        ? "text-blue-700"
-                        : "text-slate-400 line-through"
-                    }`}
-                  >
-                    {regulation.name}
-                  </span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                      regulation.parameterCount === 0
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    {regulation.parameterCount} parameter
-                  </span>
-                </li>
-              ))}
+              {node.regulations.map((regulation) => <RegulationBranch key={regulation.id} regulation={regulation} />)}
             </ul>
           )}
 
@@ -123,8 +121,45 @@ function MatrixBranch({ node, depth }: { node: MatrixTreeNode; depth: number }) 
               ))}
             </ul>
           )}
-        </>
+        </motion.div>
       )}
+      </AnimatePresence>
+    </li>
+  );
+}
+
+function RegulationBranch({ regulation }: { regulation: MatrixTreeNode["regulations"][number] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <li className="py-1">
+      <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full flex-wrap items-center gap-2 rounded-xl px-2 py-2 text-left transition hover:bg-blue-50">
+        <ChevronRight size={14} className={`shrink-0 text-blue-500 transition-transform duration-200 ${open ? "rotate-90" : ""}`} />
+        <span className={`text-xs font-semibold ${regulation.isActive ? "text-blue-700" : "text-slate-400 line-through"}`}>{regulation.name}</span>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${regulation.parameterCount === 0 ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-500"}`}>{regulation.parameterCount} parameter</span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.28, ease: "easeInOut" }} className="overflow-hidden">
+            <div className="ml-5 mt-1 overflow-x-auto rounded-xl border border-blue-100 bg-blue-50/40">
+              <table className="w-full min-w-[760px] text-left text-[11px]">
+                <thead className="text-slate-500"><tr><th className="px-3 py-2">Parameter</th><th className="px-3 py-2">Jam / durasi & baku mutu</th><th className="px-3 py-2">Metode</th><th className="px-3 py-2">Sampling</th><th className="px-3 py-2 text-right">Harga dasar</th></tr></thead>
+                <tbody>
+                  {regulation.parameters.map((parameter) => (
+                    <tr key={parameter.id} className="border-t border-blue-100 bg-white/80 align-top">
+                      <td className="px-3 py-2 font-bold text-slate-800">{parameter.name}{parameter.unit ? <span className="ml-1 font-normal text-slate-400">({parameter.unit})</span> : null}{!parameter.isAccredited ? <span className="ml-1 text-amber-600">*</span> : null}</td>
+                      <td className="px-3 py-2 text-slate-600">{parameter.durations.length ? parameter.durations.map((entry) => `${entry.label}${entry.limitValue ? ` = ${entry.limitValue}` : ""}`).join(" · ") : parameter.limitValue || parameter.limitValue2 || "-"}</td>
+                      <td className="px-3 py-2 text-slate-600">{parameter.method || "-"}</td>
+                      <td className="px-3 py-2 text-slate-600">{[parameter.samplingMethod, parameter.sampleMatrix, parameter.sampleSize].filter(Boolean).join(" · ") || "-"}</td>
+                      <td className="px-3 py-2 text-right font-semibold text-slate-700">{parameter.basePrice == null ? "Belum diisi" : new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(parameter.basePrice)}</td>
+                    </tr>
+                  ))}
+                  {regulation.parameters.length === 0 ? <tr><td colSpan={5} className="px-3 py-4 text-center text-amber-700">Belum ada parameter pada regulasi ini.</td></tr> : null}
+                </tbody>
+              </table>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </li>
   );
 }

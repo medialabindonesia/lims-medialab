@@ -347,7 +347,10 @@ export async function POST(request: Request) {
       // disentuh dari sini — termasuk `price`, yang kini digantikan basePrice
       // per regulasi.
       let analysisParameter = await prisma.analysisParameter.findFirst({
-        where: { name: parameterName },
+        // Nama yang sama dapat ditawarkan dengan metode/unit berbeda. Setiap
+        // varian dipertahankan sebagai parameter tersendiri agar import tidak
+        // menimpa metode lain dari workbook sumber.
+        where: { name: parameterName, method, unit },
         select: { id: true },
       });
 
@@ -364,6 +367,10 @@ export async function POST(request: Request) {
         unit,
         method,
         limitValue: getCell(row, parameterHeaders, "limitValue"),
+        limitValue2: getCell(row, parameterHeaders, "limitValue2"),
+        samplingMethod: getCell(row, parameterHeaders, "samplingMethod"),
+        sampleMatrix: getCell(row, parameterHeaders, "sampleMatrix"),
+        sampleSize: getCell(row, parameterHeaders, "sampleSize"),
         // null berarti belum ditetapkan; berbeda dari 0.
         basePrice: money(getCell(row, parameterHeaders, "basePrice")),
         isAccredited:

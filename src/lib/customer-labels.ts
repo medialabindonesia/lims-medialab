@@ -24,11 +24,12 @@ export type StatusMeta = {
  */
 export const QUOTATION_FLOW_ORDER = [
   "REQUESTED",
+  "VERIFIED",
+  "APPROVED",
+  "SENT",
   "REVISION",
   "NEGOTIATION",
   "CONFIRMED",
-  "VERIFIED",
-  "APPROVED",
   "PO_UPLOADED",
   "LTR_CREATED",
   "COC_CREATED",
@@ -36,9 +37,9 @@ export const QUOTATION_FLOW_ORDER = [
 
 const QUOTATION_STATUS_CUSTOMER: Record<string, StatusMeta> = {
   REQUESTED: {
-    label: "Menunggu persetujuan Anda",
-    description: "Tinjau penawaran ini, lalu setujui atau minta revisi.",
-    tone: "warn",
+    label: "Sedang disiapkan",
+    description: "Tim sales sedang menyiapkan dan memverifikasi penawaran.",
+    tone: "info",
   },
   REVISION: {
     label: "Revisi sedang dikerjakan",
@@ -57,8 +58,8 @@ const QUOTATION_STATUS_CUSTOMER: Record<string, StatusMeta> = {
   },
   CONFIRMED: {
     label: "Anda sudah menyetujui",
-    description: "Penawaran menunggu pemeriksaan akhir tim kami.",
-    tone: "info",
+    description: "Silakan unggah PO agar pekerjaan dapat dijadwalkan.",
+    tone: "success",
   },
   VERIFIED: {
     label: "Sedang diperiksa tim kami",
@@ -66,9 +67,14 @@ const QUOTATION_STATUS_CUSTOMER: Record<string, StatusMeta> = {
     tone: "info",
   },
   APPROVED: {
-    label: "Penawaran final disetujui",
-    description: "Silakan unggah PO agar pekerjaan bisa dijadwalkan.",
+    label: "Siap dikirim",
+    description: "Penawaran sudah disetujui manager dan sedang disiapkan untuk dikirim.",
     tone: "success",
+  },
+  SENT: {
+    label: "Menunggu persetujuan Anda",
+    description: "Tinjau penawaran yang dikirim, lalu setujui atau minta revisi.",
+    tone: "warn",
   },
   PO_UPLOADED: {
     label: "PO Anda diterima",

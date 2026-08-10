@@ -49,9 +49,9 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
-  if (quotation.status !== "APPROVED") {
+  if (quotation.status !== "CONFIRMED") {
     return NextResponse.json(
-      { message: "PO hanya bisa diupload setelah quotation APPROVED" },
+      { message: "PO hanya bisa diupload setelah quotation di-ACC customer" },
       { status: 400 }
     );
   }

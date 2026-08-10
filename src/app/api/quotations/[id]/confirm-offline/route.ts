@@ -90,7 +90,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  if (quotation.status !== "REQUESTED" && quotation.status !== "NEGOTIATION") {
+  if (quotation.status !== "SENT") {
     return NextResponse.json(
       {
         message: `Quotation berstatus ${quotation.status} tidak menunggu persetujuan customer.`,

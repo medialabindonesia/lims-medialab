@@ -64,6 +64,13 @@ export const WORKFLOW_CAPABILITIES: WorkflowCapability[] = [
     consequence: "Quotation yang ditolak atau diminta revisi tidak bisa diperbaiki.",
   },
   {
+    menuKey: "quotation.request",
+    action: "canUpdate",
+    label: "Review & Kirim Email Quotation",
+    stage: "Quotation",
+    consequence: "Quotation approved tidak dapat dikirim ke customer.",
+  },
+  {
     menuKey: "sales.ltr",
     action: "canCreate",
     label: "Terbitkan LTR",

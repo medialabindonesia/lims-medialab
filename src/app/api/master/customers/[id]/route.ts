@@ -95,6 +95,7 @@ export async function GET(_request: Request, context: RouteContext) {
   const customer = await prisma.customer.findUnique({
     where: { id },
     include: {
+      consultant: true,
       // Field user dipilih eksplisit: `include` polos ikut mengirim kolom
       // `password` (hash bcrypt) ke browser.
       users: {
@@ -337,6 +338,7 @@ export async function PATCH(request: Request, context: RouteContext) {
         id: updatedCustomer.id,
       },
       include: {
+        consultant: true,
         users: {
           include: {
             role: true,

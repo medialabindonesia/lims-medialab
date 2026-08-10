@@ -58,6 +58,7 @@ const menus = [
   { name: "Master Parameter", key: "master.parameters", href: "/master/parameters", icon: "ListChecks", sort: 21 },
   { name: "Master COA Template", key: "master.coa_templates", href: "/master/coa-templates", icon: "FileBadge", sort: 22 },
   { name: "Matriks, Regulasi & Harga", key: "master.marketing", href: "/master/marketing", icon: "Layers", sort: 23 },
+  { name: "Lead & Survey", key: "marketing.leads", href: "/marketing/leads", icon: "ClipboardList", sort: 24 },
 
   { name: "Request Quotation", key: "quotation.request", href: "/quotations/request", icon: "FilePlus", sort: 30 },
   { name: "Verify Quotation", key: "quotation.verify", href: "/quotations/verify", icon: "FileCheck", sort: 31 },
@@ -144,6 +145,7 @@ const roleAccess: Record<string, string[]> = {
     "master.parameters",
     "master.coa_templates",
     "master.marketing",
+    "marketing.leads",
     // Sales yang menyusun penawaran untuk calon customer, tidak hanya
     // memverifikasi penawaran yang diajukan customer lewat portal.
     "quotation.request",
@@ -170,6 +172,7 @@ const roleAccess: Record<string, string[]> = {
 
   TECHNICAL: [
     "dashboard.worker",
+    "marketing.leads",
     "technical.coc",
     "technical.stps",
     "sales.sampling_schedule",
@@ -177,6 +180,7 @@ const roleAccess: Record<string, string[]> = {
 
   CUSTOMER_SERVICE: [
     "dashboard.worker",
+    "marketing.leads",
     "support.desk",
     "support.faq",
   ],
@@ -261,6 +265,9 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
   }
 
   if (roleCode === "CUSTOMER_SERVICE") {
+    if (menuKey === "marketing.leads") {
+      return { ...base, canCreate: true, canUpdate: true, canExport: true };
+    }
     if (menuKey === "support.desk") {
       return {
         ...base,
@@ -283,6 +290,9 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
   }
 
   if (roleCode === "SALES_STAFF") {
+    if (menuKey === "marketing.leads") {
+      return { ...base, canCreate: true, canUpdate: true, canExport: true };
+    }
     // Menyusun penawaran: membuat baru sekaligus melengkapi harga sebelum
     // diajukan ke manager.
     if (menuKey === "quotation.request") {
@@ -346,6 +356,10 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
         canExport: true,
       };
     }
+  }
+
+  if (roleCode === "TECHNICAL" && menuKey === "marketing.leads") {
+    return { ...base, canUpdate: true, canExport: true };
   }
 
   if (roleCode === "SALES_MANAGER_DIRECTOR") {

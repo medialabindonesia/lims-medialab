@@ -31,10 +31,12 @@ import {
   FilePlus,
   FileText,
   Lock,
+  Mail,
   Percent,
   RefreshCcw,
   Save,
   Search,
+  Send,
   Upload,
   Wallet,
   X,
@@ -123,6 +125,9 @@ type Quotation = {
   samplingBy?: string | null;
   testingObjective?: string | null;
   tatRequested?: string | null;
+  tatBusinessDays?: number;
+  tatPriceMultiplier?: number;
+  tatSurchargeAmount?: number;
   paymentTerm?: string | null;
   termsNote?: string | null;
   createdAt: string;
@@ -188,6 +193,11 @@ type Props = {
   initialQuotations: Quotation[];
   /** Role pemakai halaman — menentukan apakah istilah internal diterjemahkan. */
   viewerRole?: string;
+  initialLead?: {
+    id: string;
+    requestedTests: string;
+    customer: CustomerOption;
+  } | null;
 };
 
 type FormItem = {
@@ -209,6 +219,7 @@ type QuotationForm = {
   /** Status quotation yang sedang disunting; menentukan apakah alasan wajib. */
   editingStatus?: string;
   customerId: string;
+  leadId?: string;
   note: string;
 
   quotationDate: string;
@@ -297,12 +308,13 @@ function getStepIssues(step: ModalTab, form: QuotationForm): string[] {
 
 const flowSteps = [
   "REQUESTED",
+  "VERIFIED",
+  "APPROVED",
+  "SENT",
   "REVISION",
   "REJECTED",
   "NEGOTIATION",
   "CONFIRMED",
-  "VERIFIED",
-  "APPROVED",
   "PO_UPLOADED",
   "LTR_CREATED",
   "COC_CREATED",
@@ -319,13 +331,13 @@ const modeConfig: Record<
   request: {
     title: "Request Quotation",
     description:
-      "Customer membuat quotation sesuai template dokumen, meminta revisi, ACC quotation, dan upload PO.",
+      "Sales menyusun quotation, menunggu verifikasi dan approval manager, lalu mereview draft email sebelum mengirimkannya ke customer.",
     empty: "Belum ada quotation.",
   },
   verify: {
     title: "Verify Quotation",
-    description: "Staff melakukan verifikasi setelah customer ACC quotation.",
-    empty: "Tidak ada quotation yang sudah di-ACC customer.",
+    description: "Staff memverifikasi kelengkapan scope dan harga sebelum diajukan ke manager.",
+    empty: "Tidak ada quotation baru yang menunggu verifikasi.",
   },
   revise: {
     title: "Revise Quotation",
@@ -429,6 +441,7 @@ function getStatusStyle(status: string) {
     CONFIRMED: "bg-green-50 text-green-700",
     VERIFIED: "bg-cyan-50 text-cyan-700",
     APPROVED: "bg-emerald-50 text-emerald-700",
+    SENT: "bg-cyan-50 text-cyan-700",
     PO_UPLOADED: "bg-purple-50 text-purple-700",
     LTR_CREATED: "bg-indigo-50 text-indigo-700",
     COC_CREATED: "bg-pink-50 text-pink-700",
@@ -579,13 +592,14 @@ export default function QuotationFlowClient({
   customers,
   initialQuotations,
   viewerRole,
+  initialLead,
 }: Props) {
   const reduce = useReducedMotion();
   const isCustomerView = viewerRole === "CUSTOMER_ENGAGEMENT";
 
   const [mounted, setMounted] = useState(false);
   const [quotations, setQuotations] = useState<Quotation[]>(initialQuotations);
-  const [openForm, setOpenForm] = useState(false);
+  const [openForm, setOpenForm] = useState(Boolean(initialLead));
   const [activeTab, setActiveTab] = useState<ModalTab>("detail");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -593,6 +607,8 @@ export default function QuotationFlowClient({
   const [documentQuotation, setDocumentQuotation] = useState<Quotation | null>(null);
   const [documentLabel, setDocumentLabel] = useState("");
   const [documentItemIds, setDocumentItemIds] = useState<string[]>([]);
+  const [emailQuotation, setEmailQuotation] = useState<Quotation | null>(null);
+  const [emailDraft, setEmailDraft] = useState({ id: "", toEmail: "", ccEmails: "", subject: "", bodyText: "" });
 
   // Pembangun item dari template COA sudah dibuang: parameter kini berasal
   // dari matriks/regulasi per grup, bukan dari template.
@@ -601,10 +617,11 @@ export default function QuotationFlowClient({
 
   const [form, setForm] = useState<QuotationForm>({
     editReason: "",
-    customerId: lockedCustomerId,
-    selectedCustomer: null,
+    customerId: initialLead?.customer.id || lockedCustomerId,
+    leadId: initialLead?.id,
+    selectedCustomer: initialLead?.customer || null,
     groups: [createEmptyGroup()],
-    note: "",
+    note: initialLead?.requestedTests || "",
 
     quotationDate: getTodayInputDate(),
     validUntil: addDaysInputDate(30),
@@ -629,7 +646,7 @@ export default function QuotationFlowClient({
   }, []);
 
   useEffect(() => {
-    if (!openForm && !documentQuotation) return;
+    if (!openForm && !documentQuotation && !emailQuotation) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -637,7 +654,7 @@ export default function QuotationFlowClient({
     return () => {
       document.body.style.overflow = previousOverflow;
     };
-  }, [openForm, documentQuotation]);
+  }, [openForm, documentQuotation, emailQuotation]);
 
   const config = modeConfig[mode];
 
@@ -738,7 +755,7 @@ export default function QuotationFlowClient({
       mode === "request"
         ? quotations
         : mode === "verify"
-          ? quotations.filter((quotation) => quotation.status === "CONFIRMED")
+          ? quotations.filter((quotation) => quotation.status === "REQUESTED")
             : mode === "revise"
             ? quotations.filter((quotation) =>
                 ["REVISION", "REJECTED", "APPROVED", "PO_UPLOADED"].includes(
@@ -779,7 +796,10 @@ export default function QuotationFlowClient({
     [form.groups]
   );
 
-  const taxableAmount = totalFormAmount + Number(form.samplingCost || 0);
+  const tatMultiplier = form.tatRequested === "TOP_URGENT" ? 1.5 : form.tatRequested === "URGENT" ? 1.3 : 1;
+  const tatBusinessDays = form.tatRequested === "TOP_URGENT" ? 5 : form.tatRequested === "URGENT" ? 7 : 10;
+  const tatSurchargeAmount = totalFormAmount * (tatMultiplier - 1);
+  const taxableAmount = totalFormAmount + tatSurchargeAmount + Number(form.samplingCost || 0);
   const vatAmount = taxableAmount * (Number(form.vatPercent || 0) / 100);
   const grandTotal = taxableAmount + vatAmount;
 
@@ -789,6 +809,7 @@ export default function QuotationFlowClient({
       // Untuk sales tidak dipilihkan otomatis: dengan ratusan customer,
       // memilihkan yang pertama berisiko terkirim ke customer yang salah.
       customerId: lockedCustomerId,
+      leadId: undefined,
       selectedCustomer: null,
       groups: [createEmptyGroup()],
       note: "",
@@ -814,6 +835,15 @@ export default function QuotationFlowClient({
 
   function handleCreate() {
     resetForm();
+    if (initialLead) {
+      setForm((current) => ({
+        ...current,
+        leadId: initialLead.id,
+        customerId: initialLead.customer.id,
+        selectedCustomer: initialLead.customer,
+        note: initialLead.requestedTests,
+      }));
+    }
     setActiveTab("detail");
     setMessage("");
     setOpenForm(true);
@@ -825,6 +855,7 @@ export default function QuotationFlowClient({
       editReason: "",
       editingStatus: quotation.status,
       customerId: quotation.customer.id,
+      leadId: undefined,
       selectedCustomer: {
         id: quotation.customer.id,
         name: quotation.customer.name,
@@ -1051,6 +1082,62 @@ export default function QuotationFlowClient({
     );
   }
 
+  async function openEmailReview(quotation: Quotation) {
+    setLoading(true);
+    setMessage("");
+    const response = await fetch(`/api/quotations/${quotation.id}/email`);
+    const data = await response.json();
+    setLoading(false);
+    if (!response.ok) return setMessage(data.message || "Gagal memuat draft email");
+    setEmailDraft({
+      id: data.draft.id || "",
+      toEmail: data.draft.toEmail || "",
+      ccEmails: Array.isArray(data.draft.ccEmails) ? data.draft.ccEmails.join(", ") : "",
+      subject: data.draft.subject || "",
+      bodyText: data.draft.bodyText || "",
+    });
+    setEmailQuotation(quotation);
+  }
+
+  async function saveEmailDraft(sendAfterSave: boolean) {
+    if (!emailQuotation) return;
+    setLoading(true);
+    setMessage("");
+    const response = await fetch(`/api/quotations/${emailQuotation.id}/email`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        draftId: emailDraft.id || null,
+        toEmail: emailDraft.toEmail,
+        ccEmails: emailDraft.ccEmails.split(",").map((item) => item.trim()).filter(Boolean),
+        subject: emailDraft.subject,
+        bodyText: emailDraft.bodyText,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      setLoading(false);
+      return setMessage(data.message || "Gagal menyimpan draft email");
+    }
+    setEmailDraft((current) => ({ ...current, id: data.draft.id }));
+    if (!sendAfterSave) {
+      setLoading(false);
+      return setMessage("Draft email tersimpan. Belum dikirim ke customer.");
+    }
+    const sendResponse = await fetch(`/api/quotations/${emailQuotation.id}/email/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ draftId: data.draft.id }),
+    });
+    const sendData = await sendResponse.json();
+    setLoading(false);
+    setMessage(sendData.message || (sendResponse.ok ? "Quotation terkirim" : "Pengiriman gagal"));
+    if (sendResponse.ok) {
+      setEmailQuotation(null);
+      await refreshData();
+    }
+  }
+
   function openLtrGrouping(quotation: Quotation) {
     const usedIds = new Set(
       (quotation.ltrs || []).flatMap((ltr) =>
@@ -1097,8 +1184,7 @@ export default function QuotationFlowClient({
     if (mode === "request") {
       return (
         <div className="flex flex-wrap justify-end gap-2">
-          {(quotation.status === "REQUESTED" ||
-            quotation.status === "NEGOTIATION") &&
+          {quotation.status === "SENT" &&
             (isCustomerView ? (
               <>
                 <button
@@ -1132,7 +1218,17 @@ export default function QuotationFlowClient({
               </button>
             ))}
 
-          {quotation.status === "APPROVED" && (
+          {quotation.status === "APPROVED" && !isCustomerView && (
+            <button
+              onClick={() => openEmailReview(quotation)}
+              className="inline-flex items-center gap-2 rounded-2xl bg-cyan-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-cyan-700"
+            >
+              <Send size={16} />
+              Review & Send
+            </button>
+          )}
+
+          {quotation.status === "CONFIRMED" && (
             <button
               onClick={() => uploadPo(quotation)}
               className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
@@ -1152,7 +1248,7 @@ export default function QuotationFlowClient({
           className="inline-flex items-center gap-2 rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm font-semibold text-yellow-700 transition-colors hover:bg-yellow-100"
         >
           <Edit3 size={16} />
-          Revisi & Kirim
+          Revisi & Ajukan Ulang
         </button>
       );
     }
@@ -1616,6 +1712,15 @@ export default function QuotationFlowClient({
                     </span>
                   </div>
 
+                  <div className="flex justify-between gap-4 rounded-xl bg-cyan-50 px-3 py-2">
+                    <span className="text-cyan-700">
+                      TAT {form.tatRequested.replaceAll("_", " ")} · {tatBusinessDays} hari kerja · +{Math.round((tatMultiplier - 1) * 100)}%
+                    </span>
+                    <span className="font-bold text-cyan-800">
+                      {formatRupiah(tatSurchargeAmount)}
+                    </span>
+                  </div>
+
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-500">
                       VAT {form.vatPercent}%
@@ -1727,6 +1832,27 @@ export default function QuotationFlowClient({
       </motion.form>
     </div>
   );
+
+  const emailModal = emailQuotation ? (
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-md">
+      <motion.div initial={reduce ? false : { opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between gap-4">
+          <div><p className="text-sm font-bold text-cyan-600">Draft Email Customer</p><h2 className="mt-1 text-2xl font-black text-slate-900">Review sebelum Send</h2><p className="mt-1 text-sm text-slate-500">Quotation PDF dan identitas customer akan dilampirkan otomatis.</p></div>
+          <button onClick={() => setEmailQuotation(null)} className="rounded-xl border border-slate-200 p-2 text-slate-500"><X size={18} /></button>
+        </div>
+        <div className="mt-5 grid gap-4">
+          <Field label="To" value={emailDraft.toEmail} type="email" onChange={(value) => setEmailDraft((current) => ({ ...current, toEmail: String(value) }))} icon={Mail} />
+          <Field label="CC (pisahkan dengan koma)" value={emailDraft.ccEmails} onChange={(value) => setEmailDraft((current) => ({ ...current, ccEmails: String(value) }))} icon={Mail} />
+          <Field label="Subject" value={emailDraft.subject} onChange={(value) => setEmailDraft((current) => ({ ...current, subject: String(value) }))} icon={FileText} />
+          <label><span className="mb-2 block text-sm font-medium text-slate-600">Isi email</span><textarea rows={11} value={emailDraft.bodyText} onChange={(event) => setEmailDraft((current) => ({ ...current, bodyText: event.target.value }))} className="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-cyan-500" /></label>
+        </div>
+        <div className="mt-5 flex flex-wrap justify-end gap-2">
+          <button disabled={loading} onClick={() => saveEmailDraft(false)} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 disabled:opacity-50">Simpan Draft</button>
+          <button disabled={loading} onClick={() => saveEmailDraft(true)} className="inline-flex items-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Send size={16} /> {loading ? "Memproses..." : "Send ke Customer"}</button>
+        </div>
+      </motion.div>
+    </div>
+  ) : null;
 
   const ltrModal = documentQuotation ? (
     <div
@@ -2303,6 +2429,7 @@ export default function QuotationFlowClient({
       </motion.div>
 
       {mounted && openForm ? createPortal(modal, document.body) : null}
+      {mounted && emailQuotation ? createPortal(emailModal, document.body) : null}
       {mounted && documentQuotation ? createPortal(ltrModal, document.body) : null}
     </motion.div>
   );

@@ -1,6 +1,7 @@
 import { z } from "zod";
-import type { Prisma, QuotationPricingStatus } from "@prisma/client";
+import type { Prisma, QuotationPricingStatus, TatRequest } from "@prisma/client";
 import { computePricingStatus } from "@/lib/order-code";
+import { calculateTatCharge } from "@/lib/tat-policy";
 
 /**
  * Penyusunan isi quotation berbasis GRUP.
@@ -427,14 +428,19 @@ export function calculateQuotationTotals(input: {
   totalAmount: number;
   samplingCost?: number;
   vatPercent?: number;
+  tatRequested?: TatRequest | null;
 }) {
   const samplingCost = input.samplingCost || 0;
   const vatPercent = input.vatPercent ?? 11;
-  const taxableAmount = input.totalAmount + samplingCost;
+  const tat = calculateTatCharge(input.totalAmount, input.tatRequested);
+  const taxableAmount = tat.adjustedTestingAmount + samplingCost;
   const vatAmount = taxableAmount * (vatPercent / 100);
 
   return {
     totalAmount: input.totalAmount,
+    tatBusinessDays: tat.policy.businessDays,
+    tatPriceMultiplier: tat.policy.priceMultiplier,
+    tatSurchargeAmount: tat.surchargeAmount,
     samplingCost,
     vatPercent,
     vatAmount,

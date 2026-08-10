@@ -46,6 +46,10 @@ export const PARAMETER_COLUMNS = [
   "unit",
   "method",
   "limitValue",
+  "limitValue2",
+  "samplingMethod",
+  "sampleMatrix",
+  "sampleSize",
   "basePrice",
   "durations",
   "isAccredited",
@@ -162,6 +166,10 @@ export type MarketingMasterExport = {
     unit: string | null;
     method: string | null;
     limitValue: string | null;
+    limitValue2: string | null;
+    samplingMethod: string | null;
+    sampleMatrix: string | null;
+    sampleSize: string | null;
     basePrice: number | null;
     durations: ParsedDuration[];
     isAccredited: boolean;
@@ -252,6 +260,10 @@ export function buildMarketingMasterWorkbook(data: MarketingMasterExport) {
       item.unit,
       item.method,
       item.limitValue,
+      item.limitValue2,
+      item.samplingMethod,
+      item.sampleMatrix,
+      item.sampleSize,
       item.basePrice,
       formatDurations(item.durations),
       item.isAccredited ? "YES" : "NO",
@@ -259,7 +271,7 @@ export function buildMarketingMasterWorkbook(data: MarketingMasterExport) {
       item.sort,
       item.isActive ? "YES" : "NO",
     ]),
-    [30, 34, 34, 12, 34, 40, 14, 52, 14, 16, 8, 10]
+    [30, 34, 34, 12, 34, 40, 40, 32, 24, 20, 14, 52, 14, 16, 8, 10]
   );
 
   return workbook;

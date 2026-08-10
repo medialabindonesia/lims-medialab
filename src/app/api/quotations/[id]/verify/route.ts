@@ -28,11 +28,11 @@ export async function PATCH(_request: Request, context: RouteContext) {
     );
   }
 
-  if (quotation.status !== "CONFIRMED") {
+  if (quotation.status !== "REQUESTED") {
     return NextResponse.json(
       {
         message:
-          "Quotation hanya bisa diverifikasi setelah customer ACC / CONFIRMED",
+          "Quotation hanya bisa diverifikasi saat masih REQUESTED",
       },
       { status: 400 }
     );

@@ -171,7 +171,7 @@ export async function buildQuotationExcel(quotation: any) {
     ["Template COA", quotation.coaTemplate?.name || "-"],
     ["Sampling By", samplingByLabel(quotation.samplingBy)],
     ["Testing Objective", testingObjectiveLabel(quotation.testingObjective)],
-    ["TAT Requested", tatLabel(quotation.tatRequested)],
+    ["TAT Requested", `${tatLabel(quotation.tatRequested)} · ${quotation.tatBusinessDays || 10} hari kerja`],
     ["Note", quotation.note || "-"],
   ];
 
@@ -256,15 +256,17 @@ export async function buildQuotationExcel(quotation: any) {
 
   const parameterTotal = quotation.totalAmount || 0;
   const samplingCost = quotation.samplingCost || 0;
+  const tatSurcharge = quotation.tatSurchargeAmount || 0;
   const vatPercent = quotation.vatPercent || 0;
   const vatAmount = quotation.vatAmount || 0;
   const grandTotal =
     quotation.grandTotal && quotation.grandTotal > 0
       ? quotation.grandTotal
-      : parameterTotal + samplingCost + vatAmount;
+      : parameterTotal + tatSurcharge + samplingCost + vatAmount;
 
   const summaryRows = [
     ["Parameter Total", parameterTotal],
+    [`Surcharge TAT (${Math.round(((quotation.tatPriceMultiplier || 1) - 1) * 100)}%)`, tatSurcharge],
     ["Sampling Cost", samplingCost],
     [`VAT ${vatPercent}%`, vatAmount],
     ["Grand Total", grandTotal],
