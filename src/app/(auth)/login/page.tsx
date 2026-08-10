@@ -34,13 +34,23 @@ const DEMO_ACCOUNTS = [
     password: "customer123",
   },
   {
-    role: "Sales",
-    email: "sales@medialab.test",
+    role: "Lab Admin",
+    email: "labadmin@medialab.test",
+    password: "password123",
+  },
+  {
+    role: "Lab Supervisor",
+    email: "supervisor@medialab.test",
     password: "password123",
   },
   {
     role: "Lab Analyst",
     email: "analyst@medialab.test",
+    password: "password123",
+  },
+  {
+    role: "Lab Manager",
+    email: "labmanager@medialab.test",
     password: "password123",
   },
 ] as const;
