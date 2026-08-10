@@ -99,13 +99,13 @@ const roleAccess: Record<string, string[]> = {
     "master.parameters",
     "master.coa_templates",
     "lab.receive_sample",
-    "lab.distribute_parameter",
     "coa.preliminary",
     "coa.final",
   ],
 
   LAB_SUPERVISOR: [
     "dashboard.worker",
+    "lab.distribute_parameter",
     "lab.review_results",
     "lab.verify_results",
     "lab.ask_retest",
@@ -361,14 +361,6 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
       };
     }
 
-    if (menuKey === "lab.distribute_parameter") {
-      return {
-        ...base,
-        canUpdate: true,
-        canExport: true,
-      };
-    }
-
     if (menuKey.startsWith("coa.")) {
       return {
         ...base,
@@ -380,6 +372,14 @@ function getPermissionByRoleAndMenu(roleCode: string, menuKey: string, canView: 
   }
 
   if (roleCode === "LAB_SUPERVISOR") {
+    if (menuKey === "lab.distribute_parameter") {
+      return {
+        ...base,
+        canUpdate: true,
+        canExport: true,
+      };
+    }
+
     if (menuKey === "lab.review_results") {
       return {
         ...base,

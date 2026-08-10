@@ -21,6 +21,7 @@ type Coa = {
   coaNo: string;
   type: "PRELIMINARY" | "FINAL";
   status: string;
+  createdById?: string | null;
 };
 
 type SampleParameter = {
@@ -75,6 +76,7 @@ type Props = {
   mode: CoaMode;
   initialSamples: Sample[];
   viewerRole?: string;
+  viewerUserId?: string;
 };
 
 function getStatusStyle(status: string) {
@@ -104,6 +106,7 @@ export default function CoaFlowClient({
   mode,
   initialSamples,
   viewerRole,
+  viewerUserId,
 }: Props) {
   const [samples, setSamples] = useState<Sample[]>(initialSamples);
   const [loading, setLoading] = useState(false);
@@ -241,6 +244,32 @@ export default function CoaFlowClient({
     }
 
     if (mode === "final") {
+      if (finalCoa?.status === "DRAFT") {
+        const isSameUser =
+          !!viewerUserId && finalCoa.createdById === viewerUserId;
+
+        if (isSameUser) {
+          return (
+            <p className="max-w-55 text-right text-[12px] font-semibold text-amber-600">
+              Menunggu approval Lab Manager lain (bukan pembuatnya sendiri)
+            </p>
+          );
+        }
+
+        return (
+          <button
+            disabled={loading}
+            onClick={() =>
+              runAction(`/api/coa/${sample.id}/final/approve`, "PATCH")
+            }
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-purple-500 px-4 text-[13px] font-bold text-white hover:bg-purple-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:rounded-2xl sm:text-sm"
+          >
+            <Award size={16} />
+            Approve Final COA
+          </button>
+        );
+      }
+
       if (finalCoa) {
         return null;
       }

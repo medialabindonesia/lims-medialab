@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAnyApiPermission } from "@/lib/api-permission";
+import { requireApiPermission } from "@/lib/api-permission";
 import { generateDocumentNo } from "@/lib/document-number";
 
 type RouteContext = {
@@ -9,11 +9,13 @@ type RouteContext = {
   }>;
 };
 
+/**
+ * Hanya membuat draft Final COA (status DRAFT, createdById saja). Approval
+ * sengaja dipisah ke endpoint lain (final/approve) supaya orang yang approve
+ * tidak boleh sama dengan yang create — lihat final/approve/route.ts.
+ */
 export async function POST(_request: Request, context: RouteContext) {
-  const permission = await requireAnyApiPermission([
-    { menuKey: "coa.final", action: "canCreate" },
-    { menuKey: "coa.final", action: "canApprove" },
-  ]);
+  const permission = await requireApiPermission("coa.final", "canCreate");
 
   if (!permission.allowed) return permission.response;
 
@@ -63,30 +65,26 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const existingFinal = sample.coa.find((item) => item.type === "FINAL");
 
-  const result = await prisma.$transaction(async (tx) => {
-    const finalCoa = existingFinal
-      ? await tx.coa.update({
-          where: { id: existingFinal.id },
-          data: {
-            status: "APPROVED",
-            approvedById: permission.session?.userId,
-          },
-        })
-      : await tx.coa.create({
-          data: {
-            coaNo: generateDocumentNo("FINAL-COA"),
-            sampleId: sample.id,
-            type: "FINAL",
-            status: "APPROVED",
-            createdById: permission.session?.userId,
-            approvedById: permission.session?.userId,
-          },
-        });
+  if (existingFinal) {
+    return NextResponse.json(
+      {
+        message:
+          existingFinal.status === "APPROVED"
+            ? "Final COA sudah disetujui"
+            : "Final COA sudah dibuat, menunggu approval Lab Manager",
+      },
+      { status: 400 }
+    );
+  }
 
-    const updatedSample = await tx.sample.update({
-      where: { id: sample.id },
+  const result = await prisma.$transaction(async (tx) => {
+    const finalCoa = await tx.coa.create({
       data: {
-        status: "FINAL_COA",
+        coaNo: generateDocumentNo("FINAL-COA"),
+        sampleId: sample.id,
+        type: "FINAL",
+        status: "DRAFT",
+        createdById: permission.session?.userId,
       },
     });
 
@@ -95,15 +93,15 @@ export async function POST(_request: Request, context: RouteContext) {
         actorId: permission.session?.userId,
         sampleId: sample.id,
         action: "CREATE_FINAL_COA",
-        note: `Final COA ${finalCoa.coaNo} created`,
+        note: `Final COA ${finalCoa.coaNo} dibuat, menunggu approval`,
       },
     });
 
-    return { finalCoa, sample: updatedSample };
+    return { finalCoa };
   });
 
   return NextResponse.json({
-    message: "Final COA berhasil dibuat",
+    message: "Final COA berhasil dibuat, menunggu approval Lab Manager",
     ...result,
   });
 }

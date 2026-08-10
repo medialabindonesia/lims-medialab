@@ -21,6 +21,7 @@ export default async function FinalCoaPage() {
         mode="final"
         initialSamples={data.samples}
         viewerRole={session.roleCode}
+        viewerUserId={session.userId}
       />
     </section>
   );
