@@ -74,6 +74,28 @@ durasi sampling. Perintah ini tidak membuat atau mereset user/password demo,
 RBAC, customer, template COA, FAQ, maupun canned reply. Harga dasar yang belum
 tersedia tetap dibiarkan kosong.
 
+## Uji koneksi Resend
+
+Isi API key asli di `.env` lokal. Jangan menulis key langsung pada source code
+dan jangan memasukkan `.env` ke commit:
+
+```dotenv
+RESEND_API_KEY="re_xxxxxxxxx"
+RESEND_TEST_FROM="onboarding@resend.dev"
+RESEND_TEST_TO="rafifn.a18@gmail.com"
+```
+
+Ganti `re_xxxxxxxxx` dengan API key Resend asli Anda, lalu jalankan:
+
+```bash
+pnpm email:test
+```
+
+Skrip akan berhenti sebelum menghubungi Resend jika key masih kosong atau masih
+bernilai placeholder. `onboarding@resend.dev` dipakai untuk uji awal; gunakan
+`MAIL_FROM` dari domain Medialab yang sudah diverifikasi untuk pengiriman
+quotation produksi.
+
 Port 3307 dipakai, bukan 3306, karena 3306 sering sudah terisi MySQL yang
 terpasang langsung di Windows.
 

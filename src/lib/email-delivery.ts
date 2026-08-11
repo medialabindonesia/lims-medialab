@@ -43,7 +43,9 @@ export function getEmailDeliveryConfiguration(): EmailDeliveryConfiguration {
 }
 
 /**
- * Adapter pengiriman minimal memakai REST API Resend tanpa dependency baru.
+ * Adapter produksi memakai REST API Resend langsung agar request dapat
+ * dibatalkan dengan AbortSignal.timeout. SDK resmi digunakan oleh skrip
+ * `pnpm email:test` untuk memverifikasi key secara terpisah.
  * Draft tetap dapat dibuat tanpa konfigurasi; endpoint send akan menjelaskan
  * variabel environment yang belum tersedia dan tidak berpura-pura sukses.
  */

@@ -15,6 +15,7 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:marketing": "tsx prisma/seed-marketing.ts",
+    "email:test": "tsx scripts/test-resend-email.ts",
     "check:workbook": "tsx scripts/check-marketing-workbook.ts",
     "convert:menu-pengujian": "tsx scripts/convert-menu-pengujian.ts",
     "setup:env": "node scripts/setup-local-env.mjs"
@@ -36,6 +37,7 @@
     "pdfjs-dist": "^6.1.200",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "resend": "^6.19.0",
     "tailwind-merge": "^3.6.0",
     "zod": "^4.4.3"
   },
