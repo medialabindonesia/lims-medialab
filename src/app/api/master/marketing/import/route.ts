@@ -11,7 +11,11 @@ import {
   optionalYes,
   readHeaderMap,
 } from "@/lib/excel-import";
-import { parseDurations, SHEETS } from "@/lib/marketing-master-workbook";
+import {
+  parseDurations,
+  regulationParameterVariantKey,
+  SHEETS,
+} from "@/lib/marketing-master-workbook";
 
 export const runtime = "nodejs";
 
@@ -382,11 +386,16 @@ export async function POST(request: Request) {
           optionalYes(getCell(row, parameterHeaders, "isActive")) ?? true,
       };
 
+      // Metode dan satuan ikut menentukan identitas baris: satu parameter bisa
+      // ditawarkan dengan beberapa metode uji di dalam regulasi yang sama.
+      const variantKey = regulationParameterVariantKey(method, unit);
+
       const existing = await prisma.regulationParameter.findUnique({
         where: {
-          regulationId_parameterId: {
+          regulationId_parameterId_variantKey: {
             regulationId: regulation.id,
             parameterId: analysisParameter.id,
+            variantKey,
           },
         },
         select: { id: true },
@@ -403,6 +412,7 @@ export async function POST(request: Request) {
               ...data,
               regulationId: regulation.id,
               parameterId: analysisParameter.id,
+              variantKey,
             },
             select: { id: true },
           });

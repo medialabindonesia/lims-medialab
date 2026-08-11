@@ -132,9 +132,14 @@ Jangan menjalankan seed otomatis pada produksi. Jika data awal dari
 `prisma/seed.ts` memang dibutuhkan, tinjau isinya terlebih dahulu dan jalankan
 secara sadar setelah deployment pertama.
 
-Untuk hanya menyinkronkan master marketing tanpa menyentuh akun demo, password,
-FAQ, atau RBAC lain, gunakan `pnpm db:seed:marketing`. Impor seluruh katalog
-tetap dilakukan dari workbook canonical melalui halaman Master Marketing.
+Katalog pengujian tidak ikut ditanam oleh `prisma/seed.ts`. Matriks, regulasi,
+parameter, dan durasi hanya berasal dari `MENU PENGUJIAN 2024.xlsx` dan
+dimasukkan lewat `pnpm db:sync:menu-pengujian`, yang membaca berkas turunan di
+`docs/generated/` sehingga ikut ter-deploy bersama kode. Jalankan `--dry-run`
+lebih dulu untuk melihat berapa baris yang akan dibuang.
+
+Perintah itu membuat isi katalog sama persis dengan berkas dan aman diulang.
+Akun demo, password, RBAC, FAQ, dan data UAT tidak tersentuh.
 
 ## 3. Buat SSH key GitHub Actions
 

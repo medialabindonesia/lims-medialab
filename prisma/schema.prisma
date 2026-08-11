@@ -604,6 +604,18 @@ model RegulationParameter {
   /// Ikut tercentang otomatis saat regulasi dipilih di form quotation.
   defaultSelected Boolean @default(true)
 
+  /// Pembeda varian di dalam satu regulasi.
+  ///
+  /// Satu parameter dapat ditawarkan dengan lebih dari satu metode uji pada
+  /// regulasi yang sama — NO2 pada PP 22/2021 tersedia lewat SNI 19-7119.2-2005
+  /// maupun MASA 408, dan SO2 punya tiga varian. Tanpa kolom ini varian kedua
+  /// dan seterusnya saling menimpa, sehingga 331 layanan yang benar-benar bisa
+  /// dikerjakan Medialab tidak pernah muncul di form quotation.
+  ///
+  /// Nilainya diturunkan dari metode dan satuan lewat
+  /// `regulationParameterVariantKey()`. Baris lama memakai string kosong.
+  variantKey String @default("") @db.VarChar(64)
+
   sort     Int     @default(0)
   isActive Boolean @default(true)
 
@@ -616,7 +628,10 @@ model RegulationParameter {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([regulationId, parameterId])
+  @@unique([regulationId, parameterId, variantKey])
+  /// Penopang foreign key `regulationId`. Sebelumnya peran ini dipegang awalan
+  /// index unik lama, yang kini sudah memuat kolom `variantKey`.
+  @@index([regulationId])
   @@index([parameterId])
 }
 

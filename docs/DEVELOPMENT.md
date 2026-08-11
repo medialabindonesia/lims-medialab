@@ -62,17 +62,39 @@ pnpm dev
 Akun demo tercetak di akhir langkah 3. Halaman login juga menampilkannya
 selama `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS="true"`.
 
-Jika database sudah berisi akun dan data uji, tetapi master marketing perlu
-disinkronkan ulang, gunakan seed terarah:
+### Mengisi katalog pengujian
+
+`pnpm db:seed` **tidak** mengisi matriks, regulasi, dan parameter. Katalog
+pengujian hanya boleh berasal dari `MENU PENGUJIAN 2024.xlsx` milik Marketing —
+menurut mereka berkas itulah seluruh layanan yang Medialab bisa tawarkan.
 
 ```bash
-pnpm db:seed:marketing
+pnpm db:sync:menu-pengujian --dry-run   # tampilkan rencana, tidak menulis
+pnpm db:sync:menu-pengujian             # terapkan
 ```
 
-Perintah ini hanya meng-upsert matriks, regulasi, parameter-regulasi, dan
-durasi sampling. Perintah ini tidak membuat atau mereset user/password demo,
-RBAC, customer, template COA, FAQ, maupun canned reply. Harga dasar yang belum
-tersedia tetap dibiarkan kosong.
+Perintah ini membaca `docs/generated/master-marketing-menu-2024.xlsx` yang ikut
+tersimpan di repo, sehingga tidak memerlukan berkas asli milik Marketing. Isinya
+membuat katalog di database sama persis dengan berkas itu: apa pun yang ada di
+database tetapi tidak ada di berkas akan dibuang. Aman dijalankan berkali-kali.
+
+Quotation lama tidak ikut terhapus. Setiap quotation menyimpan salinan teksnya
+sendiri dan tautan ke master memakai `SetNull`, jadi yang terjadi hanya tautan
+terputus — dokumen yang sudah tercetak tetap sama.
+
+`pnpm db:seed:marketing` masih ada sebagai nama lama dan menjalankan hal yang
+persis sama.
+
+Kalau Marketing mengirim berkas menu yang diperbarui, buat ulang berkas
+turunannya lebih dulu:
+
+```bash
+pnpm convert:menu-pengujian "C:/path/MENU PENGUJIAN 2024.xlsx"
+```
+
+Converter menghasilkan dua sheet untuk manusia: `Audit Sumber` (baris yang
+disisihkan, ejaan yang digabung) dan `Review Akreditasi` (parameter yang tanda
+bintangnya tidak konsisten di sumber). Harga dasar sengaja dibiarkan kosong.
 
 ## Uji koneksi Resend
 

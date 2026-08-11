@@ -72,14 +72,20 @@ sudo -H -u deploy bash -lc \
   'cd /opt/apps/lims-medialab-marketing/current && pnpm db:seed'
 ```
 
-Jika akun, RBAC, dan data UAT sudah ada lalu hanya master marketing yang perlu
-disinkronkan, gunakan seed terarah agar password demo dan data modul lain tidak
-tersentuh:
+Katalog pengujian diisi terpisah dari seed. Jalankan setelah deployment, dan
+gunakan `--dry-run` lebih dulu untuk melihat rencananya:
 
 ```bash
 sudo -H -u deploy bash -lc \
-  'cd /opt/apps/lims-medialab-marketing/current && pnpm db:seed:marketing'
+  'cd /opt/apps/lims-medialab-marketing/current && pnpm db:sync:menu-pengujian --dry-run'
+
+sudo -H -u deploy bash -lc \
+  'cd /opt/apps/lims-medialab-marketing/current && pnpm db:sync:menu-pengujian'
 ```
+
+Perintah ini membuat matriks, regulasi, parameter, dan durasi sama persis
+dengan `MENU PENGUJIAN 2024.xlsx`. Password demo, RBAC, dan data modul lain
+tidak tersentuh, dan quotation lama tetap utuh.
 
 Untuk bootstrap environment non-produksi lewat satu deployment, operator dapat
 menambahkan `RUN_FULL_SEED_ON_DEPLOY="true"` ke `shared/.env`. Flag ini harus

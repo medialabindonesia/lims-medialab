@@ -2,7 +2,6 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { PrismaMariaDb } from "@prisma/adapter-mariadb";
 import bcrypt from "bcryptjs";
-import { seedMarketingMaster } from "./seed-marketing-master";
 
 function createAdapter() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -1272,9 +1271,16 @@ async function main() {
     ],
   });
 
-  console.log("Seeding master marketing (matriks, regulasi, durasi)...");
-
-  await seedMarketingMaster(prisma);
+  // Katalog pengujian TIDAK ditanam di sini.
+  //
+  // Matriks, regulasi, parameter, dan durasi hanya boleh berasal dari
+  // `MENU PENGUJIAN 2024.xlsx` — menurut Marketing itulah seluruh layanan yang
+  // Medialab bisa tawarkan. Dulu seed ini menanam katalog kecil hasil salinan
+  // surat penawaran Rev.07, lalu katalog itu hidup berdampingan dengan katalog
+  // resmi dan membuat form quotation menampilkan pilihan yang usang.
+  //
+  // Isi katalog dengan: pnpm db:sync:menu-pengujian
+  console.log("Katalog pengujian dilewati — jalankan `pnpm db:sync:menu-pengujian`.");
 
   console.log("Seeding FAQ categories & items...");
 

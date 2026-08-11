@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import ExcelJS from "exceljs";
 
 /**
@@ -92,6 +93,41 @@ export function parseDurations(raw: string | null): ParsedDuration[] {
       return { label, limitValue, isDefault };
     })
     .filter((entry) => entry.label.length > 0);
+}
+
+/**
+ * Pembeda varian sebuah parameter di dalam satu regulasi.
+ *
+ * Parameter yang sama bisa ditawarkan dengan metode uji berbeda pada regulasi
+ * yang sama. Contohnya Nitrogen Dioxide (NO2) pada PP 22/2021 tersedia lewat
+ * SNI 19-7119.2-2005 maupun MASA 408, dan Sulfur Dioxide (SO2) punya tiga
+ * varian. Nilai kembalian fungsi ini disimpan pada `RegulationParameter.variantKey`
+ * sehingga tiap varian menjadi baris tersendiri.
+ *
+ * Bagian yang terbaca manusia dipertahankan di depan agar isi tabel masih bisa
+ * ditelusuri, lalu ditutup potongan hash supaya metode panjang yang awalannya
+ * mirip tidak pernah bertabrakan setelah dipotong.
+ *
+ * Parameter tanpa metode maupun satuan menghasilkan string kosong — sama
+ * dengan nilai bawaan baris lama, sehingga data yang sudah ada tidak berubah
+ * makna setelah migration.
+ */
+export function regulationParameterVariantKey(
+  method: string | null | undefined,
+  unit: string | null | undefined,
+) {
+  const source = `${(method ?? "").trim()}|${(unit ?? "").trim()}`;
+  if (source === "|") return "";
+
+  const readable = source
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 46);
+
+  const digest = crypto.createHash("sha1").update(source).digest("hex").slice(0, 8);
+
+  return readable ? `${readable}_${digest}` : digest;
 }
 
 export function formatDurations(entries: ParsedDuration[]) {
