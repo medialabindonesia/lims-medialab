@@ -328,13 +328,25 @@ dasar quotation secara otomatis seperti permintaan bisnis.
 
 ### 5.3 Master data di environment marketing
 
-Database lokal sudah selesai dan terverifikasi pada 11 Agustus 2026: 29 matriks,
-293 regulasi, 3.005 parameter, 8 durasi — sama persis dengan berkas sumber.
-Menjalankan script sync dua kali menghasilkan keadaan yang sama tanpa perubahan.
-28 quotation uji tetap utuh beserta 83 baris parameternya.
+Selesai dan terverifikasi pada 11 Agustus 2026 di **kedua** environment. Isinya
+sama persis dengan berkas sumber: **29 matriks, 293 regulasi, 3.005 parameter,
+8 durasi**, dengan 11 kategori utama dan tidak ada lagi cabang
+`Udara`/`Lingkungan Kerja`/`Air` bawaan seed lama.
 
-Database `lims_marketing` menyusul lewat deployment; jalankan
-`pnpm db:sync:menu-pengujian` di sana setelah deploy selesai.
+| | Lokal `lims_e2e` | VPS `lims_marketing` |
+| --- | --- | --- |
+| Katalog | 29 / 293 / 3.005 / 8 | 29 / 293 / 3.005 / 8 |
+| Dihapus saat sync | 47 matriks, 302 regulasi | 17 matriks, 9 regulasi |
+| Quotation setelah sync | 28 quotation, 83 baris | 2 quotation, 12 baris |
+
+Menjalankan script sync dua kali berturut-turut di database lokal tidak membuat
+maupun menghapus apa pun, jadi sifat "aman diulang" sudah terbukti, bukan hanya
+diklaim. Health check `lims-medialab-marketing` mengembalikan `status: ok` pada
+commit `087656d` setelah sync.
+
+Yang masih kurang di katalog: harga paket/base price resmi belum ada dari
+sumber. Quotation dapat disusun, tetapi tidak dapat di-approve sebelum harga
+komersialnya lengkap.
 
 Harga paket/base price resmi belum tersedia dari sumber. Quotation dapat disusun,
 tetapi tidak dapat di-approve sebelum harga komersialnya lengkap.
