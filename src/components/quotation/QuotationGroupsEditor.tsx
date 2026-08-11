@@ -43,6 +43,19 @@ type MatrixNode = {
   children: MatrixNode[];
 };
 
+function regulationLabelInTree(
+  nodes: MatrixNode[],
+  regulationId: string
+): string {
+  for (const node of nodes) {
+    const regulation = node.regulations.find((item) => item.id === regulationId);
+    if (regulation) return regulation.shortName || regulation.name;
+    const nested = regulationLabelInTree(node.children, regulationId);
+    if (nested) return nested;
+  }
+  return "Regulasi";
+}
+
 type DurationOption = {
   id: string;
   code: string;
@@ -53,6 +66,8 @@ type DurationOption = {
 
 export type GroupParamDraft = {
   regulationParameterId: string | null;
+  regulationId: string;
+  regulationLabel: string;
   parameterId: string;
   name: string;
   unit: string | null;
@@ -75,7 +90,8 @@ export type GroupParamDraft = {
  * dimuat ulang dari master, lalu pilihan lama ditempelkan di atasnya.
  */
 type PendingSelection = {
-  parameterIds: string[];
+  parameterKeys: string[];
+  knownRegulationIds: string[];
   prices: Record<string, string>;
   durationIds: Record<string, string>;
 };
@@ -86,9 +102,12 @@ export type GroupDraft = {
   /** Id matriks per tingkat cascade, dari akar ke daun. */
   matrixPath: string[];
   regulationId: string;
+  regulationIds: string[];
   regulationLabel: string;
   locations: Array<{ key: string; label: string; customerSampleId: string }>;
   qty: string;
+  /** Harga satu paket, bukan harga masing-masing parameter. */
+  unitPrice: string;
   note: string;
   params: GroupParamDraft[];
   loadingParams: boolean;
@@ -125,9 +144,11 @@ export function createEmptyGroup(): GroupDraft {
     description: "",
     matrixPath: [],
     regulationId: "",
+    regulationIds: [],
     regulationLabel: "",
     locations: [{ key: newKey(), label: "", customerSampleId: "" }],
     qty: "1",
+    unitPrice: "",
     note: "",
     params: [],
     loadingParams: false,
@@ -157,21 +178,14 @@ function formatRupiah(value: number) {
   }).format(value);
 }
 
-/** Total satu grup. null bila ada parameter terpilih yang belum berharga. */
+/** Total satu grup. null bila harga paket belum ditetapkan. */
 export function groupSubtotal(group: GroupDraft): number | null {
   const selected = group.params.filter((param) => param.selected);
   if (selected.length === 0) return 0;
 
   const qty = Number(group.qty) || 1;
-  let total = 0;
-
-  for (const param of selected) {
-    const price = parsePriceInput(param.price);
-    if (price === null) return null;
-    total += price * qty;
-  }
-
-  return total;
+  const unitPrice = parsePriceInput(group.unitPrice);
+  return unitPrice === null ? null : unitPrice * qty;
 }
 
 export function groupsTotal(groups: GroupDraft[]) {
@@ -191,14 +205,11 @@ export function groupsTotal(groups: GroupDraft[]) {
 }
 
 export function countUnpricedParams(groups: GroupDraft[]) {
-  return groups.reduce(
-    (count, group) =>
-      count +
-      group.params.filter(
-        (param) => param.selected && parsePriceInput(param.price) === null
-      ).length,
-    0
-  );
+  return groups.filter(
+    (group) =>
+      group.params.some((param) => param.selected) &&
+      parsePriceInput(group.unitPrice) === null
+  ).length;
 }
 
 /** Bentuk payload yang dikirim ke POST/PATCH /api/quotations. */
@@ -207,7 +218,9 @@ export function toApiGroups(groups: GroupDraft[]) {
     description: group.description || null,
     matrixId: group.matrixPath[group.matrixPath.length - 1] || null,
     regulationId: group.regulationId || null,
+    regulationIds: group.regulationIds,
     qty: Number(group.qty) || 1,
+    unitPrice: parsePriceInput(group.unitPrice),
     note: group.note || null,
     locations: group.locations
       .filter((location) => location.label.trim())
@@ -221,7 +234,8 @@ export function toApiGroups(groups: GroupDraft[]) {
         regulationParameterId: param.regulationParameterId,
         parameterId: param.parameterId,
         durationId: param.durationId || null,
-        price: parsePriceInput(param.price),
+        // Harga komersial disimpan sekali pada grup. Harga dasar parameter
+        // tetap di-resolve server sebagai snapshot teknis, bukan dijumlahkan.
         method: param.method,
       })),
   }));
@@ -233,12 +247,18 @@ export type SavedQuotationGroup = {
   description: string | null;
   matrixId: string | null;
   regulationId: string | null;
+  unitPrice: number | null;
   qty: number;
   note: string | null;
   regulation?: { name: string; shortName: string | null } | null;
+  regulationLinks?: Array<{
+    regulationId: string;
+    regulation: { name: string; shortName: string | null };
+  }>;
   locations?: Array<{ label: string; customerSampleId: string | null }>;
   items?: Array<{
     parameterId: string;
+    regulationParameterId?: string | null;
     durationId: string | null;
     price: number | null;
   }>;
@@ -257,13 +277,14 @@ export function buildGroupsFromQuotation(
   return savedGroups.map((group) => {
     const prices: Record<string, string> = {};
     const durationIds: Record<string, string> = {};
-    const parameterIds: string[] = [];
+    const parameterKeys: string[] = [];
 
     for (const item of group.items ?? []) {
-      parameterIds.push(item.parameterId);
-      prices[item.parameterId] =
+      const parameterKey = item.regulationParameterId || item.parameterId;
+      parameterKeys.push(parameterKey);
+      prices[parameterKey] =
         item.price === null ? "" : formatPriceInput(String(item.price));
-      if (item.durationId) durationIds[item.parameterId] = item.durationId;
+      if (item.durationId) durationIds[parameterKey] = item.durationId;
     }
 
     const locations = (group.locations ?? []).map((location) => ({
@@ -272,6 +293,19 @@ export function buildGroupsFromQuotation(
       customerSampleId: location.customerSampleId ?? "",
     }));
 
+    const regulationIds = group.regulationLinks?.length
+      ? group.regulationLinks.map((link) => link.regulationId)
+      : group.regulationId
+        ? [group.regulationId]
+        : [];
+    const regulationLabel = group.regulationLinks?.length
+      ? group.regulationLinks
+          .map(
+            (link) => link.regulation.shortName || link.regulation.name
+          )
+          .join("; ")
+      : group.regulation?.shortName || group.regulation?.name || "";
+
     return {
       key: newKey(),
       description: group.description ?? "",
@@ -279,18 +313,27 @@ export function buildGroupsFromQuotation(
       // tampil kosong sampai sales menyentuhnya, tanpa mengubah data tersimpan.
       matrixPath: group.matrixId ? [group.matrixId] : [],
       regulationId: group.regulationId ?? "",
-      regulationLabel:
-        group.regulation?.shortName || group.regulation?.name || "",
+      regulationIds,
+      regulationLabel,
       locations: locations.length
         ? locations
         : [{ key: newKey(), label: "", customerSampleId: "" }],
       qty: String(group.qty || 1),
+      unitPrice:
+        group.unitPrice === null
+          ? ""
+          : formatPriceInput(String(group.unitPrice)),
       note: group.note ?? "",
       params: [],
       loadingParams: false,
       paramsError: null,
       paramsLoadedFor: null,
-      pendingSelection: { parameterIds, prices, durationIds },
+      pendingSelection: {
+        parameterKeys,
+        knownRegulationIds: regulationIds,
+        prices,
+        durationIds,
+      },
     };
   });
 }
@@ -306,8 +349,8 @@ export function validateGroups(groups: GroupDraft[]): string[] {
   groups.forEach((group, index) => {
     const label = group.description || `Grup ${index + 1}`;
 
-    if (!group.regulationId) {
-      issues.push(`${label}: regulasi belum dipilih.`);
+    if (group.regulationIds.length === 0) {
+      issues.push(`${label}: minimal satu regulasi belum dipilih.`);
     }
 
     if (!group.params.some((param) => param.selected)) {
@@ -396,19 +439,14 @@ export default function QuotationGroupsEditor({
     [patchGroupWith]
   );
 
-  /** Qty grup selalu mengikuti jumlah titik sampling yang terisi. */
-  const withLocationQty = useCallback((group: GroupDraft): GroupDraft => {
-    const filled = group.locations.filter((item) => item.label.trim()).length;
-    return { ...group, qty: String(filled || 1) };
-  }, []);
-
   const loadParameters = useCallback(
     async (
       key: string,
-      regulationId: string,
+      regulationIds: string[],
       /** Saat memuat ulang untuk revisi, pilihan lama dipertahankan. */
       keepPending = false
     ) => {
+      const loadedKey = [...regulationIds].sort().join(",");
       patchGroupWith(key, (group) => ({
         ...group,
         loadingParams: true,
@@ -418,16 +456,25 @@ export default function QuotationGroupsEditor({
       }));
 
       try {
-        const response = await fetch(
-          `/api/master/regulations/${regulationId}/parameters`
+        const payloads = await Promise.all(
+          regulationIds.map(async (regulationId) => {
+            const response = await fetch(
+              `/api/master/regulations/${regulationId}/parameters`
+            );
+            if (!response.ok) {
+              throw new Error("Gagal memuat parameter regulasi.");
+            }
+            return {
+              regulationId,
+              regulationLabel: regulationLabelInTree(tree, regulationId),
+              data: await response.json(),
+            };
+          })
         );
 
-        if (!response.ok) throw new Error("Gagal memuat parameter regulasi.");
-
-        const data = await response.json();
-
-        const params: GroupParamDraft[] = (data.parameters ?? []).map(
-          (row: {
+        const params: GroupParamDraft[] = payloads.flatMap(
+          ({ regulationId, regulationLabel, data }) =>
+            (data.parameters ?? []).map((row: {
             regulationParameterId: string;
             parameterId: string;
             name: string;
@@ -445,6 +492,8 @@ export default function QuotationGroupsEditor({
 
             return {
               regulationParameterId: row.regulationParameterId,
+              regulationId,
+              regulationLabel,
               parameterId: row.parameterId,
               name: row.name,
               unit: row.unit,
@@ -463,7 +512,7 @@ export default function QuotationGroupsEditor({
                   ? ""
                   : formatPriceInput(String(row.basePrice)),
             };
-          }
+          })
         );
 
         patchGroupWith(key, (group) => {
@@ -474,28 +523,36 @@ export default function QuotationGroupsEditor({
               ...group,
               params,
               loadingParams: false,
-              paramsLoadedFor: regulationId,
+              paramsLoadedFor: loadedKey,
             };
           }
 
-          const chosen = new Set(pending.parameterIds);
+          const chosen = new Set(pending.parameterKeys);
 
           return {
             ...group,
             loadingParams: false,
-            paramsLoadedFor: regulationId,
+            paramsLoadedFor: loadedKey,
             pendingSelection: null,
             params: params.map((param) => {
-              if (!chosen.has(param.parameterId)) {
+              const parameterKey =
+                param.regulationParameterId ?? param.parameterId;
+              if (!pending.knownRegulationIds.includes(param.regulationId)) {
+                return param;
+              }
+              if (
+                !chosen.has(parameterKey) &&
+                !chosen.has(param.parameterId)
+              ) {
                 return { ...param, selected: false };
               }
 
               return {
                 ...param,
                 selected: true,
-                price: pending.prices[param.parameterId] ?? param.price,
+                price: pending.prices[parameterKey] ?? param.price,
                 durationId:
-                  pending.durationIds[param.parameterId] || param.durationId,
+                  pending.durationIds[parameterKey] || param.durationId,
               };
             }),
           };
@@ -504,12 +561,12 @@ export default function QuotationGroupsEditor({
         patchGroup(key, {
           loadingParams: false,
           // Ditandai sudah dicoba agar efek hidrasi tidak mengulang terus.
-          paramsLoadedFor: regulationId,
+          paramsLoadedFor: loadedKey,
           paramsError: (error as Error).message,
         });
       }
     },
-    [patchGroup, patchGroupWith]
+    [patchGroup, patchGroupWith, tree]
   );
 
   /**
@@ -518,12 +575,13 @@ export default function QuotationGroupsEditor({
    */
   useEffect(() => {
     for (const group of groups) {
+      const loadedKey = [...group.regulationIds].sort().join(",");
       if (
-        group.regulationId &&
-        group.regulationId !== group.paramsLoadedFor &&
+        group.regulationIds.length > 0 &&
+        loadedKey !== group.paramsLoadedFor &&
         !group.loadingParams
       ) {
-        void loadParameters(group.key, group.regulationId, true);
+        void loadParameters(group.key, group.regulationIds, true);
       }
     }
   }, [groups, loadParameters]);
@@ -573,26 +631,58 @@ export default function QuotationGroupsEditor({
     patchGroup(group.key, {
       matrixPath: nextPath,
       regulationId: "",
+      regulationIds: [],
       regulationLabel: "",
       params: [],
       paramsError: null,
+      paramsLoadedFor: null,
+      pendingSelection: null,
       description: group.description,
     });
   }
 
-  function handleRegulationChange(group: GroupDraft, regulationId: string) {
+  function handleRegulationToggle(
+    group: GroupDraft,
+    regulationId: string,
+    checked: boolean
+  ) {
     const node = selectedNode(group);
-    const regulation = node?.regulations.find(
-      (candidate) => candidate.id === regulationId
-    );
+    const nextRegulationIds = checked
+      ? [...new Set([...group.regulationIds, regulationId])]
+      : group.regulationIds.filter((id) => id !== regulationId);
+    const labels = nextRegulationIds.map((id) => {
+      const regulation = node?.regulations.find((candidate) => candidate.id === id);
+      return regulation?.shortName || regulation?.name || "Regulasi";
+    });
 
-    // Daftar parameter dimuat oleh efek hidrasi begitu regulationId berubah,
-    // sehingga hanya ada satu jalur pemuatan.
+    const selectedParams = group.params.filter((param) => param.selected);
+    const pendingSelection: PendingSelection = {
+      parameterKeys: selectedParams.map(
+        (param) => param.regulationParameterId ?? param.parameterId
+      ),
+      knownRegulationIds: group.regulationIds,
+      prices: Object.fromEntries(
+        selectedParams.map((param) => [
+          param.regulationParameterId ?? param.parameterId,
+          param.price,
+        ])
+      ),
+      durationIds: Object.fromEntries(
+        selectedParams.map((param) => [
+          param.regulationParameterId ?? param.parameterId,
+          param.durationId,
+        ])
+      ),
+    };
+
     patchGroup(group.key, {
-      regulationId,
-      regulationLabel: regulation?.shortName || regulation?.name || "",
+      regulationId: nextRegulationIds[0] || "",
+      regulationIds: nextRegulationIds,
+      regulationLabel: labels.join("; "),
       description: group.description || node?.name || "",
-      pendingSelection: null,
+      pendingSelection,
+      paramsLoadedFor: null,
+      params: nextRegulationIds.length ? group.params : [],
     });
   }
 
@@ -757,19 +847,35 @@ export default function QuotationGroupsEditor({
                       <label className="mb-1.5 block text-xs font-bold text-slate-500">
                         Regulasi / Baku Mutu
                       </label>
-                      {node.regulations.length > 0 ? (
-                        <Select
-                          value={group.regulationId}
-                          disabled={disabled}
-                          placeholder="Pilih regulasi…"
-                          onChange={(value) =>
-                            handleRegulationChange(group, value)
-                          }
-                          options={node.regulations.map((regulation) => ({
-                            value: regulation.id,
-                            label: `${regulation.name} (${regulation.parameterCount} parameter)`,
-                          }))}
-                        />
+                     {node.regulations.length > 0 ? (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {node.regulations.map((regulation) => (
+                            <label
+                              key={regulation.id}
+                              className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-600 transition hover:border-blue-300"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={group.regulationIds.includes(regulation.id)}
+                                disabled={disabled}
+                                onChange={(event) =>
+                                  handleRegulationToggle(
+                                    group,
+                                    regulation.id,
+                                    event.target.checked
+                                  )
+                                }
+                                className="mt-0.5 h-4 w-4 shrink-0 accent-blue-700"
+                              />
+                              <span>
+                                <strong className="block text-slate-700">
+                                  {regulation.name}
+                                </strong>
+                                {regulation.parameterCount} parameter
+                              </span>
+                            </label>
+                          ))}
+                        </div>
                       ) : (
                         <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-700">
                           Belum ada regulasi terdaftar untuk matriks ini.
@@ -781,7 +887,7 @@ export default function QuotationGroupsEditor({
                 </div>
 
                 {/* Titik sampling */}
-                {group.regulationId && (
+                {group.regulationIds.length > 0 && (
                   <div className="rounded-xl border border-slate-200 bg-white p-3">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500">
@@ -801,16 +907,14 @@ export default function QuotationGroupsEditor({
                             placeholder={`Titik ${locationIndex + 1} — mis. Upwind`}
                             onChange={(event) => {
                               const label = event.target.value;
-                              patchGroupWith(group.key, (current) =>
-                                withLocationQty({
-                                  ...current,
-                                  locations: current.locations.map((item) =>
-                                    item.key === location.key
-                                      ? { ...item, label }
-                                      : item
-                                  ),
-                                })
-                              );
+                              patchGroupWith(group.key, (current) => ({
+                                ...current,
+                                locations: current.locations.map((item) =>
+                                  item.key === location.key
+                                    ? { ...item, label }
+                                    : item
+                                ),
+                              }));
                             }}
                             className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 outline-none focus:border-blue-300"
                           />
@@ -837,14 +941,12 @@ export default function QuotationGroupsEditor({
                               disabled={disabled}
                               aria-label="Hapus titik"
                               onClick={() =>
-                                patchGroupWith(group.key, (current) =>
-                                  withLocationQty({
-                                    ...current,
-                                    locations: current.locations.filter(
-                                      (item) => item.key !== location.key
-                                    ),
-                                  })
-                                )
+                                patchGroupWith(group.key, (current) => ({
+                                  ...current,
+                                  locations: current.locations.filter(
+                                    (item) => item.key !== location.key
+                                  ),
+                                }))
                               }
                               className="shrink-0 rounded-lg px-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                             >
@@ -871,6 +973,48 @@ export default function QuotationGroupsEditor({
                     >
                       <Plus size={13} /> Tambah titik
                     </button>
+
+                    <div className="mt-3 grid gap-3 border-t border-slate-100 pt-3 sm:grid-cols-2">
+                      <label>
+                        <span className="mb-1.5 block text-xs font-bold text-slate-500">
+                          Qty / frekuensi pekerjaan
+                        </span>
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={group.qty}
+                          disabled={disabled}
+                          onChange={(event) =>
+                            patchGroup(group.key, { qty: event.target.value })
+                          }
+                          className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-300"
+                        />
+                        <span className="mt-1 block text-[11px] text-slate-400">
+                          Diisi manual; tidak otomatis sama dengan jumlah lokasi.
+                        </span>
+                      </label>
+                      <label>
+                        <span className="mb-1.5 block text-xs font-bold text-slate-500">
+                          Harga satu paket
+                        </span>
+                        <span className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3">
+                          <span className="text-xs font-bold text-slate-400">Rp</span>
+                          <input
+                            inputMode="numeric"
+                            value={group.unitPrice}
+                            disabled={disabled}
+                            placeholder="Belum ditetapkan"
+                            onChange={(event) =>
+                              patchGroup(group.key, {
+                                unitPrice: formatPriceInput(event.target.value),
+                              })
+                            }
+                            className="min-w-0 flex-1 bg-transparent py-2 text-right text-sm font-bold text-slate-700 outline-none"
+                          />
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 )}
 
@@ -974,11 +1118,12 @@ export default function QuotationGroupsEditor({
                                 </p>
                                 {/* Metode mengikuti parameter, tidak diketik sales. */}
                                 <p className="mt-0.5 break-words text-xs font-medium text-slate-400">
+                                  {param.regulationLabel} ·{" "}
                                   {param.method || "Metode belum ditetapkan"}
                                 </p>
                               </div>
 
-                              {param.selected && (
+                              {param.selected && param.durations.length > 0 && (
                                 <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center">
                                   {param.durations.length > 0 && (
                                     <Select
@@ -1001,25 +1146,6 @@ export default function QuotationGroupsEditor({
                                     />
                                   )}
 
-                                  <div className="flex min-h-11 w-40 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3">
-                                    <span className="shrink-0 text-xs font-bold text-slate-400">
-                                      Rp
-                                    </span>
-                                    <input
-                                      inputMode="numeric"
-                                      value={param.price}
-                                      disabled={disabled}
-                                      placeholder="Belum diisi"
-                                      onChange={(event) =>
-                                        patchParam(group.key, parameterKey, {
-                                          price: formatPriceInput(
-                                            event.target.value
-                                          ),
-                                        })
-                                      }
-                                      className="min-w-0 flex-1 bg-transparent py-2 text-right text-sm font-bold text-slate-700 outline-none placeholder:text-xs placeholder:font-medium placeholder:text-slate-300"
-                                    />
-                                  </div>
                                 </div>
                               )}
                             </div>
@@ -1069,7 +1195,7 @@ export default function QuotationGroupsEditor({
         <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-700">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           <span>
-            {countUnpricedParams(groups)} parameter belum berharga. Quotation
+            {countUnpricedParams(groups)} paket belum berharga. Quotation
             tetap bisa disimpan dan dikirim sebagai penawaran scope, tetapi
             belum bisa di-approve.
           </span>

@@ -31,7 +31,7 @@ export async function POST(request: Request, context: RouteContext) {
     where: { id },
     include: {
       purchaseOrder: true,
-      items: { orderBy: { id: "asc" } },
+      items: { orderBy: [{ sort: "asc" }, { id: "asc" }] },
       ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
     },
   });

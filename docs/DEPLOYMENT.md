@@ -99,9 +99,42 @@ wajib benar adalah `DATABASE_URL` dan `JWT_SECRET`. Password database yang
 mengandung karakter seperti `@`, `:`, `/`, atau `#` harus di-URL-encode.
 `SHADOW_DATABASE_URL` tidak diperlukan di produksi.
 
+### Konfigurasi email quotation
+
+Fitur review draft tetap dapat dipakai tanpa provider email. Agar tombol
+**Send** benar-benar mengirim PDF quotation dan identitas customer, isi tiga
+variabel berikut langsung di `shared/.env` environment yang bersangkutan:
+
+```dotenv
+RESEND_API_KEY="re_..."
+MAIL_FROM="Medialab <quotation@domain-medialab-yang-terverifikasi>"
+MAIL_REPLY_TO="sales@domain-medialab"
+```
+
+`MAIL_REPLY_TO` opsional. Jangan commit API key ke repository dan jangan
+memakai alamat contoh di atas sebelum domain pengirim diverifikasi pada
+Resend. Setelah mengubah `shared/.env`, restart proses aplikasi environment
+tersebut. Uji pertama sebaiknya memakai quotation dummy dan alamat internal;
+pastikan PDF serta file identitas terlampir sebelum mengaktifkannya untuk
+customer.
+
+### Konfigurasi identitas surat penawaran
+
+Generator PDF tidak menanam nama badan usaha, rekening, atau kontak resmi dari
+berkas `PT CONTOH`. Isi variabel `QUOTATION_COMPANY_*`, `QUOTATION_BANK_*`,
+`QUOTATION_FORM_*`, dan `QUOTATION_MINIMUM_ORDER` sesuai daftar lengkap pada
+[`.env.example`](../.env.example). Kosongkan rekening atau minimum order yang
+belum disetujui; aplikasi tidak akan mengarang nilainya.
+Tombol **Send** tetap dinonaktifkan sampai identitas perusahaan, alamat, email,
+rekening, dan metadata controlled-form yang wajib sudah lengkap.
+
 Jangan menjalankan seed otomatis pada produksi. Jika data awal dari
 `prisma/seed.ts` memang dibutuhkan, tinjau isinya terlebih dahulu dan jalankan
 secara sadar setelah deployment pertama.
+
+Untuk hanya menyinkronkan master marketing tanpa menyentuh akun demo, password,
+FAQ, atau RBAC lain, gunakan `pnpm db:seed:marketing`. Impor seluruh katalog
+tetap dilakukan dari workbook canonical melalui halaman Master Marketing.
 
 ## 3. Buat SSH key GitHub Actions
 

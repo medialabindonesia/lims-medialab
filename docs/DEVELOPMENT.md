@@ -62,6 +62,18 @@ pnpm dev
 Akun demo tercetak di akhir langkah 3. Halaman login juga menampilkannya
 selama `NEXT_PUBLIC_SHOW_DEMO_ACCOUNTS="true"`.
 
+Jika database sudah berisi akun dan data uji, tetapi master marketing perlu
+disinkronkan ulang, gunakan seed terarah:
+
+```bash
+pnpm db:seed:marketing
+```
+
+Perintah ini hanya meng-upsert matriks, regulasi, parameter-regulasi, dan
+durasi sampling. Perintah ini tidak membuat atau mereset user/password demo,
+RBAC, customer, template COA, FAQ, maupun canned reply. Harga dasar yang belum
+tersedia tetap dibiarkan kosong.
+
 Port 3307 dipakai, bukan 3306, karena 3306 sering sudah terisi MySQL yang
 terpasang langsung di Windows.
 

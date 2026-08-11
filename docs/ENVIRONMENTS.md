@@ -63,13 +63,31 @@ Port 3000, 3001, dan 3002 sudah terpakai aplikasi lain di VPS ini — itulah
 sebabnya environment LIMS memakai 3011 ke atas. Periksa dulu dengan
 `ss -ltn` sebelum menambah environment baru.
 
-Setelah subdomain aktif, push ke branch terkait. Deployment pertama akan
-menjalankan `prisma migrate deploy` sendiri; seed dijalankan manual:
+Setelah subdomain aktif, push ke branch terkait. Setiap deployment menjalankan
+`prisma migrate deploy`, tetapi **tidak menjalankan full seed secara otomatis**.
+Untuk mengisi environment baru yang memang masih kosong, jalankan satu kali:
 
 ```bash
 sudo -H -u deploy bash -lc \
   'cd /opt/apps/lims-medialab-marketing/current && pnpm db:seed'
 ```
+
+Jika akun, RBAC, dan data UAT sudah ada lalu hanya master marketing yang perlu
+disinkronkan, gunakan seed terarah agar password demo dan data modul lain tidak
+tersentuh:
+
+```bash
+sudo -H -u deploy bash -lc \
+  'cd /opt/apps/lims-medialab-marketing/current && pnpm db:seed:marketing'
+```
+
+Untuk bootstrap environment non-produksi lewat satu deployment, operator dapat
+menambahkan `RUN_FULL_SEED_ON_DEPLOY="true"` ke `shared/.env`. Flag ini harus
+dikembalikan menjadi `false` atau dihapus setelah deployment tersebut selesai;
+jika dibiarkan aktif, full seed akan dijalankan kembali pada setiap deployment
+dan dapat menimpa password demo, permission, template, FAQ, atau data UAT.
+Guard pada script deployment tetap menolak full seed di environment produksi,
+meskipun flag tersebut tidak sengaja bernilai `true`.
 
 ## GitHub Environments
 

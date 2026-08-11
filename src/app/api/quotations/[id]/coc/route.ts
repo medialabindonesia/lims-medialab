@@ -31,7 +31,7 @@ export async function POST(request: Request, context: RouteContext) {
   const quotation = await prisma.quotation.findUnique({
     where: { id },
     include: {
-      items: { orderBy: { id: "asc" } },
+      items: { orderBy: [{ sort: "asc" }, { id: "asc" }] },
       ltrs: true,
       cocs: { include: { items: true }, orderBy: { sequence: "asc" } },
     },

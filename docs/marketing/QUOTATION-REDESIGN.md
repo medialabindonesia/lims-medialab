@@ -1,8 +1,13 @@
 # Desain Ulang Alur Quotation (Marketing)
 
-Status: **draft desain, belum diimplementasi penuh**
+Status: **dokumen desain awal; sebagian asumsi sudah digantikan oleh audit template resmi**
 Branch: `marketing-dev`
 Terakhir diperbarui: 7 Agustus 2026
+
+> Jangan memakai dokumen ini sebagai spesifikasi implementasi terakhir. Temuan
+> dari XLSM/PDF resmi—terutama harga paket, qty manual, multi-regulasi, dan
+> rincian biaya tambahan—dicatat pada
+> [QUOTATION-OFFICIAL-TEMPLATE-AUDIT.md](./QUOTATION-OFFICIAL-TEMPLATE-AUDIT.md).
 
 Dokumen ini punya dua pembaca:
 

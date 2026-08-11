@@ -37,18 +37,29 @@ export async function PATCH(request: Request, context: RouteContext) {
     );
   }
 
-  // Gerbang harga: sales boleh menyusun dan mengirim scope tanpa harga, tetapi
-  // quotation tidak boleh melewati APPROVED selama masih ada harga kosong.
-  // Dihitung ulang dari item, bukan sekadar percaya kolom pricingStatus,
-  // agar tetap benar untuk data yang diubah lewat jalur lain.
-  const unpricedCount = await prisma.quotationItem.count({
-    where: { quotationId: id, price: null },
-  });
+  // Dokumen aktif memakai harga paket per grup. Quotation lama tanpa grup
+  // tetap diperiksa pada harga parameter agar kompatibel.
+  const [unpricedPackages, unpricedItems, unpricedCharges] = await Promise.all([
+    prisma.quotationGroup.count({
+      where: { quotationId: id, pricingMode: "PACKAGE", unitPrice: null },
+    }),
+    prisma.quotationItem.count({
+      where: {
+        quotationId: id,
+        price: null,
+        OR: [{ groupId: null }, { group: { pricingMode: "ITEM" } }],
+      },
+    }),
+    prisma.quotationChargeItem.count({
+      where: { quotationId: id, unitPrice: null },
+    }),
+  ]);
+  const unpricedCount = unpricedPackages + unpricedItems + unpricedCharges;
 
   if (unpricedCount > 0) {
     return NextResponse.json(
       {
-        message: `${PRICING_GATE_MESSAGE} (${unpricedCount} parameter belum berharga)`,
+        message: `${PRICING_GATE_MESSAGE} (${unpricedCount} paket/biaya belum berharga)`,
         unpricedCount,
       },
       { status: 409 }

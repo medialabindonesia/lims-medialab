@@ -14,6 +14,7 @@
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:marketing": "tsx prisma/seed-marketing.ts",
     "check:workbook": "tsx scripts/check-marketing-workbook.ts",
     "convert:menu-pengujian": "tsx scripts/convert-menu-pengujian.ts",
     "setup:env": "node scripts/setup-local-env.mjs"

@@ -34,12 +34,14 @@ import {
   Lock,
   Mail,
   Percent,
+  Plus,
   RefreshCcw,
   Save,
   Search,
   Send,
   Upload,
   Wallet,
+  Trash2,
   X,
 } from "lucide-react";
 import PageHeader from "@/components/layout/PageHeader";
@@ -100,6 +102,29 @@ type QuotationItem = {
   parameter: ParameterOption;
 };
 
+type ChargeCategory = "SAMPLING" | "DOCUMENT" | "OTHER";
+
+type SavedChargeItem = {
+  id: string;
+  category: ChargeCategory;
+  description: string;
+  detail?: string | null;
+  qty: number;
+  unit?: string | null;
+  unitPrice: number | null;
+};
+
+type ChargeDraft = {
+  key: string;
+  category: ChargeCategory;
+  description: string;
+  detail: string;
+  qty: number;
+  unit: string;
+  /** String kosong berarti harga belum ditetapkan. */
+  unitPrice: string;
+};
+
 type Quotation = {
   id: string;
   quotationNo: string;
@@ -111,6 +136,7 @@ type Quotation = {
   offlineConfirmationNote?: string | null;
   pricingStatus?: "UNPRICED" | "PARTIAL" | "PRICED" | null;
   groups?: SavedQuotationGroup[];
+  chargeItems?: SavedChargeItem[];
   status: string;
   note?: string | null;
   revisionReason?: string | null;
@@ -118,6 +144,9 @@ type Quotation = {
   postApprovalEditReason?: string | null;
   totalAmount: number;
   samplingCost: number;
+  additionalCost?: number;
+  discountAmount?: number;
+  discountLabel?: string | null;
   vatPercent: number;
   vatAmount: number;
   grandTotal: number;
@@ -238,6 +267,9 @@ type QuotationForm = {
   tatRequested: "NORMAL" | "URGENT" | "TOP_URGENT";
 
   samplingCost: number;
+  chargeItems: ChargeDraft[];
+  discountAmount: number;
+  discountLabel: string;
   vatPercent: number;
 
   paymentTerm: string;
@@ -296,6 +328,14 @@ function getStepIssues(step: ModalTab, form: QuotationForm): string[] {
 
   if (step === "terms") {
     if (!form.paymentTerm.trim()) issues.push("Payment term wajib diisi.");
+    form.chargeItems.forEach((item, index) => {
+      if (!item.description.trim()) {
+        issues.push(`Biaya tambahan ${index + 1}: deskripsi wajib diisi.`);
+      }
+      if (!Number.isFinite(Number(item.qty)) || Number(item.qty) <= 0) {
+        issues.push(`Biaya tambahan ${index + 1}: qty harus lebih dari 0.`);
+      }
+    });
 
     // Menyunting draft sendiri tidak perlu alasan; yang wajib beralasan hanya
     // perubahan atas dokumen yang sudah beredar ke customer.
@@ -433,6 +473,56 @@ function formatRupiah(value: number) {
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(value || 0);
+}
+
+function formatMoneyDraft(value: number | string | null | undefined) {
+  if (value === null || value === undefined || value === "") return "";
+  const digits = String(value).replace(/\D/g, "");
+  return digits ? Number(digits).toLocaleString("id-ID") : "";
+}
+
+function parseMoneyDraft(value: string) {
+  const digits = value.replace(/\D/g, "");
+  return digits ? Number(digits) : null;
+}
+
+function createChargeItem(category: ChargeCategory = "SAMPLING"): ChargeDraft {
+  return {
+    key: Math.random().toString(36).slice(2, 10),
+    category,
+    description: "",
+    detail: "",
+    qty: 1,
+    unit: "",
+    unitPrice: "",
+  };
+}
+
+function savedChargesToDraft(
+  items: SavedChargeItem[] | undefined,
+  legacySamplingCost: number
+) {
+  if (items?.length) {
+    return items.map((item) => ({
+      key: item.id,
+      category: item.category,
+      description: item.description,
+      detail: item.detail || "",
+      qty: item.qty,
+      unit: item.unit || "",
+      unitPrice: formatMoneyDraft(item.unitPrice),
+    }));
+  }
+
+  return legacySamplingCost > 0
+    ? [
+        {
+          ...createChargeItem("SAMPLING"),
+          description: "Biaya sampling (data lama)",
+          unitPrice: formatMoneyDraft(legacySamplingCost),
+        },
+      ]
+    : [];
 }
 
 function getStatusStyle(status: string) {
@@ -615,6 +705,10 @@ export default function QuotationFlowClient({
   const [documentItemIds, setDocumentItemIds] = useState<string[]>([]);
   const [emailQuotation, setEmailQuotation] = useState<Quotation | null>(null);
   const [emailDraft, setEmailDraft] = useState({ id: "", toEmail: "", ccEmails: "", subject: "", bodyText: "" });
+  const [emailDelivery, setEmailDelivery] = useState<{
+    ready: boolean;
+    missing: string[];
+  }>({ ready: false, missing: [] });
 
   // Pembangun item dari template COA sudah dibuang: parameter kini berasal
   // dari matriks/regulasi per grup, bukan dari template.
@@ -637,6 +731,9 @@ export default function QuotationFlowClient({
     tatRequested: "NORMAL",
 
     samplingCost: 0,
+    chargeItems: [],
+    discountAmount: 0,
+    discountLabel: "Diskon",
     vatPercent: 11,
 
     paymentTerm: "Pembayaran dilakukan setelah invoice diterima.",
@@ -798,15 +895,41 @@ export default function QuotationFlowClient({
   // dilewati, dan keberadaannya ditandai lewat `hasUnpriced`.
   const formTotals = useMemo(() => groupsTotal(form.groups), [form.groups]);
   const totalFormAmount = formTotals.total;
+  const chargeTotals = useMemo(() => {
+    let sampling = 0;
+    let additional = 0;
+    let unpriced = 0;
+
+    for (const item of form.chargeItems) {
+      const price = parseMoneyDraft(item.unitPrice);
+      if (price === null) {
+        unpriced += 1;
+        continue;
+      }
+      const subtotal = price * Math.max(0, Number(item.qty) || 0);
+      if (item.category === "SAMPLING") sampling += subtotal;
+      else additional += subtotal;
+    }
+
+    return { sampling, additional, unpriced };
+  }, [form.chargeItems]);
   const unpricedCount = useMemo(
-    () => countUnpricedParams(form.groups),
-    [form.groups]
+    () => countUnpricedParams(form.groups) + chargeTotals.unpriced,
+    [chargeTotals.unpriced, form.groups]
   );
 
   const tatMultiplier = form.tatRequested === "TOP_URGENT" ? 1.5 : form.tatRequested === "URGENT" ? 1.3 : 1;
   const tatBusinessDays = form.tatRequested === "TOP_URGENT" ? 5 : form.tatRequested === "URGENT" ? 7 : 10;
   const tatSurchargeAmount = totalFormAmount * (tatMultiplier - 1);
-  const taxableAmount = totalFormAmount + tatSurchargeAmount + Number(form.samplingCost || 0);
+  const commercialSubtotal =
+    totalFormAmount +
+    tatSurchargeAmount +
+    chargeTotals.sampling +
+    chargeTotals.additional;
+  const taxableAmount = Math.max(
+    0,
+    commercialSubtotal - Number(form.discountAmount || 0)
+  );
   const vatAmount = taxableAmount * (Number(form.vatPercent || 0) / 100);
   const grandTotal = taxableAmount + vatAmount;
 
@@ -829,6 +952,9 @@ export default function QuotationFlowClient({
       tatRequested: "NORMAL",
 
       samplingCost: 0,
+      chargeItems: [],
+      discountAmount: 0,
+      discountLabel: "Diskon",
       vatPercent: 11,
 
       paymentTerm: "Pembayaran dilakukan setelah invoice diterima.",
@@ -877,6 +1003,12 @@ export default function QuotationFlowClient({
         (quotation.tatRequested as QuotationForm["tatRequested"]) || "NORMAL",
 
       samplingCost: quotation.samplingCost || 0,
+      chargeItems: savedChargesToDraft(
+        quotation.chargeItems,
+        quotation.samplingCost || 0
+      ),
+      discountAmount: quotation.discountAmount || 0,
+      discountLabel: quotation.discountLabel || "Diskon",
       vatPercent: quotation.vatPercent ?? 11,
 
       paymentTerm:
@@ -944,6 +1076,15 @@ export default function QuotationFlowClient({
       body: JSON.stringify({
         ...form,
         groups: toApiGroups(form.groups),
+        chargeItems: form.chargeItems.map((item) => ({
+          category: item.category,
+          description: item.description.trim(),
+          detail: item.detail.trim() || null,
+          qty: Number(item.qty) || 1,
+          unit: item.unit.trim() || null,
+          unitPrice: parseMoneyDraft(item.unitPrice),
+        })),
+        samplingCost: chargeTotals.sampling,
         items: undefined,
         selectedCustomer: undefined,
       }),
@@ -1100,11 +1241,25 @@ export default function QuotationFlowClient({
       subject: data.draft.subject || "",
       bodyText: data.draft.bodyText || "",
     });
+    setEmailDelivery({
+      ready: Boolean(data.emailDelivery?.ready),
+      missing: Array.isArray(data.emailDelivery?.missing)
+        ? data.emailDelivery.missing
+        : [],
+    });
     setEmailQuotation(quotation);
   }
 
   async function saveEmailDraft(sendAfterSave: boolean) {
     if (!emailQuotation) return;
+    if (sendAfterSave && !emailDelivery.ready) {
+      setMessage(
+        `Email belum dapat dikirim. Konfigurasi ${emailDelivery.missing.join(
+          " dan "
+        ) || "provider email"} belum tersedia.`
+      );
+      return;
+    }
     setLoading(true);
     setMessage("");
     const response = await fetch(`/api/quotations/${emailQuotation.id}/email`, {
@@ -1627,20 +1782,171 @@ export default function QuotationFlowClient({
             <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
               <div className="space-y-5">
                 <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <Field
-                      label="Sampling Cost"
-                      value={form.samplingCost}
-                      type="number"
-                      onChange={(value) =>
-                        setForm((prev) => ({
-                          ...prev,
-                          samplingCost: Number(value || 0),
-                        }))
-                      }
-                      icon={Wallet}
-                    />
+                  <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-black text-slate-900">
+                        Biaya Sampling & Dokumen
+                      </h3>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Setiap baris memiliki qty dan harga sendiri seperti bagian B/C surat penawaran.
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            chargeItems: [
+                              ...prev.chargeItems,
+                              createChargeItem("SAMPLING"),
+                            ],
+                          }))
+                        }
+                        className="inline-flex items-center gap-1 rounded-xl border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700"
+                      >
+                        <Plus size={13} /> Sampling
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm((prev) => ({
+                            ...prev,
+                            chargeItems: [
+                              ...prev.chargeItems,
+                              createChargeItem("DOCUMENT"),
+                            ],
+                          }))
+                        }
+                        className="inline-flex items-center gap-1 rounded-xl border border-violet-200 px-3 py-2 text-xs font-bold text-violet-700"
+                      >
+                        <Plus size={13} /> Dokumen
+                      </button>
+                    </div>
+                  </div>
 
+                  <div className="mb-5 space-y-3">
+                    {form.chargeItems.length === 0 && (
+                      <p className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-xs text-slate-400">
+                        Tidak ada biaya sampling/dokumen. Tambahkan hanya bila diperlukan.
+                      </p>
+                    )}
+                    {form.chargeItems.map((item, index) => (
+                      <div
+                        key={item.key}
+                        className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 md:grid-cols-[130px_1fr_78px_100px_140px_auto]"
+                      >
+                        <select
+                          value={item.category}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              chargeItems: prev.chargeItems.map((current) =>
+                                current.key === item.key
+                                  ? {
+                                      ...current,
+                                      category: event.target.value as ChargeCategory,
+                                    }
+                                  : current
+                              ),
+                            }))
+                          }
+                          className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-700"
+                        >
+                          <option value="SAMPLING">Sampling</option>
+                          <option value="DOCUMENT">Dokumen</option>
+                          <option value="OTHER">Lainnya</option>
+                        </select>
+                        <input
+                          value={item.description}
+                          placeholder="Deskripsi biaya"
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              chargeItems: prev.chargeItems.map((current) =>
+                                current.key === item.key
+                                  ? { ...current, description: event.target.value }
+                                  : current
+                              ),
+                            }))
+                          }
+                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-400"
+                        />
+                        <input
+                          type="number"
+                          min={0.01}
+                          step="any"
+                          value={item.qty}
+                          aria-label={`Qty biaya ${index + 1}`}
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              chargeItems: prev.chargeItems.map((current) =>
+                                current.key === item.key
+                                  ? { ...current, qty: Number(event.target.value) }
+                                  : current
+                              ),
+                            }))
+                          }
+                          className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm outline-none"
+                        />
+                        <input
+                          value={item.unit}
+                          placeholder="Satuan"
+                          onChange={(event) =>
+                            setForm((prev) => ({
+                              ...prev,
+                              chargeItems: prev.chargeItems.map((current) =>
+                                current.key === item.key
+                                  ? { ...current, unit: event.target.value }
+                                  : current
+                              ),
+                            }))
+                          }
+                          className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm outline-none"
+                        />
+                        <span className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2">
+                          <span className="text-xs font-bold text-slate-400">Rp</span>
+                          <input
+                            inputMode="numeric"
+                            value={item.unitPrice}
+                            placeholder="Harga"
+                            onChange={(event) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                chargeItems: prev.chargeItems.map((current) =>
+                                  current.key === item.key
+                                    ? {
+                                        ...current,
+                                        unitPrice: formatMoneyDraft(event.target.value),
+                                      }
+                                    : current
+                                ),
+                              }))
+                            }
+                            className="min-w-0 flex-1 bg-transparent py-2 text-right text-sm font-bold outline-none"
+                          />
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Hapus biaya ${index + 1}`}
+                          onClick={() =>
+                            setForm((prev) => ({
+                              ...prev,
+                              chargeItems: prev.chargeItems.filter(
+                                (current) => current.key !== item.key
+                              ),
+                            }))
+                          }
+                          className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
                     <Field
                       label="VAT Percent"
                       value={form.vatPercent}
@@ -1652,6 +1958,31 @@ export default function QuotationFlowClient({
                         }))
                       }
                       icon={Percent}
+                    />
+
+                    <Field
+                      label="Discount Amount"
+                      value={form.discountAmount}
+                      type="number"
+                      onChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          discountAmount: Number(value || 0),
+                        }))
+                      }
+                      icon={Wallet}
+                    />
+
+                    <Field
+                      label="Discount Label"
+                      value={form.discountLabel}
+                      onChange={(value) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          discountLabel: String(value),
+                        }))
+                      }
+                      icon={FileText}
                     />
 
                     <div className="md:col-span-2">
@@ -1690,9 +2021,9 @@ export default function QuotationFlowClient({
                   Summary
                 </h3>
 
-                {formTotals.hasUnpriced && (
+                {unpricedCount > 0 && (
                   <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-                    {unpricedCount} parameter belum berharga. Quotation tetap
+                    {unpricedCount} paket/biaya belum berharga. Quotation tetap
                     bisa disimpan dan dikirim sebagai penawaran scope, tetapi
                     total di bawah belum final dan belum bisa di-approve.
                   </p>
@@ -1700,7 +2031,7 @@ export default function QuotationFlowClient({
 
                 <div className="mt-5 space-y-3 text-sm">
                   <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Parameter Total</span>
+                    <span className="text-slate-500">Paket Pengujian</span>
                     <span className="font-bold text-slate-900">
                       {formatRupiah(totalFormAmount)}
                       {formTotals.hasUnpriced && (
@@ -1712,20 +2043,38 @@ export default function QuotationFlowClient({
                   </div>
 
                   <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Sampling Cost</span>
+                    <span className="text-slate-500">Biaya Sampling</span>
                     <span className="font-bold text-slate-900">
-                      {formatRupiah(Number(form.samplingCost || 0))}
+                      {formatRupiah(chargeTotals.sampling)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-4">
+                    <span className="text-slate-500">Dokumen & Lainnya</span>
+                    <span className="font-bold text-slate-900">
+                      {formatRupiah(chargeTotals.additional)}
                     </span>
                   </div>
 
                   <div className="flex justify-between gap-4 rounded-xl bg-cyan-50 px-3 py-2">
                     <span className="text-cyan-700">
-                      TAT {form.tatRequested.replaceAll("_", " ")} · {tatBusinessDays} hari kerja · +{Math.round((tatMultiplier - 1) * 100)}%
+                      TAT {form.tatRequested.replaceAll("_", " ")} ·{" "}
+                      {tatBusinessDays} hari kerja · +
+                      {Math.round((tatMultiplier - 1) * 100)}%
                     </span>
                     <span className="font-bold text-cyan-800">
                       {formatRupiah(tatSurchargeAmount)}
                     </span>
                   </div>
+
+                  {Number(form.discountAmount || 0) > 0 && (
+                    <div className="flex justify-between gap-4 text-rose-600">
+                      <span>{form.discountLabel || "Diskon"}</span>
+                      <span className="font-bold">
+                        -{formatRupiah(Number(form.discountAmount || 0))}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex justify-between gap-4">
                     <span className="text-slate-500">
@@ -1774,7 +2123,7 @@ export default function QuotationFlowClient({
               </span>
             </span>
             <span className="hidden shrink-0 sm:inline">
-              Total parameter:{" "}
+              Total paket pengujian:{" "}
               <span className="font-black text-slate-900">
                 {formatRupiah(totalFormAmount)}
               </span>
@@ -1847,6 +2196,14 @@ export default function QuotationFlowClient({
           <button onClick={() => setEmailQuotation(null)} className="rounded-xl border border-slate-200 p-2 text-slate-500"><X size={18} /></button>
         </div>
         <div className="mt-5 grid gap-4">
+          {!emailDelivery.ready && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+              Draft dapat ditinjau dan disimpan, tetapi pengiriman nyata belum aktif.
+              {emailDelivery.missing.length
+                ? ` IT perlu mengisi ${emailDelivery.missing.join(" dan ")}.`
+                : ""}
+            </p>
+          )}
           <Field label="To" value={emailDraft.toEmail} type="email" onChange={(value) => setEmailDraft((current) => ({ ...current, toEmail: String(value) }))} icon={Mail} />
           <Field label="CC (pisahkan dengan koma)" value={emailDraft.ccEmails} onChange={(value) => setEmailDraft((current) => ({ ...current, ccEmails: String(value) }))} icon={Mail} />
           <Field label="Subject" value={emailDraft.subject} onChange={(value) => setEmailDraft((current) => ({ ...current, subject: String(value) }))} icon={FileText} />
@@ -1854,7 +2211,7 @@ export default function QuotationFlowClient({
         </div>
         <div className="mt-5 flex flex-wrap justify-end gap-2">
           <button disabled={loading} onClick={() => saveEmailDraft(false)} className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 disabled:opacity-50">Simpan Draft</button>
-          <button disabled={loading} onClick={() => saveEmailDraft(true)} className="inline-flex items-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Send size={16} /> {loading ? "Memproses..." : "Send ke Customer"}</button>
+          <button disabled={loading || !emailDelivery.ready} onClick={() => saveEmailDraft(true)} className="inline-flex items-center gap-2 rounded-2xl bg-cyan-600 px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Send size={16} /> {loading ? "Memproses..." : "Send ke Customer"}</button>
         </div>
       </motion.div>
     </div>

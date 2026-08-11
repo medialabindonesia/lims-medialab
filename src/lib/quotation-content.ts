@@ -58,8 +58,12 @@ const groupLocationSchema = z.object({
 export const quotationGroupSchema = z.object({
   description: nullableString,
   matrixId: nullableString,
+  /** Primary legacy regulation. `regulationIds` adalah sumber multi-select. */
   regulationId: nullableString,
+  regulationIds: z.array(z.string().min(1)).default([]),
   qty: z.coerce.number().int().min(1, "Qty minimal 1").default(1),
+  /** Harga paket/grup. Null berarti belum ditetapkan. */
+  unitPrice: z.coerce.number().min(0).nullable().optional(),
   note: nullableString,
   locations: z.array(groupLocationSchema).default([]),
   items: z
@@ -67,13 +71,24 @@ export const quotationGroupSchema = z.object({
     .min(1, "Setiap grup minimal berisi 1 parameter"),
 });
 
+export const quotationChargeItemSchema = z.object({
+  category: z.enum(["SAMPLING", "DOCUMENT", "OTHER"]),
+  description: z.string().trim().min(1, "Deskripsi biaya wajib diisi").max(191),
+  detail: nullableString,
+  qty: z.coerce.number().positive("Qty biaya harus lebih dari 0").default(1),
+  unit: nullableString,
+  unitPrice: z.coerce.number().min(0).nullable(),
+});
+
 export type QuotationGroupInput = z.infer<typeof quotationGroupSchema>;
+export type QuotationChargeItemInput = z.infer<typeof quotationChargeItemSchema>;
 
 export type ResolvedItem = {
   parameterId: string;
   regulationParameterId: string | null;
   durationId: string | null;
   qty: number;
+  sort: number;
   price: number | null;
   basePrice: number | null;
   method: string | null;
@@ -89,7 +104,11 @@ export type ResolvedGroup = {
   description: string | null;
   matrixId: string | null;
   regulationId: string | null;
+  regulationIds: string[];
   qty: number;
+  unitPrice: number | null;
+  basePrice: number | null;
+  pricingMode: "ITEM" | "PACKAGE";
   note: string | null;
   locations: Array<{
     label: string;
@@ -99,9 +118,14 @@ export type ResolvedGroup = {
   items: ResolvedItem[];
 };
 
+export type ResolvedChargeItem = QuotationChargeItemInput & { sort: number };
+
 export type ResolvedQuotationContent = {
   groups: ResolvedGroup[];
+  chargeItems: ResolvedChargeItem[];
   totalAmount: number;
+  samplingCost: number;
+  additionalCost: number;
   pricingStatus: QuotationPricingStatus;
   unpricedCount: number;
 };
@@ -132,6 +156,7 @@ export type ResolveOptions = {
    * Customer menentukan APA yang diuji; Medialab yang menentukan harganya.
    */
   ignoreSubmittedPrices?: boolean;
+  chargeItems?: QuotationChargeItemInput[];
 };
 
 export async function resolveQuotationContent(
@@ -144,7 +169,12 @@ export async function resolveQuotationContent(
   }
 
   const regulationIds = [
-    ...new Set(groups.map((group) => group.regulationId).filter(Boolean)),
+    ...new Set(
+      groups.flatMap((group) => [
+        ...group.regulationIds,
+        ...(group.regulationId ? [group.regulationId] : []),
+      ])
+    ),
   ] as string[];
 
   const regulationParameterIds = [
@@ -242,9 +272,36 @@ export async function resolveQuotationContent(
   let totalAmount = 0;
 
   for (const [groupIndex, group] of groups.entries()) {
-    const regulation = group.regulationId
-      ? regulationById.get(group.regulationId)
+    const selectedRegulationIds = [
+      ...new Set([
+        ...group.regulationIds,
+        ...(group.regulationId ? [group.regulationId] : []),
+      ]),
+    ];
+    const primaryRegulationId = selectedRegulationIds[0] ?? null;
+    const regulation = primaryRegulationId
+      ? regulationById.get(primaryRegulationId)
       : null;
+
+    if (selectedRegulationIds.length === 0) {
+      return {
+        ok: false,
+        message: `Grup ${groupIndex + 1}: minimal pilih satu regulasi`,
+      };
+    }
+
+    const groupRegulations = selectedRegulationIds
+      .map((id) => regulationById.get(id))
+      .filter(Boolean);
+    const regulationMatrixIds = new Set(
+      groupRegulations.map((entry) => entry!.matrixId)
+    );
+    if (regulationMatrixIds.size > 1) {
+      return {
+        ok: false,
+        message: `Grup ${groupIndex + 1}: semua regulasi harus berasal dari matriks yang sama`,
+      };
+    }
 
     // Matriks diambil dari regulasi bila ada, agar tidak mungkin tidak sinkron
     // dengan regulasi yang dipilih.
@@ -265,21 +322,25 @@ export async function resolveQuotationContent(
         .map((location) => location.customerSampleId)
         .filter(Boolean)
         .join(", ") || null;
-    const regulationMatrix = regulation
-      ? regulation.shortName || regulation.name
-      : null;
-
     const items: ResolvedItem[] = [];
+    const packagePricing = group.unitPrice !== undefined;
+    const packageUnitPrice = options.ignoreSubmittedPrices
+      ? null
+      : group.unitPrice ?? null;
 
-    for (const item of group.items) {
+    if (packagePricing) {
+      allPrices.push(packageUnitPrice);
+      totalAmount += (packageUnitPrice ?? 0) * group.qty;
+    }
+
+    for (const [itemIndex, item] of group.items.entries()) {
       const regulationParameter = item.regulationParameterId
         ? regulationParameterById.get(item.regulationParameterId)
         : null;
 
       if (regulationParameter) {
         if (
-          group.regulationId &&
-          regulationParameter.regulationId !== group.regulationId
+          !selectedRegulationIds.includes(regulationParameter.regulationId)
         ) {
           return {
             ok: false,
@@ -336,15 +397,27 @@ export async function resolveQuotationContent(
           : item.price;
 
       const qty = item.qty ?? group.qty;
+      const itemRegulation = regulationParameter
+        ? regulationById.get(regulationParameter.regulationId)
+        : regulation;
+      const regulationMatrix = itemRegulation
+        ? itemRegulation.shortName || itemRegulation.name
+        : null;
 
-      allPrices.push(price ?? null);
-      totalAmount += (price ?? 0) * qty;
+      // Data lama masih boleh memakai harga per parameter. Payload baru selalu
+      // mengirim field unitPrice sehingga harga komersial hanya dihitung sekali
+      // pada level paket, bukan sebanyak jumlah parameter.
+      if (!packagePricing) {
+        allPrices.push(price ?? null);
+        totalAmount += (price ?? 0) * qty;
+      }
 
       items.push({
         parameterId: item.parameterId,
         regulationParameterId: regulationParameter?.id ?? null,
         durationId,
         qty,
+        sort: (itemIndex + 1) * 10,
         price: price ?? null,
         basePrice,
         method:
@@ -364,19 +437,43 @@ export async function resolveQuotationContent(
       sort: (groupIndex + 1) * 10,
       description: group.description ?? matrixName ?? null,
       matrixId,
-      regulationId: group.regulationId ?? null,
+      regulationId: primaryRegulationId,
+      regulationIds: selectedRegulationIds,
       qty: group.qty,
+      unitPrice: packageUnitPrice,
+      basePrice: null,
+      pricingMode: packagePricing ? "PACKAGE" : "ITEM",
       note: group.note ?? null,
       locations,
       items,
     });
   }
 
+  const chargeItems: ResolvedChargeItem[] = options.ignoreSubmittedPrices
+    ? []
+    : (options.chargeItems ?? []).map((item, index) => ({
+        ...item,
+        detail: item.detail ?? null,
+        unit: item.unit ?? null,
+        sort: (index + 1) * 10,
+      }));
+  for (const item of chargeItems) allPrices.push(item.unitPrice);
+
+  const samplingCost = chargeItems
+    .filter((item) => item.category === "SAMPLING")
+    .reduce((sum, item) => sum + (item.unitPrice ?? 0) * item.qty, 0);
+  const additionalCost = chargeItems
+    .filter((item) => item.category !== "SAMPLING")
+    .reduce((sum, item) => sum + (item.unitPrice ?? 0) * item.qty, 0);
+
   return {
     ok: true,
     content: {
       groups: resolvedGroups,
+      chargeItems,
       totalAmount,
+      samplingCost,
+      additionalCost,
       pricingStatus: computePricingStatus(allPrices),
       unpricedCount: allPrices.filter((price) => price === null).length,
     },
@@ -405,8 +502,19 @@ export async function persistQuotationContent(
         regulationId: group.regulationId,
         qty: group.qty,
         note: group.note,
+        unitPrice: group.unitPrice,
+        basePrice: group.basePrice,
+        pricingMode: group.pricingMode,
         locations: group.locations.length
           ? { create: group.locations }
+          : undefined,
+        regulationLinks: group.regulationIds.length
+          ? {
+              create: group.regulationIds.map((regulationId, index) => ({
+                regulationId,
+                sort: (index + 1) * 10,
+              })),
+            }
           : undefined,
       },
       select: { id: true },
@@ -422,18 +530,38 @@ export async function persistQuotationContent(
       })),
     });
   }
+
+  if (content.chargeItems.length > 0) {
+    await db.quotationChargeItem.createMany({
+      data: content.chargeItems.map((item) => ({
+        quotationId,
+        category: item.category,
+        description: item.description,
+        detail: item.detail,
+        qty: item.qty,
+        unit: item.unit,
+        unitPrice: item.unitPrice,
+        sort: item.sort,
+      })),
+    });
+  }
 }
 
 export function calculateQuotationTotals(input: {
   totalAmount: number;
   samplingCost?: number;
+  additionalCost?: number;
+  discountAmount?: number;
   vatPercent?: number;
   tatRequested?: TatRequest | null;
 }) {
   const samplingCost = input.samplingCost || 0;
+  const additionalCost = input.additionalCost || 0;
+  const discountAmount = Math.max(0, input.discountAmount || 0);
   const vatPercent = input.vatPercent ?? 11;
   const tat = calculateTatCharge(input.totalAmount, input.tatRequested);
-  const taxableAmount = tat.adjustedTestingAmount + samplingCost;
+  const subtotal = tat.adjustedTestingAmount + samplingCost + additionalCost;
+  const taxableAmount = Math.max(0, subtotal - discountAmount);
   const vatAmount = taxableAmount * (vatPercent / 100);
 
   return {
@@ -442,6 +570,8 @@ export function calculateQuotationTotals(input: {
     tatPriceMultiplier: tat.policy.priceMultiplier,
     tatSurchargeAmount: tat.surchargeAmount,
     samplingCost,
+    additionalCost,
+    discountAmount,
     vatPercent,
     vatAmount,
     grandTotal: taxableAmount + vatAmount,

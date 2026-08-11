@@ -8,6 +8,7 @@ import { createWithOrderCode, quotationDocumentCode } from "@/lib/order-code";
 import {
   calculateQuotationTotals,
   persistQuotationContent,
+  quotationChargeItemSchema,
   quotationGroupSchema,
   resolveQuotationContent,
 } from "@/lib/quotation-content";
@@ -18,16 +19,27 @@ const TRANSACTION_OPTIONS = { timeout: 30_000, maxWait: 10_000 };
 const QUOTATION_INCLUDE = {
   customer: true,
   coaTemplate: true,
-  items: { include: { parameter: true } },
+  items: {
+    orderBy: [{ sort: "asc" }, { id: "asc" }],
+    include: { parameter: true },
+  },
   groups: {
     include: {
       matrix: true,
       regulation: true,
+      regulationLinks: {
+        include: { regulation: true },
+        orderBy: { sort: "asc" },
+      },
       locations: { orderBy: { sort: "asc" } },
-      items: { include: { parameter: true, duration: true } },
+      items: {
+        orderBy: [{ sort: "asc" }, { id: "asc" }],
+        include: { parameter: true, duration: true },
+      },
     },
     orderBy: { sort: "asc" },
   },
+  chargeItems: { orderBy: [{ category: "asc" }, { sort: "asc" }] },
   purchaseOrder: true,
   ltr: true,
   ltrs: { include: { items: true }, orderBy: { sequence: "asc" } },
@@ -83,6 +95,8 @@ const quotationCreateSchema = z.object({
   tatRequested: z.enum(["NORMAL", "URGENT", "TOP_URGENT"]).optional().nullable(),
 
   samplingCost: z.coerce.number().min(0).optional(),
+  discountAmount: z.coerce.number().min(0).optional(),
+  discountLabel: nullableString,
   vatPercent: z.coerce.number().min(0).optional(),
 
   paymentTerm: nullableString,
@@ -90,6 +104,7 @@ const quotationCreateSchema = z.object({
 
   /** Struktur baru: satu grup = satu baris pada surat penawaran resmi. */
   groups: z.array(quotationGroupSchema).optional(),
+  chargeItems: z.array(quotationChargeItemSchema).default([]),
 
   /** Jalur lama, dipakai bila `groups` tidak dikirim. */
   items: z.array(quotationItemSchema).optional(),
@@ -315,6 +330,7 @@ export async function POST(request: Request) {
   if (parsed.data.groups?.length) {
     const resolved = await resolveQuotationContent(prisma, parsed.data.groups, {
       ignoreSubmittedPrices: isCustomerSubmission,
+      chargeItems: isCustomerSubmission ? [] : parsed.data.chargeItems,
     });
 
     if (!resolved.ok) {
@@ -323,8 +339,9 @@ export async function POST(request: Request) {
 
     const totals = calculateQuotationTotals({
       totalAmount: resolved.content.totalAmount,
-      // Biaya sampling dan PPN juga bagian dari harga, jadi ikut dikunci.
-      samplingCost: isCustomerSubmission ? 0 : parsed.data.samplingCost,
+      samplingCost: resolved.content.samplingCost,
+      additionalCost: resolved.content.additionalCost,
+      discountAmount: isCustomerSubmission ? 0 : parsed.data.discountAmount,
       vatPercent: isCustomerSubmission ? undefined : parsed.data.vatPercent,
       tatRequested: parsed.data.tatRequested || "NORMAL",
     });
@@ -344,6 +361,9 @@ export async function POST(request: Request) {
             tatPriceMultiplier: totals.tatPriceMultiplier,
             tatSurchargeAmount: totals.tatSurchargeAmount,
             samplingCost: totals.samplingCost,
+            additionalCost: totals.additionalCost,
+            discountAmount: totals.discountAmount,
+            discountLabel: parsed.data.discountLabel || null,
             vatPercent: totals.vatPercent,
             vatAmount: totals.vatAmount,
             grandTotal: totals.grandTotal,
@@ -386,7 +406,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message:
         resolved.content.unpricedCount > 0
-          ? `Quotation ${quotation.quotationNo} disimpan. ${resolved.content.unpricedCount} parameter belum berharga dan harus dilengkapi sebelum approval.`
+          ? `Quotation ${quotation.quotationNo} disimpan. ${resolved.content.unpricedCount} paket/biaya belum berharga dan harus dilengkapi sebelum approval.`
           : `Quotation ${quotation.quotationNo} berhasil dibuat`,
       quotation,
     });
@@ -499,12 +519,13 @@ export async function POST(request: Request) {
       grandTotal: totals.grandTotal,
 
       items: {
-        create: legacyItems.map((item) => {
+        create: legacyItems.map((item, index) => {
           const templateParameter = templateParameterMap.get(item.parameterId);
           const parameter = parameters.find((param) => param.id === item.parameterId);
 
           return {
             parameterId: item.parameterId,
+            sort: (index + 1) * 10,
             qty: item.qty,
             price: item.customPrice ?? priceMap.get(item.parameterId) ?? 0,
             description: item.description || null,

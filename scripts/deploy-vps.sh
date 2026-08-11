@@ -76,23 +76,35 @@ pnpm build
 log "Menerapkan migrasi database"
 pnpm exec prisma migrate deploy
 
-# Seed hanya untuk environment uji coba, supaya environment baru langsung bisa
-# dipakai tanpa langkah manual.
+# Full seed menulis role, permission, password akun demo, template, FAQ, dan
+# master data. Karena itu seed tidak lagi dijalankan otomatis pada setiap
+# deployment non-produksi. Operator harus meminta secara eksplisit melalui
+# RUN_FULL_SEED_ON_DEPLOY=true, baik sebagai process environment maupun baris
+# di shared/.env. Nilai lain, termasuk kosong dan "false", selalu berarti skip.
 #
-# Dijaga BERLAPIS dan sengaja tidak bergantung pada satu variabel saja:
-# APP_ENV bisa saja salah diketik atau lupa dikirim, sedangkan APP_ROOT
-# ditentukan workflow. Seed menulis role, menu, akun demo, dan master data —
-# menjalankannya di produksi akan menimpa data sungguhan.
+# Guard produksi tetap berlapis: flag tidak boleh mengalahkan pemeriksaan
+# APP_ENV, APP_ROOT, dan APP_NAME.
 PRODUCTION_ROOT="/opt/apps/lims-medialab"
+FULL_SEED_FLAG="${RUN_FULL_SEED_ON_DEPLOY:-}"
+
+if [[ -z "$FULL_SEED_FLAG" ]] &&
+   grep -Eq "^[[:space:]]*RUN_FULL_SEED_ON_DEPLOY[[:space:]]*=[[:space:]]*['\"]?true['\"]?[[:space:]]*(#.*)?$" \
+     "$APP_ROOT/shared/.env"; then
+  FULL_SEED_FLAG="true"
+fi
 
 if [[ "$APP_ENV" != "production" &&
       "$APP_ROOT_REAL" != "$PRODUCTION_ROOT" &&
-      "$APP_NAME" != "lims-medialab" ]]; then
-  log "Menjalankan seed untuk environment $APP_ENV"
-  # Seed bersifat upsert sehingga aman diulang tiap deployment.
+      "$APP_NAME" != "lims-medialab" &&
+      "$FULL_SEED_FLAG" == "true" ]]; then
+  log "RUN_FULL_SEED_ON_DEPLOY=true: menjalankan full seed untuk environment $APP_ENV"
   pnpm db:seed
+elif [[ "$APP_ENV" == "production" ||
+        "$APP_ROOT_REAL" == "$PRODUCTION_ROOT" ||
+        "$APP_NAME" == "lims-medialab" ]]; then
+  log "Environment produksi: full seed selalu dilewati"
 else
-  log "Environment produksi: seed dilewati"
+  log "Full seed dilewati (RUN_FULL_SEED_ON_DEPLOY tidak bernilai true)"
 fi
 
 activate_release() {

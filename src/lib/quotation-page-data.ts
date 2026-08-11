@@ -42,6 +42,7 @@ export async function getQuotationPageData() {
         customer: true,
         coaTemplate: true,
         items: {
+          orderBy: [{ sort: "asc" }, { id: "asc" }],
           include: {
             parameter: true,
           },
@@ -52,11 +53,19 @@ export async function getQuotationPageData() {
           include: {
             matrix: true,
             regulation: true,
+            regulationLinks: {
+              include: { regulation: true },
+              orderBy: { sort: "asc" },
+            },
             locations: { orderBy: { sort: "asc" } },
-            items: { include: { parameter: true, duration: true } },
+            items: {
+              orderBy: [{ sort: "asc" }, { id: "asc" }],
+              include: { parameter: true, duration: true },
+            },
           },
           orderBy: { sort: "asc" },
         },
+        chargeItems: { orderBy: [{ category: "asc" }, { sort: "asc" }] },
         purchaseOrder: true,
         ltr: true,
         ltrs: {

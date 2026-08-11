@@ -30,10 +30,34 @@ export async function getAuthorizedQuotationForExport(quotationId: string) {
       customer: true,
       coaTemplate: true,
       items: {
+        orderBy: [{ sort: "asc" }, { id: "asc" }],
         include: {
           parameter: true,
+          duration: true,
+          regulationParameter: true,
         },
       },
+      groups: {
+        include: {
+          matrix: true,
+          regulation: true,
+          regulationLinks: {
+            include: { regulation: true },
+            orderBy: { sort: "asc" },
+          },
+          locations: { orderBy: { sort: "asc" } },
+          items: {
+            orderBy: [{ sort: "asc" }, { id: "asc" }],
+            include: {
+              parameter: true,
+              duration: true,
+              regulationParameter: true,
+            },
+          },
+        },
+        orderBy: { sort: "asc" },
+      },
+      chargeItems: { orderBy: [{ category: "asc" }, { sort: "asc" }] },
       purchaseOrder: true,
       ltr: true,
       coc: {
@@ -73,8 +97,27 @@ export async function getAuthorizedQuotationForExport(quotationId: string) {
     };
   }
 
+  const actorIds = [quotation.requestedById, quotation.approvedById].filter(
+    (value): value is string => Boolean(value)
+  );
+  const actors = actorIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: actorIds } },
+        select: { id: true, name: true, email: true },
+      })
+    : [];
+  const actorById = new Map(actors.map((actor) => [actor.id, actor]));
+
   return {
-    quotation,
+    quotation: {
+      ...quotation,
+      requestedBy: quotation.requestedById
+        ? actorById.get(quotation.requestedById) || null
+        : null,
+      approvedBy: quotation.approvedById
+        ? actorById.get(quotation.approvedById) || null
+        : null,
+    },
     response: null,
   };
 }

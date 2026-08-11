@@ -133,6 +133,20 @@ enum QuotationEmailStatus {
   FAILED
 }
 
+/// Biaya komersial di luar paket pengujian laboratorium.
+enum QuotationChargeCategory {
+  SAMPLING
+  DOCUMENT
+  OTHER
+}
+
+/// Menjaga arti harga quotation lama (per item) dan format resmi baru
+/// (satu harga paket per grup) tetap eksplisit saat unitPrice bernilai null.
+enum QuotationGroupPricingMode {
+  ITEM
+  PACKAGE
+}
+
 enum TestingObjective {
   ROUTINE_MONITORING
   SUPERVISION
@@ -526,15 +540,17 @@ model Regulation {
   id        String  @id @default(cuid())
   matrixId  String
   code      String  @unique
-  name      String
+  /// Beberapa judul regulasi resmi pada master 2024 melebihi 191 karakter.
+  name      String  @db.Text
   shortName String?
   note      String? @db.Text
   sort      Int     @default(0)
   isActive  Boolean @default(true)
 
-  matrix     Matrix                @relation(fields: [matrixId], references: [id], onDelete: Restrict)
+  matrix     Matrix                     @relation(fields: [matrixId], references: [id], onDelete: Restrict)
   parameters RegulationParameter[]
   groups     QuotationGroup[]
+  groupLinks QuotationGroupRegulation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -655,10 +671,16 @@ model Quotation {
   tatPriceMultiplier Float @default(1)
   tatSurchargeAmount Float @default(0)
 
-  samplingCost Float @default(0)
-  vatPercent   Float @default(11)
-  vatAmount    Float @default(0)
-  grandTotal   Float @default(0)
+  samplingCost   Float   @default(0)
+  /// Total biaya DOCUMENT + OTHER. Disimpan sebagai snapshot untuk audit.
+  additionalCost Float   @default(0)
+  /// Pengurang sebelum PPN; label dibuat eksplisit agar tidak menjadi sel
+  /// anonim seperti pada workbook lama.
+  discountAmount Float   @default(0)
+  discountLabel  String?
+  vatPercent     Float   @default(11)
+  vatAmount      Float   @default(0)
+  grandTotal     Float   @default(0)
 
   paymentTerm String?
   termsNote   String?
@@ -680,24 +702,32 @@ model Quotation {
   primaryLtrId               String?                     @unique
   primaryCocId               String?                     @unique
 
-  customer       Customer         @relation(fields: [customerId], references: [id])
-  coaTemplate    CoaTemplate?     @relation(fields: [coaTemplateId], references: [id])
+  customer       Customer              @relation(fields: [customerId], references: [id])
+  coaTemplate    CoaTemplate?          @relation(fields: [coaTemplateId], references: [id])
   items          QuotationItem[]
   groups         QuotationGroup[]
   purchaseOrder  PurchaseOrder?
-  ltr            Ltr?             @relation("PrimaryLtr", fields: [primaryLtrId], references: [id], onDelete: SetNull)
-  coc            Coc?             @relation("PrimaryCoc", fields: [primaryCocId], references: [id], onDelete: SetNull)
-  ltrs           Ltr[]            @relation("QuotationLtrs")
-  cocs           Coc[]            @relation("QuotationCocs")
+  ltr            Ltr?                  @relation("PrimaryLtr", fields: [primaryLtrId], references: [id], onDelete: SetNull)
+  coc            Coc?                  @relation("PrimaryCoc", fields: [primaryCocId], references: [id], onDelete: SetNull)
+  ltrs           Ltr[]                 @relation("QuotationLtrs")
+  cocs           Coc[]                 @relation("QuotationCocs")
   invoice        Invoice?
   samples        Sample[]
   stps           Stps[]
   supportTickets SupportTicket[]
   emailDrafts    QuotationEmail[]
+  chargeItems    QuotationChargeItem[]
   lead           Lead?
+
+  /// Lease singkat untuk mencegah dua draft/tab mengirim quotation yang sama
+  /// secara bersamaan. Dilepas setelah sukses/gagal dan dapat kedaluwarsa.
+  emailSendLock     String?
+  emailSendLockedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([emailSendLock, emailSendLockedAt])
 }
 
 /// Draft dan riwayat pengiriman email quotation. Isi disimpan sebagai
@@ -747,14 +777,22 @@ model QuotationGroup {
   matrixId     String?
   regulationId String?
 
+  /// Qty/frekuensi komersial. Tidak diturunkan dari jumlah lokasi sampling.
   qty  Int     @default(1)
   note String?
 
-  quotation  Quotation                @relation(fields: [quotationId], references: [id], onDelete: Cascade)
-  matrix     Matrix?                  @relation(fields: [matrixId], references: [id], onDelete: SetNull)
-  regulation Regulation?              @relation(fields: [regulationId], references: [id], onDelete: SetNull)
-  locations  QuotationGroupLocation[]
-  items      QuotationItem[]
+  /// Harga satu paket/grup sebagaimana tercetak pada surat penawaran resmi.
+  /// Null berarti sales belum menetapkan harga paket.
+  unitPrice   Float?
+  basePrice   Float?
+  pricingMode QuotationGroupPricingMode @default(ITEM)
+
+  quotation       Quotation                  @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  matrix          Matrix?                    @relation(fields: [matrixId], references: [id], onDelete: SetNull)
+  regulation      Regulation?                @relation(fields: [regulationId], references: [id], onDelete: SetNull)
+  regulationLinks QuotationGroupRegulation[]
+  locations       QuotationGroupLocation[]
+  items           QuotationItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -764,8 +802,23 @@ model QuotationGroup {
   @@index([regulationId])
 }
 
-/// Titik sampling dalam satu grup, mis. "Upwind", "Outlet IPAL".
-/// Jumlah baris di sini menjadi nilai default QuotationGroup.qty.
+/// Satu paket pengujian dapat mengacu pada lebih dari satu regulasi. Kolom
+/// QuotationGroup.regulationId tetap dipertahankan sebagai primary/legacy.
+model QuotationGroupRegulation {
+  id           String @id @default(cuid())
+  groupId      String
+  regulationId String
+  sort         Int    @default(0)
+
+  group      QuotationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  regulation Regulation     @relation(fields: [regulationId], references: [id], onDelete: Restrict)
+
+  @@unique([groupId, regulationId])
+  @@index([regulationId])
+}
+
+/// Titik sampling dalam satu grup, mis. "Upwind", "Outlet IPAL". Jumlah titik
+/// tidak menentukan qty komersial; qty selalu tersimpan eksplisit pada grup.
 model QuotationGroupLocation {
   id      String @id @default(cuid())
   groupId String
@@ -789,7 +842,9 @@ model QuotationItem {
   /// sebelum struktur matriks/regulasi diperkenalkan.
   regulationParameterId String?
 
-  qty Int @default(1)
+  qty  Int @default(1)
+  /// Urutan parameter pada dokumen; id menjadi tie-breaker untuk data lama.
+  sort Int @default(0)
 
   /// Null berarti harga BELUM DITETAPKAN. Berbeda maknanya dari 0.
   price Float?
@@ -817,9 +872,31 @@ model QuotationItem {
 
   @@index([quotationId])
   @@index([groupId])
+  @@index([groupId, sort, id])
   @@index([parameterId])
   @@index([regulationParameterId])
   @@index([durationId])
+}
+
+/// Baris biaya sampling, dokumen, atau biaya lain. Pengujian laboratorium
+/// tetap memakai QuotationGroup karena membutuhkan parameter dan regulasi.
+model QuotationChargeItem {
+  id          String                  @id @default(cuid())
+  quotationId String
+  category    QuotationChargeCategory
+  description String
+  detail      String?                 @db.Text
+  qty         Float                   @default(1)
+  unit        String?
+  unitPrice   Float?
+  sort        Int                     @default(0)
+
+  quotation Quotation @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([quotationId, category, sort])
 }
 
 model PurchaseOrder {

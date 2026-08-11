@@ -128,7 +128,7 @@ export function sampleCode(orderCode: string | null, sequence: number) {
 /**
  * Status harga sebuah quotation.
  *
- * `null` pada harga item berarti BELUM DITETAPKAN, berbeda dari 0. Sales boleh
+ * `null` pada harga paket/biaya berarti BELUM DITETAPKAN, berbeda dari 0. Sales boleh
  * menyimpan dan mengirim quotation tanpa harga, tetapi tidak boleh
  * melewati APPROVED sebelum seluruh harga terisi.
  */
@@ -146,4 +146,4 @@ export function computePricingStatus(
 }
 
 export const PRICING_GATE_MESSAGE =
-  "Masih ada parameter tanpa harga. Lengkapi harga terlebih dahulu sebelum quotation di-approve.";
+  "Masih ada paket atau biaya tanpa harga. Lengkapi harga terlebih dahulu sebelum quotation di-approve.";

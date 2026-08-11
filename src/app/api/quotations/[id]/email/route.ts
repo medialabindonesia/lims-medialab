@@ -3,13 +3,27 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAnyApiPermission } from "@/lib/api-permission";
 import { defaultQuotationEmail } from "@/lib/quotation-email";
+import { getEmailDeliveryConfiguration } from "@/lib/email-delivery";
+import { getQuotationDocumentConfig } from "@/lib/exports/quotation-document-config";
 
 const emailSchema = z.object({
   draftId: z.string().optional().nullable(),
-  toEmail: z.string().email("Alamat email customer tidak valid"),
-  ccEmails: z.array(z.string().email("Alamat CC tidak valid")).default([]),
-  subject: z.string().trim().min(3, "Subjek email wajib diisi"),
-  bodyText: z.string().trim().min(10, "Isi email terlalu pendek"),
+  toEmail: z.string().email("Alamat email customer tidak valid").max(191),
+  ccEmails: z
+    .array(z.string().email("Alamat CC tidak valid").max(191))
+    .max(20, "Maksimal 20 alamat CC")
+    .default([])
+    .transform((items) => [...new Set(items.map((item) => item.toLowerCase()))]),
+  subject: z
+    .string()
+    .trim()
+    .min(3, "Subjek email wajib diisi")
+    .max(191, "Subjek maksimal 191 karakter"),
+  bodyText: z
+    .string()
+    .trim()
+    .min(10, "Isi email terlalu pendek")
+    .max(100_000, "Isi email terlalu panjang"),
 });
 
 type RouteContext = { params: Promise<{ id: string }> };
@@ -17,7 +31,6 @@ type RouteContext = { params: Promise<{ id: string }> };
 async function authorize() {
   return requireAnyApiPermission([
     { menuKey: "quotation.request", action: "canUpdate" },
-    { menuKey: "quotation.approve", action: "canUpdate" },
   ]);
 }
 
@@ -42,8 +55,15 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const latest = quotation.emailDrafts[0];
+  const delivery = getEmailDeliveryConfiguration();
+  const documentConfig = getQuotationDocumentConfig();
   return NextResponse.json({
     quotationStatus: quotation.status,
+    emailDelivery: {
+      provider: delivery.provider,
+      ready: delivery.ready && documentConfig.ready,
+      missing: [...delivery.missing, ...documentConfig.missing],
+    },
     draft: latest
       ? { ...latest, ccEmails: Array.isArray(latest.ccEmails) ? latest.ccEmails : [] }
       : { id: null, status: "DRAFT", ...defaultQuotationEmail(quotation) },
@@ -87,7 +107,9 @@ export async function PUT(request: Request, context: RouteContext) {
   };
   const ownedDraft = parsed.data.draftId
     ? await prisma.quotationEmail.findFirst({
-        where: { id: parsed.data.draftId, quotationId: id, status: { in: ["DRAFT", "FAILED"] } },
+        // Draft FAILED sengaja tidak ditimpa. Payload yang berubah harus
+        // mendapat id baru agar kunci idempotensi provider juga baru.
+        where: { id: parsed.data.draftId, quotationId: id, status: "DRAFT" },
         select: { id: true },
       })
     : null;
