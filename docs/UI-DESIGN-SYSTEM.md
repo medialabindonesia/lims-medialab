@@ -100,6 +100,27 @@ memberi feedback. Animasi tidak dipakai hanya sebagai dekorasi.
 - `QuotationFlowClient.tsx`: wizard operasional dan progress yang lebih padat.
 - `QuotationGroupsEditor.tsx`: paket pengujian berbasis disclosure terstruktur.
 
+### Pola form Buat Quotation
+
+Form panjang tidak dibentangkan sebagai grid tiga kolom yang meminta mata
+bergerak bolak-balik. Polanya adalah:
+
+- satu kolom kerja utama dengan urutan baca vertikal;
+- satu ringkasan berjalan yang sticky di desktop dan dipadatkan ke action bar
+  di layar kecil;
+- tiga tahap berdasarkan keputusan user: Tujuan, Ruang Lingkup, Komersial;
+- field detail disusun dari konteks terbesar: customer, periode, layanan,
+  tujuan, lalu catatan;
+- editor paket mengarahkan urutan matriks, regulasi, parameter, dan titik;
+- baris biaya memakai dua tingkat berlabel, bukan banyak input sempit dalam satu
+  baris;
+- action bar selalu menyediakan alasan validasi, total, kembali, dan tindakan
+  berikutnya pada posisi yang stabil.
+
+Implementasi telah diuji di browser pada viewport desktop `1600x1000` dan
+mobile `390x844`, termasuk memilih customer, menyusun satu paket uji, dan masuk
+ke tahap komersial. Tidak ditemukan overflow horizontal atau error runtime.
+
 ## 8. Aturan untuk pengembangan berikutnya
 
 1. Gunakan komponen bersama sebelum menambah variasi baru.

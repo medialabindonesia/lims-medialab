@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
+  Calculator,
   Check,
   CheckCircle2,
   ClipboardCheck,
@@ -32,6 +33,7 @@ import {
   FilePlus,
   FileText,
   Lock,
+  Layers3,
   Mail,
   Percent,
   Plus,
@@ -40,6 +42,7 @@ import {
   Search,
   Send,
   Upload,
+  UserRound,
   Wallet,
   Trash2,
   X,
@@ -294,9 +297,24 @@ type ModalTab = "detail" | "items" | "terms";
  * dan, di layar mobile, kehilangan konteks "sudah sampai mana".
  */
 const WIZARD_STEPS = [
-  { key: "detail", label: "Detail", title: "Quotation Detail" },
-  { key: "items", label: "Parameter", title: "Parameter & Pricing" },
-  { key: "terms", label: "Ringkasan", title: "Terms & Summary" },
+  {
+    key: "detail",
+    label: "Tujuan",
+    title: "Detail quotation",
+    caption: "Customer, jadwal, dan jenis layanan",
+  },
+  {
+    key: "items",
+    label: "Ruang lingkup",
+    title: "Parameter & pricing",
+    caption: "Paket pengujian dan titik sampling",
+  },
+  {
+    key: "terms",
+    label: "Komersial",
+    title: "Biaya & ketentuan",
+    caption: "Biaya tambahan, pajak, dan termin",
+  },
 ] as const;
 
 /**
@@ -692,6 +710,7 @@ export default function QuotationFlowClient({
   const router = useRouter();
   const reduce = useReducedMotion();
   const { prompt: requestInput, dialog: actionDialog } = useActionDialog();
+  const editorTopRef = useRef<HTMLDivElement>(null);
   const isCustomerView = viewerRole === "CUSTOMER_ENGAGEMENT";
   const isPageEditor = formPresentation === "page";
 
@@ -806,6 +825,12 @@ export default function QuotationFlowClient({
 
     setActiveTab(target.key);
     setMessage("");
+    window.requestAnimationFrame(() => {
+      editorTopRef.current?.scrollIntoView({
+        behavior: reduce ? "auto" : "smooth",
+        block: "start",
+      });
+    });
   }
 
   /**
@@ -1518,29 +1543,160 @@ export default function QuotationFlowClient({
     return null;
   }
 
+  const selectedParameterCount = form.groups.reduce(
+    (total, group) =>
+      total + group.params.filter((parameter) => parameter.selected).length,
+    0
+  );
+
+  const editorSummary = (
+    <aside className="sticky top-[5.5rem] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_28px_rgba(15,42,73,0.07)]">
+      <div className="border-b border-slate-200 bg-slate-50 px-4 py-3.5">
+        <div className="flex items-center gap-2">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-700 text-white">
+            <Calculator size={16} />
+          </span>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
+              Ringkasan berjalan
+            </p>
+            <h3 className="text-sm font-black text-slate-900">
+              Estimasi quotation
+            </h3>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4 p-4">
+        <dl className="space-y-3 text-xs">
+          <div>
+            <dt className="text-slate-400">Customer</dt>
+            <dd className="mt-0.5 truncate font-bold text-slate-800">
+              {selectedCustomer?.company ||
+                selectedCustomer?.name ||
+                "Belum dipilih"}
+            </dd>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <dt className="text-slate-400">TAT</dt>
+              <dd className="mt-0.5 font-bold text-slate-800">
+                {tatLabel(form.tatRequested)} · {tatBusinessDays} hari
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-400">Berlaku sampai</dt>
+              <dd className="mt-0.5 font-bold text-slate-800">
+                {form.validUntil ? formatDate(form.validUntil) : "-"}
+              </dd>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3">
+            <div>
+              <dt className="text-slate-400">Paket</dt>
+              <dd className="mt-0.5 text-base font-black text-slate-900">
+                {form.groups.length}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-400">Parameter dipilih</dt>
+              <dd className="mt-0.5 text-base font-black text-slate-900">
+                {selectedParameterCount}
+              </dd>
+            </div>
+          </div>
+        </dl>
+
+        {unpricedCount > 0 && (
+          <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] leading-4 text-amber-800">
+            <AlertCircle size={13} className="mt-0.5 shrink-0" />
+            {unpricedCount} paket atau biaya belum memiliki harga final.
+          </p>
+        )}
+
+        <div className="space-y-2.5 border-t border-slate-200 pt-4 text-xs">
+          <div className="flex justify-between gap-3">
+            <span className="text-slate-500">Paket pengujian</span>
+            <span className="font-bold text-slate-800">
+              {formatRupiah(totalFormAmount)}
+            </span>
+          </div>
+          <div className="flex justify-between gap-3">
+            <span className="text-slate-500">Sampling & lainnya</span>
+            <span className="font-bold text-slate-800">
+              {formatRupiah(chargeTotals.sampling + chargeTotals.additional)}
+            </span>
+          </div>
+          {tatSurchargeAmount > 0 && (
+            <div className="flex justify-between gap-3 text-blue-700">
+              <span>Tambahan TAT</span>
+              <span className="font-bold">
+                {formatRupiah(tatSurchargeAmount)}
+              </span>
+            </div>
+          )}
+          {Number(form.discountAmount || 0) > 0 && (
+            <div className="flex justify-between gap-3 text-rose-600">
+              <span>{form.discountLabel || "Diskon"}</span>
+              <span className="font-bold">
+                -{formatRupiah(Number(form.discountAmount || 0))}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between gap-3">
+            <span className="text-slate-500">VAT {form.vatPercent}%</span>
+            <span className="font-bold text-slate-800">
+              {formatRupiah(vatAmount)}
+            </span>
+          </div>
+        </div>
+
+        <div className="rounded-xl bg-blue-700 px-4 py-3 text-white">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-blue-100">
+            Grand total
+          </p>
+          <p className="mt-1 text-xl font-black">{formatRupiah(grandTotal)}</p>
+        </div>
+      </div>
+    </aside>
+  );
+
   const quotationEditor = (
-    <div className={isPageEditor ? "w-full" : "fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-md"}>
+    <div
+      className={
+        isPageEditor
+          ? "mx-auto w-full max-w-[1280px]"
+          : "fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-md"
+      }
+    >
       <motion.form
         onSubmit={submitQuotation}
         initial={reduce ? false : { opacity: 0, y: 24, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease: EASE_OUT }}
         className={isPageEditor
-          ? "flex min-h-[calc(100dvh-7.5rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-[0_1px_2px_rgba(15,42,73,0.04)]"
+          ? "w-full"
           : "flex h-[94dvh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl sm:h-[92vh]"}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-5 sm:py-4">
+        <div
+          ref={editorTopRef}
+          className={
+            isPageEditor
+              ? "scroll-mt-24 flex items-start justify-between gap-4 border-b border-slate-200 pb-5"
+              : "flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-5 sm:py-4"
+          }
+        >
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">
               Marketing · Quotation
             </p>
-            <h2 className="mt-1 text-lg font-black leading-tight text-slate-900 sm:text-xl">
+            <h2 className="mt-1 text-xl font-black leading-tight text-slate-900 sm:text-2xl">
               {isEditing ? "Revisi Quotation" : "Buat Quotation"}
             </h2>
-            <p className="mt-1 hidden text-xs text-slate-500 sm:block">
+            <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
               {isEditing
                 ? "Ubah bagian yang perlu diperbaiki, lalu simpan revisinya."
-                : `Langkah ${stepIndex + 1} dari ${WIZARD_STEPS.length} — ${WIZARD_STEPS[stepIndex].title}.`}
+                : "Susun tujuan, ruang lingkup pengujian, lalu ketentuan komersial secara berurutan."}
             </p>
           </div>
 
@@ -1548,16 +1704,22 @@ export default function QuotationFlowClient({
             type="button"
             onClick={closeEditor}
             aria-label={isPageEditor ? "Kembali ke daftar quotation" : "Tutup form quotation"}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 sm:rounded-2xl"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
           >
-            <X size={20} />
+            {isPageEditor ? <ArrowLeft size={18} /> : <X size={18} />}
           </button>
         </div>
 
         {/* Indikator langkah. Saat membuat baru, langkah berikutnya terkunci
             sampai langkah sekarang lengkap; saat revisi semuanya terbuka. */}
-        <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
-          <ol className="flex items-center gap-1.5 sm:gap-2.5">
+        <div
+          className={
+            isPageEditor
+              ? "mt-5 rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_1px_2px_rgba(15,42,73,0.04)]"
+              : "shrink-0 border-b border-slate-200 bg-white px-4 py-3 sm:px-5"
+          }
+        >
+          <ol className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {WIZARD_STEPS.map((step, index) => {
               const active = activeTab === step.key;
               const done = index < stepIndex && !getStepIssues(step.key, form).length;
@@ -1571,7 +1733,7 @@ export default function QuotationFlowClient({
                     disabled={!unlocked}
                     aria-current={active ? "step" : undefined}
                     className={[
-                      "flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border px-2 text-[10px] font-bold transition-colors sm:justify-start sm:px-3 sm:text-xs",
+                      "flex min-h-12 w-full items-center gap-1.5 rounded-xl border px-2 text-left transition-colors sm:min-h-14 sm:gap-2.5 sm:px-3",
                       active
                         ? "border-blue-600 bg-blue-50 text-blue-700"
                         : unlocked
@@ -1581,7 +1743,7 @@ export default function QuotationFlowClient({
                   >
                     <span
                       className={[
-                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black",
+                        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-black sm:h-7 sm:w-7",
                         active
                           ? "bg-blue-700 text-white"
                           : done
@@ -1591,7 +1753,14 @@ export default function QuotationFlowClient({
                     >
                       {done ? <Check size={11} /> : index + 1}
                     </span>
-                    <span className="truncate">{step.label}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[10px] font-black sm:text-xs">
+                        {step.label}
+                      </span>
+                      <span className="mt-0.5 hidden truncate text-[10px] font-medium opacity-70 lg:block">
+                        {step.caption}
+                      </span>
+                    </span>
                     {!unlocked && <Lock size={11} className="shrink-0" />}
                   </button>
                 </li>
@@ -1609,7 +1778,13 @@ export default function QuotationFlowClient({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
+        <div
+          className={
+            isPageEditor
+              ? "pt-5 pb-28"
+              : "flex-1 overflow-y-auto px-4 py-4 sm:px-5"
+          }
+        >
           {message && (
             <p className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {message}
@@ -1617,10 +1792,27 @@ export default function QuotationFlowClient({
           )}
 
           {activeTab === "detail" && (
-            <div className="space-y-5">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
-                <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="min-w-0 space-y-5">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
+                <div className="flex items-start gap-3 border-b border-slate-200 px-5 py-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                    <UserRound size={17} />
+                  </span>
                   <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
+                      01 · Tujuan penawaran
+                    </p>
+                    <h3 className="mt-0.5 text-base font-black text-slate-900">
+                      Customer dan periode quotation
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Mulai dari customer, kemudian tentukan periode dan kebutuhan layanannya.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-4 p-5 md:grid-cols-2">
+                  <div className="md:col-span-2">
                     <label className="mb-2 block text-sm font-medium text-slate-600">
                       Customer
                     </label>
@@ -1651,7 +1843,7 @@ export default function QuotationFlowClient({
                   </div>
 
                   <DatePickerField
-                    label="Quotation Date"
+                    label="Tanggal quotation"
                     value={form.quotationDate}
                     onChange={(value) =>
                       setForm((prev) => ({ ...prev, quotationDate: value }))
@@ -1659,7 +1851,7 @@ export default function QuotationFlowClient({
                   />
 
                   <DatePickerField
-                    label="Valid Until"
+                    label="Berlaku sampai"
                     value={form.validUntil}
                     onChange={(value) =>
                       setForm((prev) => ({ ...prev, validUntil: value }))
@@ -1668,7 +1860,7 @@ export default function QuotationFlowClient({
                   />
 
                   <SelectField
-                    label="Sampling By"
+                    label="Pengambilan sample oleh"
                     value={form.samplingBy}
                     onChange={(value) =>
                       setForm((prev) => ({
@@ -1684,7 +1876,7 @@ export default function QuotationFlowClient({
                   />
 
                   <SelectField
-                    label="TAT Requested"
+                    label="Target waktu selesai (TAT)"
                     value={form.tatRequested}
                     onChange={(value) =>
                       setForm((prev) => ({
@@ -1699,9 +1891,9 @@ export default function QuotationFlowClient({
                     ]}
                   />
 
-                  <div className="lg:col-span-3">
+                  <div className="md:col-span-2">
                     <SelectField
-                      label="Testing Objective"
+                      label="Tujuan pengujian"
                       value={form.testingObjective}
                       onChange={(value) =>
                         setForm((prev) => ({
@@ -1720,9 +1912,9 @@ export default function QuotationFlowClient({
                     />
                   </div>
 
-                  <div className="lg:col-span-3">
+                  <div className="md:col-span-2">
                     <TextAreaField
-                      label="Note"
+                      label="Catatan untuk quotation"
                       value={form.note}
                       onChange={(value) =>
                         setForm((prev) => ({ ...prev, note: value }))
@@ -1732,7 +1924,7 @@ export default function QuotationFlowClient({
                   </div>
 
                   {form.id && (
-                    <div className="lg:col-span-3">
+                    <div className="md:col-span-2">
                       <TextAreaField
                         label="Alasan perubahan (wajib, minimal 8 karakter)"
                         value={form.editReason}
@@ -1747,8 +1939,16 @@ export default function QuotationFlowClient({
               </div>
 
               {selectedCustomer && (
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
+                <div className="grid overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,42,73,0.04)] md:grid-cols-3">
+                  <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 md:col-span-3">
+                    <p className="text-xs font-black text-slate-700">
+                      Data customer terpilih
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      Periksa kembali PIC, lokasi sampling, dan penerima dokumen.
+                    </p>
+                  </div>
+                  <div className="min-w-0 border-b border-slate-100 p-4 md:border-b-0 md:border-r">
                     <p className="font-black text-slate-900">
                       Customer Information
                     </p>
@@ -1763,7 +1963,7 @@ export default function QuotationFlowClient({
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
+                  <div className="min-w-0 border-b border-slate-100 p-4 md:border-b-0 md:border-r">
                     <p className="font-black text-slate-900">
                       Sampling Location
                     </p>
@@ -1778,7 +1978,7 @@ export default function QuotationFlowClient({
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
+                  <div className="min-w-0 p-4">
                     <p className="font-black text-slate-900">
                       Document Receiver
                     </p>
@@ -1791,22 +1991,48 @@ export default function QuotationFlowClient({
                   </div>
                 </div>
               )}
+              </div>
+              <div className="hidden xl:block">{editorSummary}</div>
             </div>
           )}
 
           {activeTab === "items" && (
-            <div className="space-y-5">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
-                <h3 className="text-lg font-black text-slate-900">
-                  Parameter & Pricing
-                </h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Susun pekerjaan per grup, sama seperti baris pada surat
-                  penawaran resmi. Pilih matriks dan regulasinya, lalu hilangkan
-                  centang parameter yang tidak diperlukan customer. Metode
-                  terisi otomatis dan durasi hanya menawarkan pilihan yang punya
-                  baku mutu.
-                </p>
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="min-w-0 space-y-5">
+              <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
+                <div className="flex items-start gap-3 border-b border-slate-200 px-5 py-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+                    <Layers3 size={17} />
+                  </span>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
+                      02 · Ruang lingkup pengujian
+                    </p>
+                    <h3 className="mt-0.5 text-base font-black text-slate-900">
+                      Susun paket pekerjaan dari konteks terbesar
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      Selesaikan satu grup sebelum menambah grup berikutnya agar konteks tidak terpecah.
+                    </p>
+                  </div>
+                </div>
+                <div className="grid gap-px bg-slate-200 sm:grid-cols-3">
+                  {[
+                    ["1", "Pilih matriks", "Tentukan jenis sample atau media uji."],
+                    ["2", "Pilih regulasi", "Gunakan baku mutu yang disepakati."],
+                    ["3", "Periksa parameter", "Atur titik, durasi, qty, dan harga paket."],
+                  ].map(([number, title, caption]) => (
+                    <div key={number} className="flex gap-2.5 bg-slate-50 px-4 py-3">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-black text-blue-700 ring-1 ring-slate-200">
+                        {number}
+                      </span>
+                      <div>
+                        <p className="text-[11px] font-black text-slate-700">{title}</p>
+                        <p className="mt-0.5 text-[10px] leading-4 text-slate-500">{caption}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <QuotationGroupsEditor
@@ -1815,16 +2041,21 @@ export default function QuotationFlowClient({
                   setForm((prev) => ({ ...prev, groups: updater(prev.groups) }))
                 }
               />
+              </div>
+              <div className="hidden xl:block">{editorSummary}</div>
             </div>
           )}
 
           {activeTab === "terms" && (
-            <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-5">
-                <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
                   <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-black text-slate-900">
+                      <p className="text-[10px] font-black uppercase tracking-[0.12em] text-blue-700">
+                        03 · Biaya dan ketentuan
+                      </p>
+                      <h3 className="mt-1 font-black text-slate-900">
                         Biaya Sampling & Dokumen
                       </h3>
                       <p className="mt-1 text-xs text-slate-500">
@@ -1874,9 +2105,13 @@ export default function QuotationFlowClient({
                     {form.chargeItems.map((item, index) => (
                       <div
                         key={item.key}
-                        className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 md:grid-cols-[130px_1fr_78px_100px_140px_auto]"
+                        className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50/60 p-3 md:grid-cols-12"
                       >
-                        <select
+                        <label className="md:col-span-4">
+                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            Jenis biaya
+                          </span>
+                          <select
                           value={item.category}
                           onChange={(event) =>
                             setForm((prev) => ({
@@ -1891,13 +2126,18 @@ export default function QuotationFlowClient({
                               ),
                             }))
                           }
-                          className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-700"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-700"
                         >
                           <option value="SAMPLING">Sampling</option>
                           <option value="DOCUMENT">Dokumen</option>
                           <option value="OTHER">Lainnya</option>
-                        </select>
-                        <input
+                          </select>
+                        </label>
+                        <label className="md:col-span-8">
+                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            Deskripsi
+                          </span>
+                          <input
                           value={item.description}
                           placeholder="Deskripsi biaya"
                           onChange={(event) =>
@@ -1910,9 +2150,14 @@ export default function QuotationFlowClient({
                               ),
                             }))
                           }
-                          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-cyan-400"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400"
                         />
-                        <input
+                        </label>
+                        <label className="md:col-span-2">
+                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            Qty
+                          </span>
+                          <input
                           type="number"
                           min={0.01}
                           step="any"
@@ -1928,9 +2173,14 @@ export default function QuotationFlowClient({
                               ),
                             }))
                           }
-                          className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm outline-none"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm outline-none"
                         />
-                        <input
+                        </label>
+                        <label className="md:col-span-3">
+                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            Satuan
+                          </span>
+                          <input
                           value={item.unit}
                           placeholder="Satuan"
                           onChange={(event) =>
@@ -1943,9 +2193,14 @@ export default function QuotationFlowClient({
                               ),
                             }))
                           }
-                          className="rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm outline-none"
+                          className="w-full rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm outline-none"
                         />
-                        <span className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2">
+                        </label>
+                        <label className="md:col-span-5">
+                          <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                            Harga satuan
+                          </span>
+                          <span className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2">
                           <span className="text-xs font-bold text-slate-400">Rp</span>
                           <input
                             inputMode="numeric"
@@ -1966,7 +2221,8 @@ export default function QuotationFlowClient({
                             }
                             className="min-w-0 flex-1 bg-transparent py-2 text-right text-sm font-bold outline-none"
                           />
-                        </span>
+                          </span>
+                        </label>
                         <button
                           type="button"
                           aria-label={`Hapus biaya ${index + 1}`}
@@ -1978,7 +2234,7 @@ export default function QuotationFlowClient({
                               ),
                             }))
                           }
-                          className="rounded-xl p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                          className="min-h-10 self-end rounded-xl border border-slate-200 bg-white p-2 text-slate-400 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 md:col-span-2"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -1986,9 +2242,17 @@ export default function QuotationFlowClient({
                     ))}
                   </div>
 
+                  <div className="mb-4 border-t border-slate-200 pt-5">
+                    <h4 className="text-sm font-black text-slate-800">
+                      Pengaturan harga & pembayaran
+                    </h4>
+                    <p className="mt-1 text-xs text-slate-500">
+                      Atur pajak dan diskon lebih dahulu, lalu tulis termin secara vertikal.
+                    </p>
+                  </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <Field
-                      label="VAT Percent"
+                      label="VAT (%)"
                       value={form.vatPercent}
                       type="number"
                       onChange={(value) =>
@@ -2001,7 +2265,7 @@ export default function QuotationFlowClient({
                     />
 
                     <Field
-                      label="Discount Amount"
+                      label="Nominal diskon"
                       value={form.discountAmount}
                       type="number"
                       onChange={(value) =>
@@ -2014,7 +2278,7 @@ export default function QuotationFlowClient({
                     />
 
                     <Field
-                      label="Discount Label"
+                      label="Label diskon"
                       value={form.discountLabel}
                       onChange={(value) =>
                         setForm((prev) => ({
@@ -2027,7 +2291,7 @@ export default function QuotationFlowClient({
 
                     <div className="md:col-span-2">
                       <TextAreaField
-                        label="Payment Term"
+                        label="Termin pembayaran"
                         value={form.paymentTerm}
                         onChange={(value) =>
                           setForm((prev) => ({
@@ -2041,7 +2305,7 @@ export default function QuotationFlowClient({
 
                     <div className="md:col-span-2">
                       <TextAreaField
-                        label="Terms Note"
+                        label="Syarat & ketentuan tambahan"
                         value={form.termsNote}
                         onChange={(value) =>
                           setForm((prev) => ({
@@ -2056,97 +2320,18 @@ export default function QuotationFlowClient({
                 </div>
               </div>
 
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-xl font-black text-slate-900">
-                  Summary
-                </h3>
-
-                {unpricedCount > 0 && (
-                  <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-                    {unpricedCount} paket/biaya belum berharga. Quotation tetap
-                    bisa disimpan dan dikirim sebagai penawaran scope, tetapi
-                    total di bawah belum final dan belum bisa di-approve.
-                  </p>
-                )}
-
-                <div className="mt-5 space-y-3 text-sm">
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Paket Pengujian</span>
-                    <span className="font-bold text-slate-900">
-                      {formatRupiah(totalFormAmount)}
-                      {formTotals.hasUnpriced && (
-                        <span className="ml-1 font-medium text-amber-600">
-                          +
-                        </span>
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Biaya Sampling</span>
-                    <span className="font-bold text-slate-900">
-                      {formatRupiah(chargeTotals.sampling)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">Dokumen & Lainnya</span>
-                    <span className="font-bold text-slate-900">
-                      {formatRupiah(chargeTotals.additional)}
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between gap-4 rounded-xl bg-cyan-50 px-3 py-2">
-                    <span className="text-cyan-700">
-                      TAT {form.tatRequested.replaceAll("_", " ")} ·{" "}
-                      {tatBusinessDays} hari kerja · +
-                      {Math.round((tatMultiplier - 1) * 100)}%
-                    </span>
-                    <span className="font-bold text-cyan-800">
-                      {formatRupiah(tatSurchargeAmount)}
-                    </span>
-                  </div>
-
-                  {Number(form.discountAmount || 0) > 0 && (
-                    <div className="flex justify-between gap-4 text-rose-600">
-                      <span>{form.discountLabel || "Diskon"}</span>
-                      <span className="font-bold">
-                        -{formatRupiah(Number(form.discountAmount || 0))}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between gap-4">
-                    <span className="text-slate-500">
-                      VAT {form.vatPercent}%
-                    </span>
-                    <span className="font-bold text-slate-900">
-                      {formatRupiah(vatAmount)}
-                    </span>
-                  </div>
-
-                  <div className="border-t border-slate-200 pt-4">
-                    <div className="flex justify-between gap-4">
-                      <span className="font-black text-slate-900">
-                        Grand Total
-                      </span>
-                      <span className="text-xl font-black text-emerald-600">
-                        {formatRupiah(grandTotal)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">
-                  Grand total ini akan disimpan ke quotation dan nanti dipakai
-                  untuk invoice final.
-                </div>
-              </div>
+              {editorSummary}
             </div>
           )}
         </div>
 
-        <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
+        <div
+          className={
+            isPageEditor
+              ? "sticky bottom-0 z-30 rounded-t-2xl border border-b-0 border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-12px_35px_rgba(15,42,73,0.08)] backdrop-blur sm:px-5"
+              : "shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4"
+          }
+        >
           {/* Alasan kenapa langkah ini belum bisa dilanjutkan. */}
           {currentStepIssues.length > 0 && (
             <div className="mb-3 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] leading-4 text-amber-800 sm:text-xs">
@@ -2170,7 +2355,7 @@ export default function QuotationFlowClient({
             </span>
           </div>
 
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex items-center gap-2 sm:justify-end">
             <button
               type="button"
               onClick={() =>
@@ -2197,7 +2382,7 @@ export default function QuotationFlowClient({
                 disabled={currentStepIssues.length > 0}
                 whileHover={reduce ? undefined : { scale: 1.01 }}
                 whileTap={reduce ? undefined : { scale: 0.98 }}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-2xl sm:text-sm"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-[13px] font-bold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 sm:max-w-56 sm:text-sm"
               >
                 Lanjut
                 <ArrowRight size={15} />
@@ -2212,7 +2397,7 @@ export default function QuotationFlowClient({
                 disabled={loading || allStepIssues.length > 0}
                 whileHover={reduce || loading ? undefined : { scale: 1.01 }}
                 whileTap={reduce || loading ? undefined : { scale: 0.98 }}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60 sm:rounded-2xl sm:text-sm"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 text-[13px] font-bold text-white transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60 sm:max-w-64 sm:text-sm"
               >
                 <Save size={16} />
                 {loading

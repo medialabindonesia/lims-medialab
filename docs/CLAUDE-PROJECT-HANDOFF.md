@@ -103,6 +103,10 @@ Alur status kode saat ini secara ringkas:
 - Lead dan survey memakai pola queue-detail; pembuatan lead, rekomendasi survey,
   dan Resume Survey memakai dialog aplikasi yang responsif.
 - Quotation memakai progress tahap yang jelas dan editor grup yang ringkas.
+- Form Buat Quotation memakai satu kolom kerja dan sticky running summary,
+  dengan tahap Tujuan, Ruang Lingkup, dan Komersial. Browser UAT lokal berhasil
+  melewati pemilihan customer sampai tahap komersial pada desktop dan mobile
+  tanpa overflow horizontal atau runtime error.
 - Browser `prompt` dan `alert` pada alur operasional telah diganti dengan dialog
   atau pesan inline aplikasi tanpa mengubah endpoint maupun payload bisnis.
 - Login serta header halaman Admin, Audit, Finance, Lab, Master, Sales, dan
