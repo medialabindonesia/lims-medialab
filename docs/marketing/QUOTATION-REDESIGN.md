@@ -1,5 +1,11 @@
 # Desain Ulang Alur Quotation (Marketing)
 
+> **Eksplorasi UI terbaru (12 Agustus 2026):** tiga prototype interaktif dan
+> rekomendasi implementasinya didokumentasikan di
+> [`MARKETING-UI-CONCEPTS.md`](./MARKETING-UI-CONCEPTS.md). Halaman pembanding
+> tersedia di route `/marketing/ui-concepts` untuk user yang memiliki akses
+> Marketing atau Request Quotation.
+
 Status: **dokumen desain awal; sebagian asumsi sudah digantikan oleh audit template resmi**
 Branch: `marketing-dev`
 Terakhir diperbarui: 7 Agustus 2026
