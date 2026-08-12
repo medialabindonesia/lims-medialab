@@ -59,6 +59,7 @@ const menus = [
   { name: "Matriks, Regulasi & Harga", key: "master.marketing", href: "/master/marketing", icon: "Layers", sort: 23 },
   { name: "Lead & Survey", key: "marketing.leads", href: "/marketing/leads", icon: "ClipboardList", sort: 24 },
 
+  { name: "Quotation", key: "quotation.home", href: "/quotations/home", icon: "BarChart3", sort: 29 },
   { name: "Request Quotation", key: "quotation.request", href: "/quotations/request", icon: "FilePlus", sort: 30 },
   { name: "Verify Quotation", key: "quotation.verify", href: "/quotations/verify", icon: "FileCheck", sort: 31 },
   { name: "Revise Quotation", key: "quotation.revise", href: "/quotations/revise", icon: "FilePenLine", sort: 32 },
@@ -131,6 +132,7 @@ const roleAccess: Record<string, string[]> = {
 
   CUSTOMER_ENGAGEMENT: [
     "dashboard.customer",
+    "quotation.home",
     "quotation.request",
     "coa.preliminary",
     "coa.final",
@@ -147,6 +149,7 @@ const roleAccess: Record<string, string[]> = {
     "marketing.leads",
     // Sales yang menyusun penawaran untuk calon customer, tidak hanya
     // memverifikasi penawaran yang diajukan customer lewat portal.
+    "quotation.home",
     "quotation.request",
     "quotation.verify",
     "quotation.revise",
@@ -158,6 +161,7 @@ const roleAccess: Record<string, string[]> = {
 
   SALES_MANAGER_DIRECTOR: [
     "dashboard.worker",
+    "quotation.home",
     "quotation.approve",
     "sales.monitoring",
     "sales.sampling_schedule",

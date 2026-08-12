@@ -13,6 +13,7 @@ import QuotationGroupsEditor, {
   buildGroupsFromQuotation,
   countUnpricedParams,
   createEmptyGroup,
+  getMatrixTree,
   groupsTotal,
   toApiGroups,
   validateGroups,
@@ -439,6 +440,29 @@ function toInputDate(value?: string | null) {
   return new Date(value).toISOString().slice(0, 10);
 }
 
+/**
+ * Waktu penyimpanan draft dalam bahasa sehari-hari.
+ * Draft yang baru saja tersimpan lebih berguna dibaca sebagai "barusan"
+ * daripada sebagai jam presisi.
+ */
+function formatDraftTime(value: string) {
+  const saved = new Date(value);
+  if (Number.isNaN(saved.getTime())) return "beberapa saat lalu";
+
+  const minutes = Math.floor((Date.now() - saved.getTime()) / 60000);
+  if (minutes < 1) return "barusan";
+  if (minutes < 60) return `${minutes} menit lalu`;
+
+  const sameDay = saved.toDateString() === new Date().toDateString();
+  const clock = saved.toLocaleTimeString("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  return sameDay
+    ? `hari ini ${clock}`
+    : `${saved.toLocaleDateString("id-ID", { day: "numeric", month: "short" })} ${clock}`;
+}
+
 function formatDate(value?: string | null) {
   if (!value) return "-";
 
@@ -721,6 +745,8 @@ export default function QuotationFlowClient({
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [actionFeedback, setActionFeedback] = useState<{ id: string; text: string; ok: boolean } | null>(null);
+  const [dissolvingIds, setDissolvingIds] = useState<Set<string>>(new Set());
   const [documentQuotation, setDocumentQuotation] = useState<Quotation | null>(null);
   const [documentLabel, setDocumentLabel] = useState("");
   const [documentItemIds, setDocumentItemIds] = useState<string[]>([]);
@@ -736,34 +762,204 @@ export default function QuotationFlowClient({
   // Role customer tidak memilih customer: hanya ada satu, yakni dirinya.
   const lockedCustomerId = isCustomerView ? customers[0]?.id || "" : "";
 
-  const [form, setForm] = useState<QuotationForm>({
-    editReason: "",
-    customerId: initialLead?.customer.id || lockedCustomerId,
-    leadId: initialLead?.id,
-    selectedCustomer: initialLead?.customer || null,
-    groups: [createEmptyGroup()],
-    note: initialLead?.requestedTests || "",
+  /** Isi form quotation baru yang masih kosong. */
+  function buildInitialForm(): QuotationForm {
+    return {
+      editReason: "",
+      customerId: initialLead?.customer.id || lockedCustomerId,
+      leadId: initialLead?.id,
+      selectedCustomer: initialLead?.customer || null,
+      groups: [createEmptyGroup()],
+      note: initialLead?.requestedTests || "",
 
-    quotationDate: getTodayInputDate(),
-    validUntil: addDaysInputDate(30),
+      quotationDate: getTodayInputDate(),
+      validUntil: addDaysInputDate(30),
 
-    samplingBy: "MEDIALAB",
-    testingObjective: "ROUTINE_MONITORING",
-    tatRequested: "NORMAL",
+      samplingBy: "MEDIALAB",
+      testingObjective: "ROUTINE_MONITORING",
+      tatRequested: "NORMAL",
 
-    samplingCost: 0,
-    chargeItems: [],
-    discountAmount: 0,
-    discountLabel: "Diskon",
-    vatPercent: 11,
+      samplingCost: 0,
+      chargeItems: [],
+      discountAmount: 0,
+      discountLabel: "Diskon",
+      vatPercent: 11,
 
-    paymentTerm: "Pembayaran dilakukan setelah invoice diterima.",
-    termsNote:
-      "Harga belum termasuk biaya tambahan di luar lingkup pekerjaan yang disepakati.",
+      paymentTerm: "Pembayaran dilakukan setelah invoice diterima.",
+      termsNote:
+        "Harga belum termasuk biaya tambahan di luar lingkup pekerjaan yang disepakati.",
 
-    // Jalur lama; tidak pernah dikirim ke server sejak form memakai grup.
-    items: [],
-  });
+      // Jalur lama; tidak pernah dikirim ke server sejak form memakai grup.
+      items: [],
+    };
+  }
+
+  const [form, setForm] = useState<QuotationForm>(buildInitialForm);
+
+  // ---------- Simpan otomatis ke server ----------
+  //
+  // Form quotation panjang, dan sebelumnya isian yang belum ditekan Simpan bisa
+  // hilang seluruhnya hanya karena tab tertutup. Draft kini dititipkan ke
+  // server sehingga tahan terhadap browser tertutup, komputer mati, cache
+  // dibersihkan, bahkan berpindah komputer.
+  //
+  // Draft bersifat pribadi milik pembuatnya dan tidak memakai nomor dokumen;
+  // nomor quotation resmi baru terbit saat tombol Simpan ditekan.
+  const draftScope = form.id ?? "new";
+  const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
+  /**
+   * Daftar parameter master tidak ikut disimpan. Isinya bisa ribuan baris dan
+   * selalu dimuat ulang dari katalog; yang perlu diingat hanyalah pilihan sales
+   * di atasnya, dan itu sudah diwakili `pendingSelection`.
+   */
+  function toDraftPayload(value: QuotationForm) {
+    return {
+      ...value,
+      groups: value.groups.map((group) => ({
+        ...group,
+        params: [],
+        loadingParams: false,
+        paramsError: null,
+        paramsLoadedFor: null,
+        pendingSelection:
+          group.pendingSelection ??
+          (group.params.some((param) => param.selected)
+            ? {
+                parameterKeys: group.params
+                  .filter((param) => param.selected)
+                  .map((param) => param.regulationParameterId ?? param.parameterId),
+                knownRegulationIds: group.regulationIds,
+                prices: Object.fromEntries(
+                  group.params
+                    .filter((param) => param.selected)
+                    .map((param) => [
+                      param.regulationParameterId ?? param.parameterId,
+                      param.price,
+                    ]),
+                ),
+                durationIds: Object.fromEntries(
+                  group.params
+                    .filter((param) => param.selected)
+                    .map((param) => [
+                      param.regulationParameterId ?? param.parameterId,
+                      param.durationId,
+                    ]),
+                ),
+              }
+            : null),
+      })),
+    };
+  }
+
+  /** Form yang belum disentuh tidak perlu dititipkan ke server. */
+  function isFormWorthSaving(value: QuotationForm) {
+    if (value.customerId) return true;
+    if (value.note.trim()) return true;
+    return value.groups.some(
+      (group) =>
+        group.matrixPath.length > 0 ||
+        group.regulationIds.length > 0 ||
+        group.description.trim() ||
+        group.unitPrice.trim(),
+    );
+  }
+
+  // Memulihkan draft yang tersimpan saat form dibuka.
+  useEffect(() => {
+    if (!openForm || !mounted || draftLoaded) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const response = await fetch(
+          `/api/quotations/drafts?scope=${encodeURIComponent(draftScope)}`,
+        );
+        if (!response.ok) return;
+
+        const data = await response.json();
+        if (cancelled || !data.draft?.payload) return;
+
+        setForm((previous) => ({
+          ...previous,
+          ...data.draft.payload,
+          // Identitas form ditentukan quotation yang sedang dibuka, bukan isi
+          // draft, supaya draft lama tidak pernah membajak quotation lain.
+          id: previous.id,
+          editingStatus: previous.editingStatus,
+        }));
+        setDraftSavedAt(data.draft.updatedAt);
+        setDraftRestored(true);
+      } catch {
+        // Gagal memuat draft tidak boleh menghalangi form dipakai.
+      } finally {
+        if (!cancelled) setDraftLoaded(true);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [openForm, mounted, draftLoaded, draftScope]);
+
+  // Menyimpan perubahan setelah user berhenti mengetik sejenak.
+  useEffect(() => {
+    if (!openForm || !mounted || !draftLoaded) return;
+    if (!isFormWorthSaving(form)) return;
+
+    const timer = setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await fetch("/api/quotations/drafts", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              scope: draftScope,
+              payload: toDraftPayload(form),
+            }),
+          });
+          if (!response.ok) return;
+
+          const data = await response.json();
+          setDraftSavedAt(data.savedAt);
+        } catch {
+          // Koneksi putus: biarkan percobaan berikutnya yang menyimpan.
+        }
+      })();
+    }, 1500);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, openForm, mounted, draftLoaded, draftScope]);
+
+  /** Membuang draft, dipakai setelah tersimpan dan saat user menekan Batalkan. */
+  function clearDraft() {
+    setDraftSavedAt(null);
+    setDraftRestored(false);
+    void fetch(`/api/quotations/drafts?scope=${encodeURIComponent(draftScope)}`, {
+      method: "DELETE",
+    }).catch(() => {});
+  }
+
+  /**
+   * Membatalkan pemulihan draft: isian kembali seperti saat form baru dibuka.
+   * Untuk revisi, form diisi ulang dari quotation yang tersimpan di server —
+   * bukan dikosongkan — supaya sales tidak kehilangan data yang sudah resmi.
+   */
+  function discardRestoredDraft() {
+    clearDraft();
+
+    if (!form.id) {
+      setForm(buildInitialForm());
+      return;
+    }
+
+    const original = quotations.find((item) => item.id === form.id);
+    if (original) handleEdit(original);
+  }
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => setMounted(true));
@@ -1015,7 +1211,7 @@ export default function QuotationFlowClient({
       },
       // Quotation lama belum punya grup; sales tinggal menyusunnya dari nol.
       groups: quotation.groups?.length
-        ? buildGroupsFromQuotation(quotation.groups)
+        ? buildGroupsFromQuotation(quotation.groups, getMatrixTree())
         : [createEmptyGroup()],
       note: quotation.note || "",
 
@@ -1127,6 +1323,7 @@ export default function QuotationFlowClient({
     }
 
     setMessage(data.message || "Quotation berhasil disimpan");
+    clearDraft();
     if (isPageEditor) {
       router.push("/quotations/request");
       router.refresh();
@@ -1140,7 +1337,8 @@ export default function QuotationFlowClient({
   async function runAction(
     endpoint: string,
     method: "POST" | "PATCH" = "PATCH",
-    body?: Record<string, unknown>
+    body?: Record<string, unknown>,
+    quotationId?: string,
   ) {
     setLoading(true);
     setMessage("");
@@ -1160,6 +1358,19 @@ export default function QuotationFlowClient({
     if (!response.ok) {
       setMessage(data.message || "Action gagal");
       return false;
+    }
+
+    // Animasi dissolve: kartu memudang sebelum hilang dari daftar.
+    if (quotationId) {
+      setActionFeedback({ id: quotationId, text: data.message || "Berhasil", ok: true });
+      setDissolvingIds((prev) => new Set([...prev, quotationId]));
+      await new Promise((resolve) => setTimeout(resolve, 600));
+      setDissolvingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(quotationId);
+        return next;
+      });
+      setActionFeedback(null);
     }
 
     setMessage(data.message || "Action berhasil");
@@ -1479,15 +1690,24 @@ export default function QuotationFlowClient({
 
     if (mode === "verify") {
       return (
-        <button
-          onClick={() =>
-            runAction(`/api/quotations/${quotation.id}/verify`, "PATCH")
-          }
-          className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
-        >
-          <FileCheck size={16} />
-          Verify
-        </button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            onClick={() => handleEdit(quotation)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <Edit3 size={16} />
+            Edit & Review
+          </button>
+          <button
+            onClick={() =>
+              runAction(`/api/quotations/${quotation.id}/verify`, "PATCH", undefined, quotation.id)
+            }
+            className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
+          >
+            <FileCheck size={16} />
+            Verify
+          </button>
+        </div>
       );
     }
 
@@ -1503,7 +1723,7 @@ export default function QuotationFlowClient({
           </button>
           <button
             onClick={() =>
-              runAction(`/api/quotations/${quotation.id}/approve`, "PATCH")
+              runAction(`/api/quotations/${quotation.id}/approve`, "PATCH", undefined, quotation.id)
             }
             className="inline-flex items-center gap-2 rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
           >
@@ -1786,9 +2006,41 @@ export default function QuotationFlowClient({
           }
         >
           {message && (
-            <p className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <p className={`mb-5 rounded-2xl border px-4 py-3 text-sm ${
+              message.includes("gagal") || message.includes("Action gagal")
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-emerald-200 bg-emerald-50 text-emerald-700"
+            }`}>
               {message}
             </p>
+          )}
+
+          {/* Draft yang dipulihkan otomatis; user tetap bisa membatalkannya. */}
+          {draftRestored && (
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-sm text-amber-800">
+                <span className="font-bold">Isian sebelumnya dipulihkan.</span>{" "}
+                {draftSavedAt
+                  ? `Tersimpan otomatis ${formatDraftTime(draftSavedAt)}.`
+                  : "Belum pernah disimpan sebagai quotation."}
+              </p>
+              <button
+                type="button"
+                onClick={discardRestoredDraft}
+                className="shrink-0 rounded-xl border border-amber-300 bg-white px-3 py-2 text-xs font-bold text-amber-800 transition-colors hover:bg-amber-100"
+              >
+                Batalkan &amp; mulai dari awal
+              </button>
+            </div>
+          )}
+
+          {/* Toast yang muncul saat aksi diproses (verify/approve). */}
+          {actionFeedback && (
+            <div className="pointer-events-none fixed inset-x-0 top-20 z-50 flex justify-center">
+              <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 shadow-lg">
+                <CheckCircle2 size={18} /> {actionFeedback.text}
+              </div>
+            </div>
           )}
 
           {activeTab === "detail" && (
@@ -2040,6 +2292,7 @@ export default function QuotationFlowClient({
                 onChange={(updater) =>
                   setForm((prev) => ({ ...prev, groups: updater(prev.groups) }))
                 }
+                isCustomerView={isCustomerView}
               />
               </div>
               <div className="hidden xl:block">{editorSummary}</div>
@@ -2354,6 +2607,15 @@ export default function QuotationFlowClient({
               </span>
             </span>
           </div>
+
+          {/* Penanda bahwa isian sudah aman walau belum ditekan Simpan. */}
+          {draftSavedAt && (
+            <p className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+              <Check size={12} className="text-emerald-500" />
+              Isian tersimpan otomatis {formatDraftTime(draftSavedAt)} — belum
+              menjadi quotation resmi sampai Simpan ditekan.
+            </p>
+          )}
 
           <div className="mt-3 flex items-center gap-2 sm:justify-end">
             <button
@@ -2684,7 +2946,11 @@ export default function QuotationFlowClient({
             <motion.div
               key={quotation.id}
               whileHover={reduce ? undefined : { y: -3 }}
-              className="rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-emerald-200 sm:rounded-[2rem] sm:p-5"
+              className={`rounded-[1.25rem] border border-slate-200 bg-white p-4 shadow-sm transition-all duration-500 sm:rounded-[2rem] sm:p-5 ${
+                dissolvingIds.has(quotation.id)
+                  ? "scale-95 border-emerald-300 bg-emerald-50/60 opacity-0"
+                  : "hover:border-emerald-200"
+              }`}
             >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">

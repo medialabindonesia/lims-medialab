@@ -247,9 +247,48 @@ model User {
   surveysAssigned        Survey[]         @relation("SurveyAssignedTo")
   quotationEmailsCreated QuotationEmail[] @relation("QuotationEmailCreatedBy")
   quotationEmailsSent    QuotationEmail[] @relation("QuotationEmailSentBy")
+  quotationDrafts        QuotationDraft[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/// Isian form quotation yang belum ditekan Simpan.
+///
+/// Form quotation panjang: customer, banyak grup, regulasi, parameter, lokasi,
+/// durasi, harga, sampai syarat pembayaran. Sebelum ini isian yang belum
+/// disimpan hilang begitu tab tertutup atau sesi berakhir.
+///
+/// Draft SENGAJA bukan baris `Quotation` berstatus draft. Membuat baris
+/// quotation sejak awal berarti setiap form yang ditinggal setengah jalan ikut
+/// memakan satu nomor dokumen resmi, dan penomoran surat penawaran menjadi
+/// bolong-bolong. Nomor baru diterbitkan saat sales benar-benar menekan Simpan.
+model QuotationDraft {
+  id     String @id @default(cuid())
+  userId String
+
+  /// Penanda form yang sedang diisi:
+  ///   "new"          → quotation baru yang belum pernah disimpan
+  ///   <id quotation>  → revisi quotation yang sudah ada
+  ///
+  /// Dipakai sebagai kolom tersendiri, bukan `quotationId` yang boleh null,
+  /// karena MySQL menganggap setiap NULL berbeda sehingga satu user bisa
+  /// menumpuk banyak draft "baru" tanpa pernah tertimpa.
+  scope String @db.VarChar(64)
+
+  /// Isian form dalam bentuk JSON. Daftar parameter master tidak ikut disimpan
+  /// karena selalu dimuat ulang dari katalog; yang disimpan adalah pilihan
+  /// sales atasnya.
+  payload String @db.LongText
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Draft bersifat pribadi: satu user hanya punya satu draft per form.
+  @@unique([userId, scope])
+  @@index([userId, updatedAt])
 }
 
 model Menu {

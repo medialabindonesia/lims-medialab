@@ -57,6 +57,27 @@ function regulationLabelInTree(
   return "Regulasi";
 }
 
+/**
+ * Membangun jalur matriks dari akar ke daun.
+ *
+ * Sebelumnya buildGroupsFromQuotation hanya menyimpan ID daun pada matrixPath,
+ * sehingga dropdown cascade tingkat atas tampil kosong saat quotation dibuka
+ * untuk diedit — memaksa user memilih ulang dari awal.
+ */
+function findMatrixPath(tree: MatrixNode[], leafId: string): string[] {
+  function walk(nodes: MatrixNode[], trail: string[]): string[] | null {
+    for (const node of nodes) {
+      if (node.id === leafId) return [...trail, node.id];
+      if (node.children.length > 0) {
+        const found = walk(node.children, [...trail, node.id]);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+  return walk(tree, []) ?? [leafId];
+}
+
 type DurationOption = {
   id: string;
   code: string;
@@ -131,9 +152,15 @@ type Props = {
   groups: GroupDraft[];
   onChange: (updater: GroupsUpdater) => void;
   disabled?: boolean;
+  isCustomerView?: boolean;
 };
 
 let matrixTreeCache: MatrixNode[] | null = null;
+
+/** Ambil cache pohon matriks yang sudah dimuat. */
+export function getMatrixTree(): MatrixNode[] {
+  return matrixTreeCache ?? [];
+}
 
 function newKey() {
   return Math.random().toString(36).slice(2, 10);
@@ -273,7 +300,8 @@ export type SavedQuotationGroup = {
  * `pendingSelection`.
  */
 export function buildGroupsFromQuotation(
-  savedGroups: SavedQuotationGroup[]
+  savedGroups: SavedQuotationGroup[],
+  tree: MatrixNode[] = [],
 ): GroupDraft[] {
   return savedGroups.map((group) => {
     const prices: Record<string, string> = {};
@@ -310,9 +338,9 @@ export function buildGroupsFromQuotation(
     return {
       key: newKey(),
       description: group.description ?? "",
-      // Cascade diisi seadanya dari matriks daun; dropdown tingkat atas akan
-      // tampil kosong sampai sales menyentuhnya, tanpa mengubah data tersimpan.
-      matrixPath: group.matrixId ? [group.matrixId] : [],
+      // Jalur matriks penuh dari akar ke daun, sehingga dropdown cascade
+      // langsung terisi saat quotation dibuka untuk diedit/direvisi.
+      matrixPath: group.matrixId ? findMatrixPath(tree, group.matrixId) : [],
       regulationId: group.regulationId ?? "",
       regulationIds,
       regulationLabel,
@@ -370,6 +398,7 @@ export default function QuotationGroupsEditor({
   groups,
   onChange,
   disabled,
+  isCustomerView = false,
 }: Props) {
   const [tree, setTree] = useState<MatrixNode[]>(matrixTreeCache ?? []);
   const [treeError, setTreeError] = useState<string | null>(null);
@@ -998,6 +1027,7 @@ export default function QuotationGroupsEditor({
                           Diisi manual; tidak otomatis sama dengan jumlah lokasi.
                         </span>
                       </label>
+                      {!isCustomerView && (
                       <label>
                         <span className="mb-1.5 block text-xs font-bold text-slate-500">
                           Harga satu paket
@@ -1018,6 +1048,7 @@ export default function QuotationGroupsEditor({
                           />
                         </span>
                       </label>
+                      )}
                     </div>
                   </div>
                 )}
