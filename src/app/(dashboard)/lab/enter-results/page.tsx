@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import { getLabAnalysisPageData } from "@/lib/lab-analysis-page-data";
 import LabAnalysisClient from "@/components/lab/LabAnalysisClient";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default async function EnterResultsPage() {
   const session = await getSession();
@@ -17,13 +18,7 @@ export default async function EnterResultsPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-600">Lab Analysis</p>
-        <h1 className="mt-2 text-4xl font-bold">Enter Results</h1>
-        <p className="mt-3 max-w-3xl text-slate-400">
-          Analyst menginput hasil analisis parameter.
-        </p>
-      </div>
+      <PageHeader eyebrow="Lab Analysis" title="Enter Results" subtitle="Analyst menginput hasil analisis parameter." />
 
       <LabAnalysisClient
         mode="enter"

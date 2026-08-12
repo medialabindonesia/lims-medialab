@@ -21,8 +21,8 @@ export default function SurfaceCard({
   return (
     <div
       className={cn(
-        "rounded-[1.25rem] border border-slate-200 bg-white sm:rounded-[1.5rem]",
-        !bare && "p-4 sm:p-5",
+        "rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,42,73,0.04)]",
+        !bare && "p-4",
         className
       )}
     >

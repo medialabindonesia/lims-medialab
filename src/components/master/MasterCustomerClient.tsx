@@ -488,7 +488,7 @@ export default function MasterCustomerClient({ initialCustomers, consultants }: 
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.message || "Gagal menonaktifkan customer");
+      setMessage(data.message || "Gagal menonaktifkan customer");
       return;
     }
 

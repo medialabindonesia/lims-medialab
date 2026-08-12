@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import { getTechnicalCocPageData } from "@/lib/technical-page-data";
 import TechnicalDocumentClient from "@/components/technical/TechnicalDocumentClient";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default async function CreateCocPage() {
   const session = await getSession();
@@ -17,15 +18,11 @@ export default async function CreateCocPage() {
 
   return (
     <section className="min-h-screen">
-      <div className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-semibold text-emerald-600">Technical Flow</p>
-        <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900">
-          Create COC
-        </h1>
-        <p className="mt-3 max-w-3xl text-slate-500">
-          Buat Chain of Custody berdasarkan quotation dan LTR yang sudah selesai.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Technical Flow"
+        title="Create COC"
+        subtitle="Buat Chain of Custody berdasarkan quotation dan LTR yang sudah selesai."
+      />
 
       <TechnicalDocumentClient
         mode="coc"

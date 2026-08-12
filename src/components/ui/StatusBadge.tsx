@@ -20,7 +20,7 @@ export default function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold leading-tight sm:text-xs",
+        "inline-flex max-w-full items-center gap-1.5 rounded-md border px-2 py-1 text-[10px] font-bold leading-tight sm:text-[11px]",
         STATUS_TONE_CLASS[tone],
         className
       )}

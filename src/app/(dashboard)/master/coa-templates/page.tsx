@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import MasterCoaTemplateClient from "@/components/master/MasterCoaTemplateClient";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default async function MasterCoaTemplatePage() {
   const session = await getSession();
@@ -46,14 +47,11 @@ export default async function MasterCoaTemplatePage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-600">Master Data</p>
-        <h1 className="mt-2 text-4xl font-bold">Master COA Template</h1>
-        <p className="mt-3 max-w-3xl text-slate-400">
-          Kelola jenis template COA seperti Air Ambient, ISPU, Air Limbah,
-          Emisi, dan parameter yang akan tampil di COA.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Master Data"
+        title="Master COA Template"
+        subtitle="Kelola template COA serta parameter yang akan tampil pada dokumen hasil."
+      />
 
       <MasterCoaTemplateClient
         initialTemplates={JSON.parse(JSON.stringify(templates))}

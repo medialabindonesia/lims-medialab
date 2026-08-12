@@ -12,12 +12,12 @@ export default function PageTransition({
   const pathname = usePathname();
   const reduce = useReducedMotion();
 
-  // Hormati prefers-reduced-motion: cukup fade lembut, tanpa geser/blur.
+  // Transisi cepat menjaga orientasi tanpa membuat layar operasional terasa lambat.
   const variants = reduce
     ? {
         hidden: { opacity: 0 },
-        visible: { opacity: 1, transition: { duration: 0.2 } },
-        exit: { opacity: 0, transition: { duration: 0.15 } },
+        visible: { opacity: 1, transition: { duration: 0.12 } },
+        exit: { opacity: 0, transition: { duration: 0.08 } },
       }
     : pageVariants;
 

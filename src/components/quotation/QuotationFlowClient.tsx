@@ -48,6 +48,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import Disclosure from "@/components/ui/Disclosure";
 import DocumentCode from "@/components/ui/DocumentCode";
 import StatusBadge from "@/components/ui/StatusBadge";
+import { useActionDialog } from "@/components/ui/useActionDialog";
 import {
   formatShortDate,
   humanOrderTitle,
@@ -690,6 +691,7 @@ export default function QuotationFlowClient({
 }: Props) {
   const router = useRouter();
   const reduce = useReducedMotion();
+  const { prompt: requestInput, dialog: actionDialog } = useActionDialog();
   const isCustomerView = viewerRole === "CUSTOMER_ENGAGEMENT";
   const isPageEditor = formPresentation === "page";
 
@@ -1141,40 +1143,71 @@ export default function QuotationFlowClient({
   }
 
   async function uploadPo(quotation: Quotation) {
-    const poNumber = window.prompt(
-      `Masukkan nomor PO untuk ${quotation.quotationNo}`
-    );
+    const values = await requestInput({
+      title: "Catat Purchase Order",
+      description: `Hubungkan PO customer dengan ${quotation.quotationNo}.`,
+      confirmLabel: "Simpan PO",
+      fields: [
+        { name: "poNumber", label: "Nomor PO", required: true },
+        {
+          name: "fileUrl",
+          label: "Link file PO",
+          placeholder: "Opsional, dapat dilengkapi kemudian",
+        },
+      ],
+    });
 
-    if (!poNumber) return;
-
-    const fileUrl = window.prompt(
-      "Masukkan link file PO. Boleh kosong dulu kalau belum ada."
-    );
+    if (!values) return;
 
     await runAction(`/api/quotations/${quotation.id}/po`, "POST", {
-      poNumber,
-      fileUrl: fileUrl || "",
+      poNumber: values.poNumber.trim(),
+      fileUrl: values.fileUrl.trim(),
     });
   }
 
   async function requestRevision(quotation: Quotation) {
-    const revisionNote = window.prompt(
-      `Catatan revisi untuk ${quotation.quotationNo}`
-    );
+    const values = await requestInput({
+      title: "Minta revisi quotation",
+      description: `Sampaikan perubahan yang dibutuhkan untuk ${quotation.quotationNo}.`,
+      confirmLabel: "Kirim permintaan",
+      fields: [
+        {
+          name: "note",
+          label: "Catatan revisi",
+          type: "textarea",
+          required: true,
+          minLength: 3,
+        },
+      ],
+    });
 
-    if (!revisionNote) return;
+    if (!values) return;
 
     await runAction(`/api/quotations/${quotation.id}/revision`, "PATCH", {
-      note: revisionNote,
+      note: values.note.trim(),
     });
   }
 
   async function rejectQuotation(quotation: Quotation) {
-    const reason = window.prompt(
-      `Catatan penolakan untuk sales staff (${quotation.quotationNo}), minimal 8 karakter:`
-    );
-    if (!reason) return;
-    await runAction(`/api/quotations/${quotation.id}/reject`, "PATCH", { reason });
+    const values = await requestInput({
+      title: "Tolak quotation",
+      description: `Quotation ${quotation.quotationNo} akan dikembalikan ke sales staff.`,
+      confirmLabel: "Tolak quotation",
+      tone: "danger",
+      fields: [
+        {
+          name: "reason",
+          label: "Alasan penolakan",
+          type: "textarea",
+          required: true,
+          minLength: 8,
+        },
+      ],
+    });
+    if (!values) return;
+    await runAction(`/api/quotations/${quotation.id}/reject`, "PATCH", {
+      reason: values.reason.trim(),
+    });
   }
 
   /**
@@ -1185,45 +1218,41 @@ export default function QuotationFlowClient({
    * tidak ada klik customer yang bisa dirujuk.
    */
   async function recordOfflineConfirmation(quotation: Quotation) {
-    const channels = [
-      "1. Email",
-      "2. WhatsApp",
-      "3. Telepon",
-      "4. Rapat / tatap muka",
-      "5. Dokumen bertanda tangan",
-      "6. Lainnya",
-    ].join("\n");
-
-    const choice = window.prompt(
-      `ACC customer untuk ${quotation.quotationNo} diterima lewat mana?\n\n${channels}\n\nKetik angkanya:`
-    );
-    if (!choice) return;
-
-    const channelByChoice: Record<string, string> = {
-      "1": "EMAIL",
-      "2": "WHATSAPP",
-      "3": "PHONE",
-      "4": "MEETING",
-      "5": "SIGNED_DOCUMENT",
-      "6": "OTHER",
-    };
-
-    const channel = channelByChoice[choice.trim()];
-
-    if (!channel) {
-      setMessage("Pilihan saluran tidak dikenal. Ketik angka 1 sampai 6.");
-      return;
-    }
-
-    const note = window.prompt(
-      "Tulis buktinya — siapa yang memberi ACC, kapan, dan rujukannya.\nContoh: \"Bu Lia (Purchasing) via email 8 Agu 2026, subjek 'Approval penawaran'\"\n\nMinimal 10 karakter:"
-    );
-    if (!note) return;
+    const values = await requestInput({
+      title: "Catat persetujuan customer",
+      description: `Dokumentasikan ACC di luar aplikasi untuk ${quotation.quotationNo}.`,
+      confirmLabel: "Simpan persetujuan",
+      fields: [
+        {
+          name: "channel",
+          label: "Saluran persetujuan",
+          type: "select",
+          required: true,
+          options: [
+            { value: "EMAIL", label: "Email" },
+            { value: "WHATSAPP", label: "WhatsApp" },
+            { value: "PHONE", label: "Telepon" },
+            { value: "MEETING", label: "Rapat / tatap muka" },
+            { value: "SIGNED_DOCUMENT", label: "Dokumen bertanda tangan" },
+            { value: "OTHER", label: "Lainnya" },
+          ],
+        },
+        {
+          name: "note",
+          label: "Bukti dan rujukan",
+          type: "textarea",
+          placeholder: "Siapa yang memberi ACC, kapan, dan rujukannya",
+          required: true,
+          minLength: 10,
+        },
+      ],
+    });
+    if (!values) return;
 
     await runAction(
       `/api/quotations/${quotation.id}/confirm-offline`,
       "PATCH",
-      { channel, note }
+      { channel: values.channel, note: values.note.trim() }
     );
   }
 
@@ -1330,12 +1359,23 @@ export default function QuotationFlowClient({
     quotation: Quotation,
     revision: NonNullable<Quotation["revisions"]>[number]
   ) {
-    const reason = window.prompt(
-      `Kembalikan ${quotation.quotationNo} ke revisi ${revision.revisionNo}. Jelaskan alasannya (minimal 8 karakter):`
-    );
-    if (!reason) return;
+    const values = await requestInput({
+      title: "Pulihkan versi quotation",
+      description: `${quotation.quotationNo} akan dikembalikan ke revisi ${revision.revisionNo}.`,
+      confirmLabel: "Pulihkan versi",
+      fields: [
+        {
+          name: "reason",
+          label: "Alasan pemulihan",
+          type: "textarea",
+          required: true,
+          minLength: 8,
+        },
+      ],
+    });
+    if (!values) return;
     await runAction(`/api/audit/revisions/${revision.id}/restore`, "POST", {
-      reason,
+      reason: values.reason.trim(),
     });
   }
 
@@ -1486,18 +1526,18 @@ export default function QuotationFlowClient({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.35, ease: EASE_OUT }}
         className={isPageEditor
-          ? "flex min-h-[calc(100dvh-4rem)] w-full flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 shadow-sm sm:rounded-[2rem]"
-          : "flex h-[94dvh] w-full max-w-7xl flex-col overflow-hidden rounded-[1.25rem] border border-slate-200 bg-slate-50 shadow-2xl sm:h-[92vh] sm:rounded-[2rem]"}
+          ? "flex min-h-[calc(100dvh-7.5rem)] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-[0_1px_2px_rgba(15,42,73,0.04)]"
+          : "flex h-[94dvh] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-2xl sm:h-[92vh]"}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-6 sm:py-5">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-5 sm:py-4">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-emerald-600 sm:text-sm">
-              Quotation Flow
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-blue-700">
+              Marketing · Quotation
             </p>
-            <h2 className="mt-0.5 text-lg font-black leading-tight text-slate-900 sm:mt-1 sm:text-2xl">
+            <h2 className="mt-1 text-lg font-black leading-tight text-slate-900 sm:text-xl">
               {isEditing ? "Revisi Quotation" : "Buat Quotation"}
             </h2>
-            <p className="mt-1 hidden text-sm text-slate-500 sm:block">
+            <p className="mt-1 hidden text-xs text-slate-500 sm:block">
               {isEditing
                 ? "Ubah bagian yang perlu diperbaiki, lalu simpan revisinya."
                 : `Langkah ${stepIndex + 1} dari ${WIZARD_STEPS.length} — ${WIZARD_STEPS[stepIndex].title}.`}
@@ -1516,8 +1556,8 @@ export default function QuotationFlowClient({
 
         {/* Indikator langkah. Saat membuat baru, langkah berikutnya terkunci
             sampai langkah sekarang lengkap; saat revisi semuanya terbuka. */}
-        <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
-          <ol className="flex items-center gap-1.5 sm:gap-2">
+        <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3 sm:px-5">
+          <ol className="flex items-center gap-1.5 sm:gap-2.5">
             {WIZARD_STEPS.map((step, index) => {
               const active = activeTab === step.key;
               const done = index < stepIndex && !getStepIssues(step.key, form).length;
@@ -1531,21 +1571,21 @@ export default function QuotationFlowClient({
                     disabled={!unlocked}
                     aria-current={active ? "step" : undefined}
                     className={[
-                      "flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl px-2 text-[11px] font-bold transition-colors sm:justify-start sm:px-3 sm:text-sm",
+                      "flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border px-2 text-[10px] font-bold transition-colors sm:justify-start sm:px-3 sm:text-xs",
                       active
-                        ? "bg-emerald-500 text-white shadow-sm"
+                        ? "border-blue-600 bg-blue-50 text-blue-700"
                         : unlocked
-                          ? "border border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-                          : "border border-slate-100 bg-slate-50 text-slate-300",
+                          ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                          : "border-slate-100 bg-slate-50 text-slate-300",
                     ].join(" ")}
                   >
                     <span
                       className={[
                         "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-black",
                         active
-                          ? "bg-white/25 text-white"
+                          ? "bg-blue-700 text-white"
                           : done
-                            ? "bg-emerald-500 text-white"
+                            ? "bg-green-600 text-white"
                             : "bg-slate-200 text-slate-500",
                       ].join(" ")}
                     >
@@ -1559,9 +1599,9 @@ export default function QuotationFlowClient({
             })}
           </ol>
 
-          <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-100">
+          <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-slate-100">
             <div
-              className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+              className="h-full rounded-full bg-blue-600 transition-all duration-300"
               style={{
                 width: `${((stepIndex + 1) / WIZARD_STEPS.length) * 100}%`,
               }}
@@ -1569,7 +1609,7 @@ export default function QuotationFlowClient({
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-5">
           {message && (
             <p className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {message}
@@ -1578,7 +1618,7 @@ export default function QuotationFlowClient({
 
           {activeTab === "detail" && (
             <div className="space-y-5">
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
                 <div className="grid gap-4 lg:grid-cols-3">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-slate-600">
@@ -1708,7 +1748,7 @@ export default function QuotationFlowClient({
 
               {selectedCustomer && (
                 <div className="grid gap-4 lg:grid-cols-3">
-                  <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
                     <p className="font-black text-slate-900">
                       Customer Information
                     </p>
@@ -1723,7 +1763,7 @@ export default function QuotationFlowClient({
                     </p>
                   </div>
 
-                  <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
                     <p className="font-black text-slate-900">
                       Sampling Location
                     </p>
@@ -1738,7 +1778,7 @@ export default function QuotationFlowClient({
                     </p>
                   </div>
 
-                  <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
                     <p className="font-black text-slate-900">
                       Document Receiver
                     </p>
@@ -1756,8 +1796,8 @@ export default function QuotationFlowClient({
 
           {activeTab === "items" && (
             <div className="space-y-5">
-              <div className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 className="text-xl font-black text-slate-900">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)]">
+                <h3 className="text-lg font-black text-slate-900">
                   Parameter & Pricing
                 </h3>
                 <p className="mt-1 text-sm text-slate-500">
@@ -2372,14 +2412,17 @@ export default function QuotationFlowClient({
 
   if (isPageEditor) {
     return (
-      <motion.div
-        initial={reduce ? false : { opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: EASE_OUT }}
-        className="w-full"
-      >
-        {quotationEditor}
-      </motion.div>
+      <>
+        <motion.div
+          initial={reduce ? false : { opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: EASE_OUT }}
+          className="w-full"
+        >
+          {quotationEditor}
+        </motion.div>
+        {actionDialog}
+      </>
     );
   }
 
@@ -2807,6 +2850,7 @@ export default function QuotationFlowClient({
       {mounted && openForm ? createPortal(quotationEditor, document.body) : null}
       {mounted && emailQuotation ? createPortal(emailModal, document.body) : null}
       {mounted && documentQuotation ? createPortal(ltrModal, document.body) : null}
+      {actionDialog}
     </motion.div>
   );
 }

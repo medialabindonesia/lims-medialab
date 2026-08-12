@@ -33,40 +33,38 @@ export const staggerContainer = (stagger = 0.06, delayChildren = 0): Variants =>
 
 /** Item yang fade + naik halus. Dipakai bersama staggerContainer. */
 export const fadeUpItem: Variants = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 0, y: 7 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.42, ease: EASE_OUT },
+    transition: { duration: 0.26, ease: EASE_OUT },
   },
 };
 
 /** Fade + naik standalone (tanpa stagger). */
 export const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE_OUT } },
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.28, ease: EASE_OUT } },
 };
 
 /** Fade + scale lembut, cocok untuk kartu/badge yang muncul. */
 export const fadeScale: Variants = {
-  hidden: { opacity: 0, scale: 0.96 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: EASE_OUT } },
+  hidden: { opacity: 0, scale: 0.985 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.22, ease: EASE_OUT } },
 };
 
-/** Transisi halaman: masuk dengan blur kecil, keluar memudar. */
+/** Transisi halaman ringkas; tanpa blur agar tabel dan form tetap tajam. */
 export const pageVariants: Variants = {
-  hidden: { opacity: 0, y: 14, filter: "blur(6px)" },
+  hidden: { opacity: 0, y: 6 },
   visible: {
     opacity: 1,
     y: 0,
-    filter: "blur(0px)",
-    transition: { duration: 0.38, ease: EASE_OUT },
+    transition: { duration: 0.22, ease: EASE_OUT },
   },
   exit: {
     opacity: 0,
-    y: -8,
-    filter: "blur(4px)",
-    transition: { duration: 0.22, ease: EASE_IN_OUT },
+    y: -3,
+    transition: { duration: 0.12, ease: EASE_IN_OUT },
   },
 };
 

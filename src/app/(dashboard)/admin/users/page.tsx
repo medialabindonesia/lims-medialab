@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import AdminUsersClient from "@/components/admin/AdminUsersClient";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default async function AdminUsersPage() {
   const session = await getSession();
@@ -46,14 +47,11 @@ export default async function AdminUsersPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-600">Administration</p>
-        <h1 className="mt-2 text-4xl font-bold">Users</h1>
-        <p className="mt-3 max-w-3xl text-slate-400">
-          Kelola akun login, pilih role, hubungkan user ke customer, dan reset
-          password user.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Administrasi"
+        title="Users"
+        subtitle="Kelola akun login, pilih role, hubungkan user ke customer, dan reset password user."
+      />
 
       <AdminUsersClient
         initialUsers={JSON.parse(JSON.stringify(users))}

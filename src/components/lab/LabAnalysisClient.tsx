@@ -10,6 +10,7 @@ import {
   SearchCheck,
   ShieldCheck,
 } from "lucide-react";
+import { useActionDialog } from "@/components/ui/useActionDialog";
 
 type LabMode =
   | "conduct"
@@ -200,6 +201,7 @@ export default function LabAnalysisClient({
   initialSampleParameters,
   analysts,
 }: Props) {
+  const { prompt: requestInput, dialog: actionDialog } = useActionDialog();
   const [sampleParameters, setSampleParameters] = useState<SampleParameter[]>(
     initialSampleParameters
   );
@@ -337,14 +339,26 @@ export default function LabAnalysisClient({
   }
 
   async function askRetest(group: SampleGroup) {
-    const reason = window.prompt(
-      `Alasan retest untuk sample ${group.sample.sampleNo}`
-    );
+    const values = await requestInput({
+      title: "Minta retest sample",
+      description: `Retest akan diterapkan ke parameter yang tampil pada ${group.sample.sampleNo}.`,
+      confirmLabel: "Minta retest",
+      tone: "danger",
+      fields: [
+        {
+          name: "reason",
+          label: "Alasan retest",
+          type: "textarea",
+          required: true,
+          minLength: 3,
+        },
+      ],
+    });
 
-    if (!reason) return;
+    if (!values) return;
 
     await runAction(`/api/lab/samples/${group.sample.id}/retest`, "PATCH", {
-      reason,
+      reason: values.reason.trim(),
     });
   }
 
@@ -357,15 +371,23 @@ export default function LabAnalysisClient({
       setMessage("Ubah Standard atau Limit terlebih dahulu.");
       return;
     }
-    const reason = window.prompt(
-      `Alasan revisi Standard / Limit untuk ${group.sample.sampleNo}`
-    );
-    if (!reason || reason.trim().length < 8) {
-      setMessage("Alasan revisi minimal 8 karakter.");
-      return;
-    }
+    const values = await requestInput({
+      title: "Revisi standard / limit",
+      description: `Jelaskan perubahan metadata untuk ${group.sample.sampleNo}.`,
+      confirmLabel: "Simpan revisi",
+      fields: [
+        {
+          name: "reason",
+          label: "Alasan revisi",
+          type: "textarea",
+          required: true,
+          minLength: 8,
+        },
+      ],
+    });
+    if (!values) return;
     await runAction(`/api/lab/samples/${group.sample.id}/revision`, "PATCH", {
-      reason,
+      reason: values.reason.trim(),
       parameters: changed.map((item) => ({
         id: item.id,
         displayName: getDisplayName(item),
@@ -750,6 +772,7 @@ export default function LabAnalysisClient({
           </div>
         )}
       </div>
+      {actionDialog}
     </div>
   );
 }

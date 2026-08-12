@@ -141,7 +141,7 @@ export default function LoginPage() {
                   className="pointer-events-none absolute -inset-2 rounded-[1.75rem] bg-gradient-to-r from-brand-sky/15 via-white/5 to-brand-lime/15 blur-xl"
                   aria-hidden="true"
                 />
-                <div className="relative overflow-hidden rounded-[1.4rem] border border-white/25 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(232,245,255,0.94)_68%,rgba(242,249,232,0.96))] px-5 py-3 shadow-[0_20px_52px_rgba(1,13,38,0.3)] ring-1 ring-white/10 backdrop-blur-xl">
+                <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-[0_12px_30px_rgba(15,42,73,0.09)]">
                   <span
                     className="pointer-events-none absolute inset-y-3 left-0 w-1 rounded-r-full bg-gradient-to-b from-brand-sky via-blue-500 to-brand-lime"
                     aria-hidden="true"
@@ -161,7 +161,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-white/75 backdrop-blur">
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-500">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-lime opacity-60 motion-reduce:animate-none" />
                   <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-lime" />
@@ -178,7 +178,7 @@ export default function LoginPage() {
             >
               <motion.div
                 variants={fadeUpItem}
-                className="inline-flex items-center gap-2 rounded-full border border-brand-sky/25 bg-brand-sky/10 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.14em] text-brand-sky"
+                className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3.5 py-2 text-xs font-bold uppercase tracking-[0.14em] text-blue-700"
               >
                 <Sparkles size={14} />
                 Laboratory intelligence
@@ -186,17 +186,17 @@ export default function LoginPage() {
 
               <motion.h1
                 variants={fadeUpItem}
-                className="mt-5 max-w-[42rem] text-[clamp(2.65rem,4vw,4.7rem)] font-black leading-[0.98] tracking-[-0.045em] text-white"
+                className="mt-5 max-w-[42rem] text-[clamp(2.4rem,4vw,4.25rem)] font-black leading-[0.98] tracking-[-0.045em] text-slate-950"
               >
                 Kendali laboratorium,
-                <span className="mt-2 block bg-gradient-to-r from-brand-sky via-white to-brand-lime bg-clip-text text-transparent">
+                <span className="mt-2 block bg-gradient-to-r from-blue-700 via-blue-500 to-lime-600 bg-clip-text text-transparent">
                   dalam satu alur presisi.
                 </span>
               </motion.h1>
 
               <motion.p
                 variants={fadeUpItem}
-                className="mt-5 max-w-[38rem] text-base leading-7 text-white/72 xl:text-lg xl:leading-8"
+                className="mt-5 max-w-[38rem] text-base leading-7 text-slate-500 xl:text-lg xl:leading-8"
               >
                 Dari quotation hingga certificate of analysis, setiap tahap
                 terhubung, terlacak, dan siap diaudit dalam satu workspace.
@@ -232,13 +232,13 @@ export default function LoginPage() {
               ].map(({ icon: Icon, label, value }) => (
                 <div
                   key={label}
-                  className="rounded-2xl border border-white/12 bg-white/[0.07] p-3.5 backdrop-blur-sm"
+                  className="rounded-2xl border border-slate-200 bg-white p-3.5"
                 >
                   <Icon size={18} className="text-brand-lime" />
-                  <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.15em] text-white/45">
+                  <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
                     {label}
                   </p>
-                  <p className="mt-0.5 text-xs font-bold text-white">{value}</p>
+                  <p className="mt-0.5 text-xs font-bold text-slate-700">{value}</p>
                 </div>
               ))}
             </motion.div>
@@ -277,7 +277,7 @@ export default function LoginPage() {
               </p>
             </div>
 
-            <div className="login-card rounded-[2rem] p-5 sm:p-7 xl:p-8">
+            <div className="login-card rounded-2xl p-5 sm:p-7 xl:p-8">
               <div className="relative z-10">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -323,7 +323,7 @@ export default function LoginPage() {
                     >
                       Alamat email
                     </label>
-                    <div className="login-input relative rounded-2xl border border-slate-200 bg-slate-50">
+                    <div className="login-input relative rounded-xl border border-slate-200 bg-slate-50">
                       <Mail
                         size={18}
                         className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-blue-600"
@@ -341,7 +341,7 @@ export default function LoginPage() {
                         autoCapitalize="none"
                         spellCheck={false}
                         aria-invalid={Boolean(message)}
-                        className="w-full rounded-2xl bg-transparent py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                        className="w-full rounded-xl bg-transparent py-3.5 pl-11 pr-4 text-sm font-medium text-slate-900 outline-none disabled:cursor-not-allowed disabled:opacity-60"
                         placeholder="nama@perusahaan.com"
                       />
                     </div>
@@ -354,7 +354,7 @@ export default function LoginPage() {
                     >
                       Kata sandi
                     </label>
-                    <div className="login-input relative rounded-2xl border border-slate-200 bg-slate-50">
+                    <div className="login-input relative rounded-xl border border-slate-200 bg-slate-50">
                       <LockKeyhole
                         size={18}
                         className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-blue-600"
@@ -370,7 +370,7 @@ export default function LoginPage() {
                         required
                         autoComplete="current-password"
                         aria-invalid={Boolean(message)}
-                        className="w-full rounded-2xl bg-transparent py-3.5 pl-11 pr-12 text-sm font-medium text-slate-900 outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                        className="w-full rounded-xl bg-transparent py-3.5 pl-11 pr-12 text-sm font-medium text-slate-900 outline-none disabled:cursor-not-allowed disabled:opacity-60"
                         placeholder="Masukkan kata sandi"
                       />
                       <button
@@ -416,7 +416,7 @@ export default function LoginPage() {
                     whileTap={
                       reduce || loading ? undefined : { scale: 0.985 }
                     }
-                    className="group relative inline-flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-brand-navy via-brand-deep to-brand-blue px-5 py-3.5 text-sm font-extrabold text-white shadow-[0_14px_34px_rgba(7,43,107,0.22)] transition-shadow hover:shadow-[0_18px_42px_rgba(7,43,107,0.3)] disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group relative inline-flex min-h-12 w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-blue-700 px-5 py-3.5 text-sm font-extrabold text-white shadow-[0_10px_24px_rgba(17,77,165,0.2)] transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <span className="absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-[430%] motion-reduce:hidden" />
                     <span className="relative">

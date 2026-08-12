@@ -2,15 +2,15 @@
 
 import type { ElementType } from "react";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Award,
-  BarChart3,
   BadgeCheck,
   BadgeDollarSign,
+  BarChart3,
   Briefcase,
   Building2,
   CalendarRange,
@@ -33,7 +33,6 @@ import {
   LifeBuoy,
   ListChecks,
   LogOut,
-  Menu as MenuIcon,
   Microscope,
   PackageCheck,
   PanelLeftClose,
@@ -49,6 +48,7 @@ import {
   X,
 } from "lucide-react";
 import { useSupportUnread } from "@/hooks/useSupportUnread";
+import { EASE_OUT } from "@/lib/motion";
 
 export type DashboardMenuItem = {
   id: string;
@@ -79,9 +79,9 @@ type MenuGroup = {
 
 const iconMap: Record<string, ElementType> = {
   Award,
-  BarChart3,
   BadgeCheck,
   BadgeDollarSign,
+  BarChart3,
   Briefcase,
   Building2,
   CalendarRange,
@@ -115,110 +115,23 @@ const iconMap: Record<string, ElementType> = {
 };
 
 const groupConfig: Record<string, { label: string; sort: number }> = {
-  dashboard: { label: "Dashboard", sort: 1 },
-  admin: { label: "Administration", sort: 2 },
-  master: { label: "Master Data", sort: 3 },
-  marketing: { label: "Marketing", sort: 4 },
-  quotation: { label: "Quotation", sort: 5 },
-  sales: { label: "Sales", sort: 6 },
-  technical: { label: "Technical", sort: 7 },
-  lab: { label: "Laboratory", sort: 8 },
-  audit: { label: "Quality & Audit", sort: 9 },
-  coa: { label: "Certificate / COA", sort: 10 },
-  finance: { label: "Finance", sort: 11 },
-  support: { label: "Support", sort: 12 },
-  customer: { label: "Customer Area", sort: 13 },
+  dashboard: { label: "Ringkasan", sort: 1 },
+  marketing: { label: "Marketing", sort: 2 },
+  quotation: { label: "Quotation", sort: 3 },
+  sales: { label: "Sales", sort: 4 },
+  technical: { label: "Teknis", sort: 5 },
+  lab: { label: "Pengujian", sort: 6 },
+  coa: { label: "COA", sort: 7 },
+  finance: { label: "Finance", sort: 8 },
+  master: { label: "Master Data", sort: 9 },
+  audit: { label: "Mutu & Audit", sort: 10 },
+  admin: { label: "Administrasi", sort: 11 },
+  support: { label: "Bantuan", sort: 12 },
+  customer: { label: "Customer", sort: 13 },
 };
 
-function getMenuGroupKey(menuKey: string) {
-  return menuKey.split(".")[0] || "other";
-}
-
-/**
- * Label pendek khusus navigasi bawah (mobile). Slot hanya selebar ±70px,
- * jadi nama menu penuh seperti "Support Center" atau "Preliminary COA" pasti
- * terpotong. Label di sini sengaja satu kata supaya utuh terbaca.
- */
-const MOBILE_SHORT_LABEL: Record<string, string> = {
-  "dashboard.admin": "Beranda",
-  "dashboard.worker": "Beranda",
-  "dashboard.customer": "Beranda",
-  "dashboard.finance": "Beranda",
-  "dashboard.lab": "Beranda",
-  "quotation.request": "Quotation",
-  "quotation.verify": "Verifikasi",
-  "quotation.revise": "Revisi",
-  "quotation.approve": "Approve",
-  "coa.preliminary": "Hasil",
-  "coa.final": "Sertifikat",
-  "customer.invoices": "Invoice",
-  "support.center": "Bantuan",
-  "support.desk": "Bantuan",
-  "support.faq": "FAQ",
-  "sales.monitoring": "Monitor",
-  "sales.ltr": "LTR",
-  "sales.sampling_schedule": "Jadwal",
-  "technical.coc": "COC",
-  "technical.stps": "STPS",
-  "lab.receive_sample": "Sample",
-  "lab.conduct_analysis": "Analisis",
-  "lab.enter_results": "Input",
-  "finance.create_invoice": "Invoice",
-  "finance.approve_invoice": "Approve",
-  "master.customers": "Customer",
-  "master.parameters": "Parameter",
-  "admin.users": "User",
-};
-
-/**
- * Empat slot tetap navigasi bawah per role. Sengaja TIDAK bergantung pada
- * halaman aktif: sebelumnya menu aktif disisipkan ke daftar sehingga posisi
- * tombol bergeser setiap pindah halaman dan user kehilangan memori otot.
- */
-const MOBILE_PRIMARY_KEYS: Record<string, string[]> = {
-  CUSTOMER_ENGAGEMENT: [
-    "dashboard.customer",
-    "quotation.request",
-    "coa.preliminary",
-    "support.center",
-  ],
-};
-
-function getMobileLabel(item: DashboardMenuItem) {
-  const mapped = MOBILE_SHORT_LABEL[item.key];
-
-  if (mapped) return mapped;
-
-  return item.name.replace(" Dashboard", "").split(" ")[0];
-}
-
-/**
- * Empat menu utama untuk navigasi bawah, dipilih secara deterministik:
- * preferensi per role dulu, lalu dashboard, lalu urutan menu apa adanya.
- */
-function pickMobilePrimary(
-  menus: DashboardMenuItem[],
-  roleCode: string
-): DashboardMenuItem[] {
-  const preferred = MOBILE_PRIMARY_KEYS[roleCode] || [];
-  const picked: DashboardMenuItem[] = [];
-
-  for (const key of preferred) {
-    const found = menus.find((menu) => menu.key === key);
-    if (found) picked.push(found);
-  }
-
-  const dashboard = menus.find((menu) => menu.key.startsWith("dashboard."));
-  if (dashboard && !picked.some((menu) => menu.id === dashboard.id)) {
-    picked.unshift(dashboard);
-  }
-
-  for (const menu of menus) {
-    if (picked.length >= 4) break;
-    if (!picked.some((item) => item.id === menu.id)) picked.push(menu);
-  }
-
-  return picked.slice(0, 4);
+function getGroupKey(key: string) {
+  return key.split(".")[0] || "other";
 }
 
 function getInitials(name: string) {
@@ -227,56 +140,41 @@ function getInitials(name: string) {
       .split(" ")
       .filter(Boolean)
       .slice(0, 2)
-      .map((item) => item[0]?.toUpperCase())
+      .map((part) => part[0]?.toUpperCase())
       .join("") || "ML"
   );
 }
 
 function isActivePath(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === href;
-
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function SidebarContent({
   menus,
   session,
-  onClose,
+  collapsed,
+  onNavigate,
   supportBadge,
-  collapsed = false,
 }: {
   menus: DashboardMenuItem[];
   session: DashboardSession;
-  onClose?: () => void;
+  collapsed: boolean;
+  onNavigate?: () => void;
   supportBadge?: { key: string; count: number };
-  collapsed?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
 
   const groups = useMemo<MenuGroup[]>(() => {
     const map = new Map<string, MenuGroup>();
-
     for (const menu of menus) {
-      const groupKey = getMenuGroupKey(menu.key);
-      const config = groupConfig[groupKey] || {
-        label: "Other",
-        sort: 99,
-      };
-      const current = map.get(groupKey);
-
-      if (current) {
-        current.items.push(menu);
-      } else {
-        map.set(groupKey, {
-          key: groupKey,
-          label: config.label,
-          sort: config.sort,
-          items: [menu],
-        });
-      }
+      const key = getGroupKey(menu.key);
+      const config = groupConfig[key] || { label: "Lainnya", sort: 99 };
+      const current = map.get(key);
+      if (current) current.items.push(menu);
+      else map.set(key, { key, ...config, items: [menu] });
     }
-
     return Array.from(map.values())
       .map((group) => ({
         ...group,
@@ -285,140 +183,91 @@ function SidebarContent({
       .sort((a, b) => a.sort - b.sort);
   }, [menus]);
 
-  async function handleLogout() {
+  async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
   }
 
   return (
-    <div className="flex h-full flex-col bg-brand-navy text-white">
-      <div className={collapsed ? "shrink-0 border-b border-white/10 px-3 pb-4 pt-16" : "shrink-0 border-b border-white/10 px-4 pb-4 pt-16 lg:px-5 lg:pb-5"}>
+    <div className="flex h-full flex-col bg-white text-slate-700">
+      <div className="flex h-[4.25rem] shrink-0 items-center border-b border-slate-200 px-3">
         <Link
           href="/dashboard"
-          onClick={onClose}
-          className="group block rounded-2xl"
+          onClick={onNavigate}
+          className={`flex min-w-0 items-center ${collapsed ? "w-full justify-center" : "px-1"}`}
         >
-          <div className={collapsed ? "grid h-12 place-items-center rounded-2xl bg-white shadow-lg" : "relative overflow-hidden rounded-2xl border border-white/20 bg-white px-3.5 py-2.5 shadow-[0_16px_40px_rgba(2,17,47,0.25)] transition duration-300 group-hover:-translate-y-0.5 lg:rounded-[1.4rem] lg:border-white/15 lg:bg-[linear-gradient(135deg,#ffffff_0%,#edf7ff_68%,#f3fae8_100%)] lg:px-4 lg:py-3 lg:shadow-[0_18px_48px_rgba(2,17,47,0.32)] lg:ring-1 lg:ring-white/10"}>
-            <span
-              className="pointer-events-none absolute inset-y-3 left-0 hidden w-1 rounded-r-full bg-gradient-to-b from-brand-sky via-blue-500 to-brand-lime lg:block"
-              aria-hidden="true"
-            />
-            <span
-              className="pointer-events-none absolute -right-8 -top-10 hidden h-24 w-24 rounded-full bg-brand-sky/15 lg:block"
-              aria-hidden="true"
-            />
-            <Image
-              src="/images/logo-medialab.png"
-              alt="Medialab Indonesia"
-              width={220}
-              height={66}
-              priority
-              className={collapsed ? "relative z-10 h-auto w-12 object-contain" : "relative z-10 h-auto w-40 lg:w-48"}
-            />
-          </div>
-
-          <div className={collapsed ? "hidden" : "mt-3 flex items-center justify-between px-1"}>
-            <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-sky">
-              LIMS Workspace
-            </p>
-            <span className="flex items-center gap-1.5 text-[10px] font-bold text-white/60">
-              <span className="h-1.5 w-1.5 rounded-full bg-brand-lime shadow-[0_0_10px_rgba(111,188,29,0.8)]" />
-              Online
-            </span>
-          </div>
+          <Image
+            src="/images/logo-medialab.png"
+            alt="Medialab Indonesia"
+            width={220}
+            height={66}
+            priority
+            className={collapsed ? "h-auto w-11 object-contain object-left" : "h-auto w-[9.5rem] object-contain object-left"}
+          />
+          <span className="sr-only">Medialab Indonesia</span>
         </Link>
       </div>
 
-      <div className={collapsed ? "shrink-0 px-3 py-4" : "shrink-0 px-5 py-4"}>
-        <div className={collapsed ? "rounded-2xl border border-white/12 bg-white/[0.07] p-2" : "rounded-[1.5rem] border border-white/12 bg-white/[0.07] p-4 shadow-inner shadow-white/[0.03]"} title={collapsed ? `${session.name} · ${session.roleName}` : undefined}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-lime text-sm font-black text-brand-navy shadow-[0_10px_25px_rgba(2,17,47,0.25)]">
-              {getInitials(session.name)}
-            </div>
-
-            <div className={collapsed ? "hidden" : "min-w-0 flex-1"}>
-              <p className="truncate text-sm font-extrabold text-white">
-                {session.name}
-              </p>
-              <p className="mt-0.5 truncate text-xs font-medium text-brand-sky">
-                {session.roleName}
-              </p>
-            </div>
-          </div>
-
-          {session.customerName && !collapsed && (
-            <p className="mt-3 truncate rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2 text-xs font-medium text-white/70">
-              Customer: {session.customerName}
-            </p>
-          )}
-        </div>
-      </div>
-
-      <nav
-        aria-label="Navigasi utama"
-        className={collapsed ? "flex-1 overflow-y-auto px-2 pb-4" : "flex-1 overflow-y-auto px-4 pb-4 pr-3"}
-      >
-        <div className="space-y-5">
+      <nav aria-label="Navigasi utama" className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
+        <div className="space-y-4">
           {groups.map((group) => (
-            <div key={group.key} className="space-y-2">
-              <div className={collapsed ? "mx-2 border-t border-white/10" : "sticky top-0 z-10 bg-brand-navy/95 px-3 py-2 backdrop-blur"}>
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-brand-sky/75">
-                  {collapsed ? <span className="sr-only">{group.label}</span> : group.label}
+            <div key={group.key}>
+              {collapsed ? (
+                <div className="mx-2 mb-2 border-t border-slate-200" />
+              ) : (
+                <p className="mb-1.5 px-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                  {group.label}
                 </p>
-              </div>
+              )}
 
               <div className="space-y-1">
                 {group.items.map((item) => {
-                  const Icon =
-                    item.icon && iconMap[item.icon] ? iconMap[item.icon] : Home;
+                  const Icon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : Home;
                   const active = isActivePath(pathname, item.href);
+                  const badge = supportBadge?.key === item.key ? supportBadge.count : 0;
 
                   return (
                     <Link
                       key={item.id}
                       href={item.href}
-                      onClick={onClose}
+                      onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
                       title={collapsed ? item.name : undefined}
-                      className={[
-                        "group relative flex min-h-11 items-center overflow-hidden rounded-2xl text-sm font-semibold transition-all",
-                        collapsed ? "justify-center px-2 py-3" : "gap-3 px-3.5 py-3",
+                      className={`group relative flex min-h-10 items-center rounded-xl text-[13px] font-semibold transition-colors duration-150 ${
+                        collapsed ? "justify-center px-2" : "gap-3 px-3"
+                      } ${
                         active
-                          ? "bg-gradient-to-r from-brand-blue to-brand-deep text-white shadow-[0_12px_28px_rgba(2,17,47,0.25)]"
-                          : "text-white/70 hover:bg-white/10 hover:text-white",
-                      ].join(" ")}
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
                     >
                       {active && (
-                        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand-lime shadow-[0_0_12px_rgba(111,188,29,0.65)]" />
+                        <motion.span
+                          layoutId="sidebar-active-indicator"
+                          className="absolute inset-y-1.5 left-0 w-[3px] rounded-r-full bg-blue-600"
+                          transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                        />
                       )}
-
                       <Icon
-                        size={18}
-                        className={[
-                          "shrink-0",
-                          active
-                            ? "text-brand-sky"
-                            : "text-white/45 group-hover:text-brand-sky",
-                        ].join(" ")}
+                        size={17}
+                        strokeWidth={active ? 2.25 : 1.8}
+                        className={`shrink-0 ${
+                          active ? "text-blue-700" : "text-slate-500 group-hover:text-slate-700"
+                        }`}
                       />
-
-                      <span className={collapsed ? "sr-only" : "truncate"}>{item.name}</span>
-
-                      {supportBadge &&
-                        supportBadge.key === item.key &&
-                        supportBadge.count > 0 && (
-                          <span
-                            className={[
-                              collapsed ? "absolute right-1 top-1 min-w-4 rounded-full px-1 text-center text-[9px] font-bold" : "ml-auto rounded-full px-2 py-0.5 text-xs font-bold",
-                              active
-                                ? "bg-brand-lime text-brand-navy"
-                                : "bg-red-500 text-white shadow-sm",
-                            ].join(" ")}
-                          >
-                            {supportBadge.count}
-                          </span>
-                        )}
+                      <span className={collapsed ? "sr-only" : "min-w-0 flex-1 truncate"}>{item.name}</span>
+                      {badge > 0 && (
+                        <span
+                          className={`rounded-full bg-blue-700 text-center font-black text-white ${
+                            collapsed
+                              ? "absolute right-0.5 top-0.5 min-w-4 px-1 text-[8px] leading-4"
+                              : "min-w-5 px-1.5 text-[9px] leading-5"
+                          }`}
+                        >
+                          {badge > 99 ? "99+" : badge}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}
@@ -428,20 +277,29 @@ function SidebarContent({
         </div>
       </nav>
 
-      <div className={collapsed ? "shrink-0 border-t border-white/10 bg-[#062660] p-3" : "shrink-0 border-t border-white/10 bg-[#062660] p-4"}>
-        <button
-          type="button"
-          onClick={handleLogout}
-          title={collapsed ? "Keluar" : undefined}
-          className={collapsed ? "flex min-h-11 w-full items-center justify-center rounded-2xl border border-red-300/20 bg-red-400/10 px-2 py-3 text-red-100" : "flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm font-bold text-red-100 transition-colors hover:border-red-200/30 hover:bg-red-400/20 hover:text-white"}
-        >
-          <LogOut size={17} />
-          {collapsed ? <span className="sr-only">Keluar</span> : "Keluar"}
-        </button>
-
-        <p className={collapsed ? "hidden" : "mt-3 text-center text-[11px] font-medium text-white/60"}>
-          &copy; 2026 Medialab Indonesia
-        </p>
+      <div className="shrink-0 border-t border-slate-200 p-2.5">
+        <div className={`flex items-center rounded-xl ${collapsed ? "justify-center p-1" : "gap-2.5 p-2"}`}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-700 text-[11px] font-black text-white">
+            {getInitials(session.name)}
+          </span>
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold text-slate-800">{session.name}</p>
+              <p className="mt-0.5 truncate text-[10px] text-slate-400">{session.roleName}</p>
+            </div>
+          )}
+          {!collapsed && (
+            <button
+              type="button"
+              onClick={logout}
+              aria-label="Keluar"
+              title="Keluar"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+            >
+              <LogOut size={15} />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -455,30 +313,21 @@ export default function Sidebar({
   session: DashboardSession;
 }) {
   const reduce = useReducedMotion();
-  const pathname = usePathname();
-  const [openMobile, setOpenMobile] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
-  const openButtonRef = useRef<HTMLButtonElement>(null);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
-
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const isCustomer = session.roleCode === "CUSTOMER_ENGAGEMENT";
   const supportKey = menus.find(
-    (menu) => menu.key === "support.center" || menu.key === "support.desk",
+    (menu) => menu.key === "support.center" || menu.key === "support.desk"
   )?.key;
-
   const { count: supportUnread } = useSupportUnread({
     isCustomer,
     customerId: session.customerId,
     enabled: Boolean(supportKey),
   });
-
   const supportBadge = supportKey
     ? { key: supportKey, count: supportUnread }
     : undefined;
-  const mobilePrimary = useMemo(
-    () => pickMobilePrimary(menus, session.roleCode),
-    [menus, session.roleCode]
-  );
 
   useEffect(() => {
     const saved = window.localStorage.getItem("medialab.sidebar.collapsed");
@@ -491,146 +340,96 @@ export default function Sidebar({
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--sidebar-width",
-      collapsed ? "6rem" : "20rem"
+      collapsed ? "4.75rem" : "15.5rem"
     );
-    window.localStorage.setItem(
-      "medialab.sidebar.collapsed",
-      String(collapsed)
-    );
+    window.localStorage.setItem("medialab.sidebar.collapsed", String(collapsed));
   }, [collapsed]);
 
   useEffect(() => {
-    if (!openMobile) return;
-
-    const previousOverflow = document.body.style.overflow;
-    const openButton = openButtonRef.current;
-    document.body.style.overflow = "hidden";
-    closeButtonRef.current?.focus();
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpenMobile(false);
+    function openNavigation() {
+      setMobileOpen(true);
     }
+    window.addEventListener("medialab:open-navigation", openNavigation);
+    return () => window.removeEventListener("medialab:open-navigation", openNavigation);
+  }, []);
 
-    document.addEventListener("keydown", handleKeyDown);
-
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMobileOpen(false);
+    }
+    window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", handleKeyDown);
-      openButton?.focus();
+      window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [openMobile]);
+  }, [mobileOpen]);
 
   return (
     <>
-      <aside className={`fixed inset-y-0 left-0 z-40 hidden overflow-hidden bg-brand-navy shadow-[16px_0_45px_rgba(7,43,107,0.12)] transition-[width] duration-300 lg:block ${collapsed ? "w-24" : "w-80"}`}>
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 hidden overflow-visible border-r border-slate-200 bg-white transition-[width] duration-300 lg:block ${
+          collapsed ? "w-[4.75rem]" : "w-[15.5rem]"
+        }`}
+      >
+        <SidebarContent
+          menus={menus}
+          session={session}
+          collapsed={collapsed}
+          supportBadge={supportBadge}
+        />
         <button
           type="button"
           onClick={() => setCollapsed((value) => !value)}
           aria-label={collapsed ? "Perluas sidebar" : "Ringkas sidebar"}
-          aria-pressed={collapsed}
           title={collapsed ? "Perluas sidebar" : "Ringkas sidebar"}
-          className="absolute right-3 top-3 z-30 grid h-9 w-9 place-items-center rounded-xl border border-white/15 bg-white/10 text-brand-sky transition hover:bg-white/20 hover:text-white"
+          className="absolute -right-3 top-[5.1rem] z-10 flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-blue-300 hover:text-blue-700"
         >
-          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          {collapsed ? <PanelLeftOpen size={13} /> : <PanelLeftClose size={13} />}
         </button>
-        <SidebarContent
-          menus={menus}
-          session={session}
-          supportBadge={supportBadge}
-          collapsed={collapsed}
-        />
       </aside>
 
-      <nav
-        aria-label="Navigasi bawah"
-        className="fixed inset-x-0 bottom-0 z-[9000] border-t border-blue-100 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-14px_38px_rgba(7,43,107,0.14)] backdrop-blur-xl lg:hidden"
-      >
-        <div className="mx-auto grid max-w-lg grid-cols-5 gap-0.5">
-          {mobilePrimary.map((item) => {
-            const Icon = item.icon && iconMap[item.icon] ? iconMap[item.icon] : Home;
-            const active = isActivePath(pathname, item.href);
-            const badge = supportBadge?.key === item.key ? supportBadge.count : 0;
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                aria-label={item.name}
-                className={`relative flex min-h-13 min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1 text-[10px] font-bold leading-none transition ${
-                  active
-                    ? "bg-blue-50 text-blue-800"
-                    : "text-slate-500 active:bg-slate-100"
-                }`}
-              >
-                <span className="relative">
-                  <Icon
-                    size={20}
-                    className={active ? "text-blue-700" : "text-slate-500"}
-                  />
-                  {badge > 0 && (
-                    <span className="absolute -right-2 -top-1.5 min-w-4 rounded-full bg-red-500 px-1 text-center text-[9px] font-bold leading-4 text-white">
-                      {badge > 9 ? "9+" : badge}
-                    </span>
-                  )}
-                </span>
-                <span className="max-w-full truncate">{getMobileLabel(item)}</span>
-              </Link>
-            );
-          })}
-          <button
-            ref={openButtonRef}
-            type="button"
-            onClick={() => setOpenMobile(true)}
-            aria-label="Buka semua menu"
-            aria-expanded={openMobile}
-            aria-controls="mobile-navigation"
-            className="flex min-h-13 flex-col items-center justify-center gap-1 rounded-xl px-0.5 py-1 text-[10px] font-bold leading-none text-slate-500 transition active:bg-slate-100"
-          >
-            <MenuIcon size={20} />
-            <span>Semua</span>
-          </button>
-        </div>
-      </nav>
-
       <AnimatePresence>
-        {openMobile && (
+        {mobileOpen && (
           <motion.div
             initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={reduce ? undefined : { opacity: 0 }}
             onMouseDown={(event) => {
-              if (event.currentTarget === event.target) setOpenMobile(false);
+              if (event.currentTarget === event.target) setMobileOpen(false);
             }}
-            className="fixed inset-0 z-[9999] flex items-end bg-brand-navy/65 p-2 backdrop-blur-md sm:p-4 lg:hidden"
+            className="fixed inset-0 z-[9999] bg-slate-950/35 backdrop-blur-sm lg:hidden"
           >
-            <motion.div
-              id="mobile-navigation"
+            <motion.aside
               role="dialog"
               aria-modal="true"
               aria-label="Navigasi LIMS"
-              initial={reduce ? false : { y: 40, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={reduce ? undefined : { y: 40, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="relative h-[88dvh] w-full overflow-hidden rounded-[2rem] border border-white/15 bg-brand-navy shadow-2xl sm:mx-auto sm:max-w-lg"
+              initial={reduce ? false : { x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={reduce ? undefined : { x: "-100%" }}
+              transition={{ duration: 0.24, ease: EASE_OUT }}
+              className="relative h-full w-[min(86vw,19rem)] border-r border-slate-200 bg-white shadow-[18px_0_50px_rgba(15,42,73,0.18)]"
             >
               <button
-                ref={closeButtonRef}
+                ref={closeRef}
                 type="button"
-                onClick={() => setOpenMobile(false)}
+                onClick={() => setMobileOpen(false)}
                 aria-label="Tutup navigasi"
-                className="absolute right-4 top-4 z-20 grid h-10 w-10 place-items-center rounded-2xl border border-white/15 bg-brand-navy/80 text-white transition hover:bg-white/15"
+                className="workspace-icon-button absolute right-3 top-3 z-10"
               >
-                <X size={20} />
+                <X size={17} />
               </button>
-
               <SidebarContent
                 menus={menus}
                 session={session}
+                collapsed={false}
                 supportBadge={supportBadge}
-                onClose={() => setOpenMobile(false)}
+                onNavigate={() => setMobileOpen(false)}
               />
-            </motion.div>
+            </motion.aside>
           </motion.div>
         )}
       </AnimatePresence>

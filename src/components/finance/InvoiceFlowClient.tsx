@@ -7,7 +7,6 @@ import ExportButtons from "@/components/exports/ExportButtons";
 import {
   BadgeDollarSign,
   Building2,
-  CalendarDays,
   CheckCircle2,
   CreditCard,
   FileBadge,
@@ -18,10 +17,10 @@ import {
   Search,
   Send,
   UserRound,
-  Wallet,
 } from "lucide-react";
 import Disclosure from "@/components/ui/Disclosure";
 import DocumentCode from "@/components/ui/DocumentCode";
+import { useActionDialog } from "@/components/ui/useActionDialog";
 import {
   formatShortDate,
   humanOrderTitle,
@@ -197,6 +196,7 @@ export default function InvoiceFlowClient({
   initialReadyQuotations,
 }: Props) {
   const reduce = useReducedMotion();
+  const { prompt: requestInput, dialog: actionDialog } = useActionDialog();
 
   /** Mode customer memakai bahasa sehari-hari & judulnya ada di header halaman. */
   const isCustomerMode = mode === "customer";
@@ -277,17 +277,27 @@ export default function InvoiceFlowClient({
   async function createInvoice(quotation: QuotationReady) {
     const defaultAmount = getQuotationGrandTotal(quotation);
 
-    const amountInput = window.prompt(
-      `Nominal invoice untuk ${quotation.quotationNo}`,
-      String(defaultAmount)
-    );
+    const values = await requestInput({
+      title: "Buat invoice",
+      description: `Tentukan nominal invoice untuk ${quotation.quotationNo}.`,
+      confirmLabel: "Buat invoice",
+      fields: [
+        {
+          name: "amount",
+          label: "Nominal invoice",
+          type: "number",
+          defaultValue: String(defaultAmount),
+          required: true,
+        },
+      ],
+    });
 
-    if (!amountInput) return;
+    if (!values) return;
 
-    const amount = Number(amountInput);
+    const amount = Number(values.amount);
 
     if (Number.isNaN(amount) || amount < 0) {
-      alert("Nominal invoice tidak valid.");
+      setMessage("Nominal invoice tidak valid.");
       return;
     }
 
@@ -875,6 +885,7 @@ export default function InvoiceFlowClient({
           </div>
         )}
       </motion.div>
+      {actionDialog}
     </motion.div>
   );
 }

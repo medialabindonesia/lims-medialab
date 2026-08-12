@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import { getSamplePageData } from "@/lib/sample-page-data";
 import SampleFlowClient from "@/components/sample/SampleFlowClient";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default async function DistributeParameterPage() {
   const session = await getSession();
@@ -24,13 +25,7 @@ export default async function DistributeParameterPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-600">Sample Flow</p>
-        <h1 className="mt-2 text-4xl font-bold">Distribute Parameter</h1>
-        <p className="mt-3 max-w-3xl text-slate-400">
-          Bagikan parameter sample kepada analyst berdasarkan role LAB_ANALYST.
-        </p>
-      </div>
+      <PageHeader eyebrow="Sample Flow" title="Distribute Parameter" subtitle="Bagikan parameter sample kepada analyst berdasarkan kompetensi dan beban kerja." />
 
       <SampleFlowClient
         mode="distribute"

@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import MonthNavigator from "@/components/sales/MonthNavigator";
+import PageHeader from "@/components/layout/PageHeader";
 
 function monthRange(raw?: string) {
   const match = raw?.match(/^(\d{4})-(\d{2})$/);
@@ -88,22 +89,18 @@ export default async function SalesMonitoringPage({
 
   return (
     <section className="space-y-6 pb-24 lg:pb-0">
-      <header className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-sm font-bold text-blue-600">Sales Intelligence</p>
-            <h1 className="mt-2 text-3xl font-black text-slate-900 sm:text-4xl">Monitoring Quotation</h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">Jumlah quotation, pembuat per akun, customer, nilai, dan antrian status dalam satu layar bulanan.</p>
-          </div>
-          <MonthNavigator month={range.key} />
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Sales Intelligence"
+        title="Monitoring Quotation"
+        subtitle="Jumlah quotation, pembuat per akun, customer, nilai, dan antrian status dalam satu layar bulanan."
+        actions={<MonthNavigator month={range.key} />}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {cards.map(({ label, value, icon: Icon, tone }) => (
-          <article key={label} className={`rounded-2xl border border-white p-5 shadow-sm ${tone}`}>
+          <article key={label} className={`rounded-2xl border border-slate-200 p-4 shadow-[0_1px_2px_rgba(15,42,73,0.04)] ${tone}`}>
             <Icon size={20} />
-            <p className="mt-4 text-3xl font-black">{value}</p>
+            <p className="mt-3 text-2xl font-black">{value}</p>
             <p className="mt-1 text-xs font-bold">{label}</p>
           </article>
         ))}

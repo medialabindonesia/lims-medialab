@@ -5,6 +5,7 @@ import { canAccessMenu } from "@/lib/rbac";
 import MarketingMasterClient, {
   type MatrixTreeNode,
 } from "@/components/master/MarketingMasterClient";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default async function MarketingMasterPage() {
   const session = await getSession();
@@ -126,15 +127,11 @@ export default async function MarketingMasterPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-medium text-emerald-600">Master Data</p>
-        <h1 className="mt-2 text-4xl font-bold">Matriks, Regulasi &amp; Harga</h1>
-        <p className="mt-3 max-w-3xl text-slate-400">
-          Sumber data yang dipakai form quotation: jenis contoh uji, baku mutu
-          acuan, parameter uji beserta metode, durasi, dan harga dasarnya.
-          Pengisian massal dilakukan lewat Excel.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Master Data"
+        title="Matriks, Regulasi & Harga"
+        subtitle="Sumber data form quotation: jenis contoh uji, baku mutu, parameter, metode, durasi, dan harga dasar."
+      />
 
       <MarketingMasterClient
         tree={roots}

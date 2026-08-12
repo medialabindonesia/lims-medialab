@@ -157,7 +157,7 @@ export default function AdminUsersClient({
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.message || "Gagal menonaktifkan user");
+      setMessage(data.message || "Gagal menonaktifkan user");
       return;
     }
 
@@ -166,9 +166,7 @@ export default function AdminUsersClient({
 
   function handleResetPassword(user: UserWithRelations) {
     handleEdit(user);
-    setTimeout(() => {
-      alert("Isi password baru di form, lalu klik Simpan.");
-    }, 100);
+    setMessage("Isi password baru di form, lalu klik Simpan.");
   }
 
   return (

@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessMenu, getMenuPermission } from "@/lib/rbac";
 import { verifyStoredRevision } from "@/lib/revision-audit";
 import RevisionAuditClient from "@/components/audit/RevisionAuditClient";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default async function RevisionAuditPage() {
   const session = await getSession();
@@ -49,18 +50,11 @@ export default async function RevisionAuditPage() {
 
   return (
     <section>
-      <div className="mb-8">
-        <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#114DA5]">
-          Quality & Audit
-        </p>
-        <h1 className="mt-2 text-4xl font-black text-slate-950">
-          Revision Audit Trail
-        </h1>
-        <p className="mt-3 max-w-3xl text-slate-500">
-          Bukti perubahan quotation dan hasil laboratorium. Restore tidak
-          menghapus sejarah; sistem selalu membuat revisi terbaru.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Quality & Audit"
+        title="Revision Audit Trail"
+        subtitle="Bukti perubahan quotation dan hasil laboratorium. Restore tidak menghapus sejarah; sistem selalu membuat revisi terbaru."
+      />
       <RevisionAuditClient
         initialRevisions={JSON.parse(JSON.stringify(data))}
         canRestore={permission?.canUpdate === true}

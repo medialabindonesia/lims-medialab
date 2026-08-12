@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import Select from "@/components/ui/Select";
+import { cn } from "@/lib/cn";
 
 /**
  * Step 2 form quotation: penyusunan paket pekerjaan berbasis GRUP.
@@ -751,10 +752,13 @@ export default function QuotationGroupsEditor({
         return (
           <div
             key={group.key}
-            className="overflow-hidden rounded-2xl border border-slate-200 bg-white"
+            className={cn(
+              "overflow-hidden rounded-2xl border bg-white transition-colors",
+              isOpen ? "border-blue-200 ring-1 ring-blue-100" : "border-slate-200 hover:border-blue-200"
+            )}
           >
             {/* ---- Kepala kartu: ringkasan grup ---- */}
-            <div className="flex items-start gap-3 p-4">
+            <div className="flex items-start gap-3 p-3.5">
               <button
                 type="button"
                 onClick={() => setExpandedKey(isOpen ? null : group.key)}
@@ -819,7 +823,7 @@ export default function QuotationGroupsEditor({
 
             {/* ---- Isi kartu ---- */}
             {isOpen && (
-              <div className="space-y-4 border-t border-slate-100 bg-slate-50/60 p-4">
+              <div className="space-y-4 border-t border-slate-200 bg-slate-50/70 p-4">
                 {/* Cascade matriks */}
                 <div className="grid gap-3 sm:grid-cols-2">
                   {levels.map((level, depth) => (
@@ -1186,7 +1190,7 @@ export default function QuotationGroupsEditor({
         type="button"
         disabled={disabled}
         onClick={addGroup}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 py-3.5 text-sm font-bold text-slate-500 transition hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-700 disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-white py-3 text-xs font-bold text-slate-500 transition hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-700 disabled:opacity-50"
       >
         <Plus size={16} /> Tambah Grup
       </button>

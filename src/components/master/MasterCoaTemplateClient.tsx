@@ -139,7 +139,7 @@ export default function MasterCoaTemplateClient({
     );
 
     if (!available) {
-      alert("Semua parameter sudah ditambahkan.");
+      setMessage("Semua parameter sudah ditambahkan.");
       return;
     }
 
@@ -252,7 +252,7 @@ export default function MasterCoaTemplateClient({
     const data = await response.json();
 
     if (!response.ok) {
-      alert(data.message || "Gagal menonaktifkan template");
+      setMessage(data.message || "Gagal menonaktifkan template");
       return;
     }
 

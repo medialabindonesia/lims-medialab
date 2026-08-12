@@ -192,7 +192,7 @@ export default function SampleFlowClient({
 
   async function distributeSample(sample: Sample) {
     if (analysts.length === 0) {
-      alert("Belum ada user dengan role LAB_ANALYST.");
+      setMessage("Belum ada user dengan role LAB_ANALYST.");
       return;
     }
 

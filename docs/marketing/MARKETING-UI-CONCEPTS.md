@@ -3,6 +3,13 @@
 Tanggal konsep: **12 Agustus 2026**  
 Prototype: **`/marketing/ui-concepts`**
 
+> **Status implementasi 12 Agustus 2026:** inspirasi visual enterprise telah
+> diterjemahkan menjadi design system global pada
+> [`../UI-DESIGN-SYSTEM.md`](../UI-DESIGN-SYSTEM.md). Implementasi produksi
+> mengambil alur Guided Flow sebagai dasar quotation, pola list-detail untuk
+> Lead & Survey, serta kepadatan informasi dari Sales Desk. Prototype tetap
+> disimpan sebagai arsip pembanding, bukan komponen produksi.
+
 Dokumen ini menjelaskan tiga arah desain interaktif untuk alur marketing,
 khususnya penyusunan quotation. Prototype menggunakan data contoh dan tidak
 melakukan perubahan ke database atau mengirim quotation.

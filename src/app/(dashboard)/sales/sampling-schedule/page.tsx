@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 import MonthNavigator from "@/components/sales/MonthNavigator";
+import PageHeader from "@/components/layout/PageHeader";
 
 function monthRange(raw?: string) {
   const match = raw?.match(/^(\d{4})-(\d{2})$/);
@@ -45,17 +46,17 @@ export default async function SamplingSchedulePage({ searchParams }: { searchPar
 
   return (
     <section className="space-y-6 pb-24 lg:pb-0">
-      <header className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="text-sm font-bold text-blue-600">Sampling Operations</p><h1 className="mt-2 text-3xl font-black text-slate-900 sm:text-4xl">Resume Tim Sampling</h1><p className="mt-2 text-sm text-slate-500">Jadwal, penanggung jawab, lokasi, dan ruang lingkup sampling bulan terpilih.</p></div>
-          <MonthNavigator month={range.key} />
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Sampling Operations"
+        title="Resume Tim Sampling"
+        subtitle="Jadwal, penanggung jawab, lokasi, dan ruang lingkup sampling bulan terpilih."
+        actions={<MonthNavigator month={range.key} />}
+      />
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl bg-blue-50 p-5 text-blue-800"><CalendarRange size={20} /><p className="mt-3 text-3xl font-black">{schedules.length}</p><p className="text-xs font-bold">jadwal sampling</p></div>
-        <div className="rounded-2xl bg-emerald-50 p-5 text-emerald-800"><UsersRound size={20} /><p className="mt-3 text-3xl font-black">{team.size}</p><p className="text-xs font-bold">petugas/tim terjadwal</p></div>
-        <div className="rounded-2xl bg-amber-50 p-5 text-amber-800"><Clock3 size={20} /><p className="mt-3 text-3xl font-black">{schedules.filter((item) => item.plannedSamplingEnd).length}</p><p className="text-xs font-bold">jadwal lengkap</p></div>
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4 text-blue-800"><CalendarRange size={18} /><p className="mt-2 text-2xl font-black">{schedules.length}</p><p className="text-xs font-bold">jadwal sampling</p></div>
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-emerald-800"><UsersRound size={18} /><p className="mt-2 text-2xl font-black">{team.size}</p><p className="text-xs font-bold">petugas/tim terjadwal</p></div>
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-800"><Clock3 size={18} /><p className="mt-2 text-2xl font-black">{schedules.filter((item) => item.plannedSamplingEnd).length}</p><p className="text-xs font-bold">jadwal lengkap</p></div>
       </div>
 
       <article className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-sm">

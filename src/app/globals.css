@@ -2,7 +2,7 @@
 
 :root {
   color-scheme: light;
-  --sidebar-width: 20rem;
+  --sidebar-width: 15.5rem;
 
   /* Medialab brand palette */
   --brand-navy: #072b6b;
@@ -12,13 +12,15 @@
   --brand-lime: #6fbc1d;
 
   /* Accessible UI neutrals derived from the brand blues */
-  --background: #f5f8fc;
-  --foreground: #0a2148;
+  --background: #f7f9fb;
+  --foreground: #172033;
   --surface: #ffffff;
-  --surface-subtle: #edf3fa;
-  --border: #d8e3f0;
-  --muted: #526783;
+  --surface-subtle: #f4f6f8;
+  --border: #dde3ea;
+  --muted: #637083;
   --focus: #114da5;
+  --radius-card: 0.875rem;
+  --shadow-float: 0 14px 36px rgb(15 42 73 / 10%);
 }
 
 @theme inline {
@@ -35,17 +37,17 @@
    * Remapping those semantic scales makes the whole product adopt the
    * Medialab system without sacrificing status colours or readable contrast.
    */
-  --color-slate-50: #f5f8fc;
-  --color-slate-100: #edf3fa;
-  --color-slate-200: #d8e3f0;
-  --color-slate-300: #bdccdf;
-  --color-slate-400: #60738d;
-  --color-slate-500: #526783;
-  --color-slate-600: #405570;
-  --color-slate-700: #2c415e;
-  --color-slate-800: #182f50;
-  --color-slate-900: #0a2148;
-  --color-slate-950: #061735;
+  --color-slate-50: #f7f9fb;
+  --color-slate-100: #f1f4f7;
+  --color-slate-200: #dde3ea;
+  --color-slate-300: #c8d0da;
+  --color-slate-400: #8995a5;
+  --color-slate-500: #637083;
+  --color-slate-600: #4c596b;
+  --color-slate-700: #354155;
+  --color-slate-800: #222d3f;
+  --color-slate-900: #172033;
+  --color-slate-950: #0f1726;
 
   --color-blue-50: #edf5ff;
   --color-blue-100: #dceaff;
@@ -119,9 +121,7 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 88% -8%, rgb(105 203 247 / 18%), transparent 30rem),
-    linear-gradient(180deg, #f8fbff 0%, var(--background) 28rem);
+  background: var(--background);
   color: var(--foreground);
   font-family:
     "Segoe UI Variable", "Aptos", "Helvetica Neue", Helvetica, Arial,
@@ -130,7 +130,7 @@ body {
     "kern" 1,
     "liga" 1,
     "calt" 1;
-  line-height: 1.5;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -287,19 +287,12 @@ table {
 .dashboard-canvas {
   position: relative;
   isolation: isolate;
+  min-height: 100vh;
+  background: var(--background);
 }
 
 .dashboard-canvas::before {
-  position: fixed;
-  z-index: -1;
-  inset: 0 0 0 20rem;
-  background-image:
-    linear-gradient(rgb(17 77 165 / 3.5%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(17 77 165 / 3.5%) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: linear-gradient(to bottom, black, transparent 70%);
-  content: "";
-  pointer-events: none;
+  display: none;
 }
 
 .dashboard-canvas :where(input, select, textarea) {
@@ -309,9 +302,13 @@ table {
     background-color 160ms ease;
 }
 
+.dashboard-canvas :where(input:not([type="checkbox"]):not([type="radio"]), select) {
+  min-height: 2.5rem;
+}
+
 .dashboard-canvas :where(input, select, textarea):focus {
   border-color: var(--brand-blue);
-  box-shadow: 0 0 0 4px rgb(105 203 247 / 22%);
+  box-shadow: 0 0 0 3px rgb(17 77 165 / 12%);
 }
 
 .dashboard-canvas :where(input, select, textarea):disabled {
@@ -319,12 +316,13 @@ table {
 }
 
 .dashboard-canvas table thead {
-  background: #edf5ff;
+  background: #f5f7f9;
 }
 
 .dashboard-canvas table thead th {
-  color: #2c415e;
-  font-weight: 750;
+  color: #536176;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 
 .dashboard-canvas table tbody tr {
@@ -334,11 +332,94 @@ table {
 }
 
 .dashboard-canvas table tbody tr:hover {
-  background-color: #f6faff;
+  background-color: #f8fafc;
 }
 
-.dashboard-canvas :where(div, section, article).rounded-3xl.border.bg-white {
-  box-shadow: 0 12px 34px rgb(7 43 107 / 6%);
+.dashboard-canvas :where(div, section, article)[class*="border"][class*="bg-white"] {
+  border-color: var(--border);
+}
+
+/*
+ * Compatibility layer untuk layar lama. Radius dan bayangan besar sebelumnya
+ * membuat setiap blok terasa seperti landing page. Seluruh surface operasional
+ * sekarang mengikuti densitas aplikasi pada referensi: border halus, radius
+ * 12â€“16px, dan shadow hanya untuk elemen yang benar-benar mengambang.
+ */
+.dashboard-canvas :where(div, section, article, form)[class*="rounded-[2rem]"] {
+  border-radius: 1rem;
+}
+
+.dashboard-canvas :where(div, section, article, form)[class*="rounded-3xl"],
+.dashboard-canvas :where(div, section, article, form)[class*="rounded-[1.75rem]"],
+.dashboard-canvas :where(div, section, article, form)[class*="rounded-[1.5rem]"],
+.dashboard-canvas :where(div, section, article, form)[class*="rounded-[1.25rem]"] {
+  border-radius: 1rem;
+}
+
+.dashboard-canvas :where(button, a)[class*="rounded-2xl"] {
+  border-radius: 0.75rem;
+}
+
+.dashboard-canvas :where(div, section, article, form)[class*="shadow-sm"] {
+  box-shadow: 0 1px 2px rgb(15 42 73 / 4%);
+}
+
+.dashboard-canvas :where(input, select, textarea) {
+  color: #263349;
+}
+
+.dashboard-canvas :where(input, select, textarea):not(:disabled) {
+  background-color: #fff;
+}
+
+.dashboard-canvas :where(button, a) {
+  -webkit-font-smoothing: antialiased;
+}
+
+.dashboard-canvas button:not(:disabled):active {
+  transform: scale(0.985);
+}
+
+.dashboard-canvas input[type="checkbox"],
+.dashboard-canvas input[type="radio"] {
+  accent-color: var(--brand-blue);
+}
+
+#main-content h1 {
+  font-size: clamp(1.45rem, 2.2vw, 1.85rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.workspace-icon-button {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  color: #637083;
+  transition:
+    border-color 150ms ease,
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.workspace-icon-button:hover {
+  border-color: var(--border);
+  background: #f7f9fb;
+  color: var(--brand-blue);
+}
+
+.workspace-icon-button:active {
+  transform: scale(0.96);
+}
+
+.workspace-topbar {
+  box-shadow: 0 1px 0 rgb(15 42 73 / 2%);
 }
 
 .skip-link {
@@ -374,18 +455,19 @@ table {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  border-right: 1px solid var(--border);
   background:
-    radial-gradient(circle at 72% 18%, rgb(105 203 247 / 26%), transparent 23rem),
-    radial-gradient(circle at 12% 82%, rgb(111 188 29 / 18%), transparent 21rem),
-    linear-gradient(145deg, #061f50 0%, #072b6b 44%, #143b90 100%);
+    radial-gradient(circle at 72% 18%, rgb(105 203 247 / 14%), transparent 23rem),
+    radial-gradient(circle at 12% 82%, rgb(111 188 29 / 10%), transparent 21rem),
+    #f7f9fb;
 }
 
 .login-hero::before {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgb(255 255 255 / 7%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 7%) 1px, transparent 1px);
+    linear-gradient(rgb(17 77 165 / 4%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(17 77 165 / 4%) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(circle at 50% 46%, black 12%, transparent 72%);
   content: "";
@@ -393,32 +475,20 @@ table {
 }
 
 .login-hero::after {
-  position: absolute;
-  inset: -50%;
-  background: conic-gradient(
-    from 120deg at 50% 50%,
-    transparent 0 24%,
-    rgb(105 203 247 / 10%) 30%,
-    transparent 38% 64%,
-    rgb(111 188 29 / 8%) 72%,
-    transparent 80%
-  );
-  animation: login-aurora-spin 24s linear infinite;
-  content: "";
-  pointer-events: none;
+  display: none;
 }
 
 .login-vignette {
   position: absolute;
   z-index: 1;
   inset: 0;
-  background: linear-gradient(90deg, transparent 68%, rgb(4 20 47 / 32%));
+  display: none;
   pointer-events: none;
 }
 
 .login-orbit {
   position: absolute;
-  border: 1px solid rgb(105 203 247 / 28%);
+  border: 1px solid rgb(17 77 165 / 17%);
   border-radius: 999px;
   box-shadow:
     inset 0 0 35px rgb(105 203 247 / 4%),
@@ -446,15 +516,12 @@ table {
   width: 8.5rem;
   height: 8.5rem;
   place-items: center;
-  border: 1px solid rgb(255 255 255 / 20%);
-  border-radius: 2.4rem;
-  background:
-    linear-gradient(145deg, rgb(255 255 255 / 20%), rgb(255 255 255 / 7%));
+  border: 1px solid var(--border);
+  border-radius: 1.25rem;
+  background: #fff;
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 25%),
-    0 30px 90px rgb(2 17 47 / 45%),
-    0 0 0 12px rgb(105 203 247 / 5%);
-  backdrop-filter: blur(18px);
+    0 18px 48px rgb(15 42 73 / 10%),
+    0 0 0 10px rgb(17 77 165 / 3%);
 }
 
 .login-core::before {
@@ -485,15 +552,15 @@ table {
   border: 1px solid rgb(20 59 144 / 13%);
   background: rgb(255 255 255 / 94%);
   box-shadow:
-    0 32px 80px rgb(7 43 107 / 14%),
-    0 2px 8px rgb(7 43 107 / 6%);
+    0 18px 48px rgb(15 42 73 / 10%),
+    0 1px 2px rgb(15 42 73 / 5%);
   backdrop-filter: blur(24px);
 }
 
 .login-card::before {
   position: absolute;
   inset: 0 0 auto;
-  height: 4px;
+  height: 3px;
   background: linear-gradient(
     90deg,
     var(--brand-navy),
@@ -505,15 +572,23 @@ table {
 }
 
 .login-card::after {
-  position: absolute;
-  top: -8rem;
-  right: -7rem;
-  width: 15rem;
-  height: 15rem;
-  border-radius: 999px;
-  background: rgb(105 203 247 / 11%);
-  content: "";
-  pointer-events: none;
+  display: none;
+}
+
+.login-hero [class*="text-white"] {
+  color: #263349;
+}
+
+.login-hero [class*="text-brand-sky"] {
+  color: var(--brand-blue);
+}
+
+.login-hero [class*="border-white"] {
+  border-color: var(--border);
+}
+
+.login-hero [class*="bg-white/"] {
+  background-color: rgb(255 255 255 / 82%);
 }
 
 .login-input {

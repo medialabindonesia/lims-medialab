@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { canAccessMenu } from "@/lib/rbac";
 import { getFinancePageData } from "@/lib/finance-page-data";
 import InvoiceFlowClient from "@/components/finance/InvoiceFlowClient";
+import PageHeader from "@/components/layout/PageHeader";
 
 export default async function ApproveInvoicePage() {
   const session = await getSession();
@@ -17,15 +18,7 @@ export default async function ApproveInvoicePage() {
 
   return (
     <section className="min-h-screen">
-      <div className="mb-8 rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm font-semibold text-emerald-600">Finance Flow</p>
-        <h1 className="mt-2 text-4xl font-black tracking-tight text-slate-900">
-          Approve Invoice
-        </h1>
-        <p className="mt-3 max-w-3xl text-slate-500">
-          Approve invoice, kirim invoice ke customer, dan tandai pembayaran.
-        </p>
-      </div>
+      <PageHeader eyebrow="Finance Flow" title="Approve Invoice" subtitle="Approve invoice, kirim ke customer, dan tindak lanjuti status pembayaran." />
 
       <InvoiceFlowClient
         mode="approve"

@@ -6,6 +6,7 @@ import Sidebar, {
   type DashboardSession,
 } from "./Sidebar";
 import PageTransition from "./PageTransition";
+import WorkspaceTopbar from "./WorkspaceTopbar";
 import SupportChatFab from "@/components/support/SupportChatFab";
 
 export default function DashboardShell({
@@ -25,15 +26,18 @@ export default function DashboardShell({
 
       <Sidebar menus={menus} session={session} />
 
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="min-h-screen px-3 pb-28 pt-4 transition-[margin,padding] duration-300 sm:px-4 lg:ml-[var(--sidebar-width)] lg:px-8 lg:py-8 xl:px-10"
-      >
-        <div className="mx-auto w-full max-w-[90rem]">
-          <PageTransition>{children}</PageTransition>
-        </div>
-      </main>
+      <div className="min-h-screen transition-[margin] duration-300 lg:ml-[var(--sidebar-width)]">
+        <WorkspaceTopbar menus={menus} session={session} />
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="px-3 pb-24 pt-4 sm:px-5 sm:py-5 lg:px-7 lg:py-6 xl:px-8"
+        >
+          <div className="mx-auto w-full max-w-[96rem]">
+            <PageTransition>{children}</PageTransition>
+          </div>
+        </main>
+      </div>
 
       {session.roleCode === "CUSTOMER_ENGAGEMENT" && <SupportChatFab />}
     </div>

@@ -1,13 +1,14 @@
 # Handoff AI Claude — Status Proyek LIMS Medialab
 
-Terakhir diverifikasi: **11 Agustus 2026 (WIB)**  
+Terakhir diverifikasi: **12 Agustus 2026 (WIB)**
 Branch aktif: **`marketing-dev`**  
 Commit sebelumnya: **`dab0424` — `feat: resend email vendor`**
 
-Perubahan terakhir: katalog pengujian dibangun ulang sepenuhnya dari
-`MENU PENGUJIAN 2024.xlsx`, katalog lama dihapus, master durasi dibersihkan, dan
-satu parameter kini boleh punya beberapa varian metode uji. Rinciannya di
-bagian 4.1.
+Perubahan terakhir: antarmuka branch `marketing-dev` diseragamkan menjadi
+workspace enterprise yang ringkas berdasarkan referensi visual pemilik produk.
+Shell, navigasi, header, motion, surface, status, lead/survey, quotation, dialog
+operasional, dan halaman lintas departemen kini mengikuti satu sistem desain.
+Aturan bisnis, permission, status, dan kontrak API tidak diubah.
 
 Dokumen ini adalah titik masuk utama untuk AI Claude atau developer berikutnya.
 Tujuannya membedakan secara tegas antara fitur yang sudah ada di kode, fitur
@@ -39,14 +40,14 @@ terutama tentang harga paket, qty manual, multi-regulasi, dan biaya tambahan.
 
 | Area | Status | Bukti/keterangan |
 | --- | --- | --- |
-| Git lokal | Bersih untuk file tracked | Hanya `.claude/settings.local.json` yang untracked dan merupakan konfigurasi lokal pengguna. Jangan commit tanpa permintaan eksplisit. |
+| Git lokal | Redesign UI belum di-commit | Perubahan sistem desain 12 Agustus 2026 masih berada di working tree. `.claude/settings.local.json` tetap merupakan konfigurasi lokal pengguna dan tidak disentuh. |
 | Sinkronisasi branch | Sinkron dengan remote | `HEAD` dan `origin/marketing-dev` sama-sama `dab0424`. |
 | VPS marketing | Sehat | `/opt/apps/lims-medialab-marketing/current` menunjuk commit `dab0424`; health port `3012` mengembalikan `status: ok`. |
 | Database marketing | Mutakhir | Database `lims_marketing` memiliki 16 migration dan `prisma migrate status` menyatakan up to date. |
 | Database lokal | Mutakhir | `.env` lokal menunjuk `lims_e2e` pada `127.0.0.1:3307`; 16 migration sudah diterapkan. |
-| Build | Lulus | `corepack pnpm build` berhasil; ada satu warning tracing Turbopack dari route upload support. |
+| Build | Lulus | `corepack pnpm build` berhasil pada 12 Agustus 2026 untuk 81 halaman; tetap ada satu warning tracing Turbopack dari route upload support. |
 | TypeScript | Lulus | `corepack pnpm exec tsc --noEmit` exit 0. |
-| ESLint | Lulus dengan utang teknis | 0 error, 123 warning. Sebagian besar adalah React hook warning, `no-explicit-any`, unused import, dan `alt-text`. |
+| ESLint | Lulus dengan utang teknis | 0 error, 121 warning. Sebagian besar adalah React hook warning, `no-explicit-any`, dan `alt-text` pada kode export/support lama. |
 | Pemeriksaan workbook | Perlu diulang di Node 22 | `check:workbook` gagal sebelum membaca workbook karena `tsx`/Windows memunculkan `uv_os_get_passwd ENOMEM` pada Node 24.19.0. Ini bukan bukti workbook rusak. Pemeriksaan langsung dengan ExcelJS berhasil membaca workbook. |
 | Resend | Koneksi dasar berhasil | API key yang sudah dirotasi berhasil dipakai untuk satu email uji; Resend menerima request dan memberi message ID. Ini belum sama dengan UAT kirim quotation dari UI. |
 | Konfigurasi email/dokumen marketing | Nama variabel wajib terisi | Pemeriksaan hanya melaporkan `set/missing`, tanpa membaca nilai. `RESEND_API_KEY`, `MAIL_FROM`, `MAIL_REPLY_TO`, sembilan variabel dokumen yang diwajibkan route, dan `QUOTATION_MINIMUM_ORDER` terdeteksi terisi. Nilainya tetap harus divalidasi manusia; phone/fax/website bersifat opsional dan tidak diperiksa. |
@@ -89,6 +90,24 @@ Alur status kode saat ini secara ringkas:
 `Lead → Survey opsional → REQUESTED → VERIFIED → APPROVED → SENT → CONFIRMED → PO_UPLOADED → LTR_CREATED → COC_CREATED → Sample/Lab → COA → Invoice`
 
 ## 4. Yang sudah selesai
+
+### 4.0 Sistem UI enterprise lintas aplikasi
+
+- Acuan implementasi ada di [`UI-DESIGN-SYSTEM.md`](./UI-DESIGN-SYSTEM.md).
+- Sidebar putih dapat diringkas, memiliki mobile drawer, active state yang jelas,
+  dan mempertahankan menu sesuai RBAC.
+- Topbar global menyediakan breadcrumb, command search `Ctrl/Cmd + K`, akses
+  notifikasi, profil, dan logout.
+- Canvas, border, radius, focus state, table, card, status badge, header halaman,
+  dan motion dipadatkan agar sesuai referensi operasional.
+- Lead dan survey memakai pola queue-detail; pembuatan lead, rekomendasi survey,
+  dan Resume Survey memakai dialog aplikasi yang responsif.
+- Quotation memakai progress tahap yang jelas dan editor grup yang ringkas.
+- Browser `prompt` dan `alert` pada alur operasional telah diganti dengan dialog
+  atau pesan inline aplikasi tanpa mengubah endpoint maupun payload bisnis.
+- Login serta header halaman Admin, Audit, Finance, Lab, Master, Sales, dan
+  Technical sudah diselaraskan. Compatibility layer global menjaga layar lama
+  tetap memiliki rasa visual yang sama selama refactor komponen berikutnya.
 
 ### 4.1 Katalog MENU PENGUJIAN 2024 — satu-satunya sumber
 
@@ -502,6 +521,9 @@ Claude harus berhenti dan meminta keputusan manusia jika pekerjaan menyentuh:
 | Nomor lead/survey | `src/lib/marketing-number.ts` |
 | Nomor order/dokumen sementara | `src/lib/order-code.ts` |
 | Lead & survey UI | `src/components/marketing/LeadSurveyClient.tsx` |
+| Sistem desain UI | `docs/UI-DESIGN-SYSTEM.md`, `src/app/globals.css` |
+| Topbar workspace | `src/components/layout/WorkspaceTopbar.tsx` |
+| Dialog aksi bersama | `src/components/ui/useActionDialog.tsx` |
 | API email | `src/app/api/quotations/[id]/email/` |
 | Provider email | `src/lib/email-delivery.ts` |
 | Tes Resend | `scripts/test-resend-email.ts` |
@@ -572,8 +594,8 @@ Urutan yang disarankan:
 3. Minta keputusan Mba Lia untuk penomoran, validity, ownership verifikasi, dan
    data harga; pekerjaan lain yang aman dapat berjalan paralel tanpa menebak.
 4. Perbaiki alur CS agar customer baru dapat dicatat dengan hak yang tepat.
-5. Ganti prompt Resume Survey dengan form berbasis master dan teruskan hasilnya
-   menjadi grup quotation.
+5. Teruskan hasil Resume Survey berbasis form menjadi grup quotation secara
+   otomatis setelah pemetaan bisnisnya disetujui.
 6. Jalankan `pnpm db:sync:menu-pengujian` pada database marketing setelah
    deployment, kemudian masukkan harga hanya dari sumber yang disahkan.
 7. Jalankan UAT end-to-end pada role CS, Sales, Manager, Technical, dan Customer,
