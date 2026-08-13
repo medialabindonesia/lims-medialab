@@ -10,10 +10,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import SurfaceCard from "@/components/ui/SurfaceCard";
 import {
   Mail,
   CheckCircle,
@@ -162,8 +159,7 @@ export default function QuotationEmailHistory({
               const StatusIcon = statusInfo.icon;
 
               return (
-                <Card key={email.id} className="border">
-                  <CardContent className="p-4">
+                <SurfaceCard key={email.id}>
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
@@ -210,8 +206,7 @@ export default function QuotationEmailHistory({
                         <strong>Error:</strong> {email.lastError}
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                </SurfaceCard>
               );
             })
           )}
