@@ -210,17 +210,28 @@ async function main() {
     };
 
     if (existing) {
-      // Update customerType + consultant juga supaya tidak stuck sebagai DIRECT
-      await prisma.customer.update({
-        where: { id: existing.id },
-        data: {
-          ...shared,
-          customerType: item.customerType,
-          consultantId: item.customerType === "CONSULTANT" ? consultant.id : null,
-        },
-      });
-      console.log(`  diperbarui  ${existing.customerCode ?? "(tanpa kode)"}  ${item.company}`);
-      continue;
+      // Cek apakah customerType berubah dari DIRECT ke CONSULTANT atau sebaliknya.
+      // Jika ya, kode pelanggan yang lama tidak valid lagi dan harus dibuat ulang.
+      const typeChanged = existing.customerCode !== null &&
+        (existing.customerCode.startsWith('DC.') && item.customerType === 'CONSULTANT' ||
+         existing.customerCode.startsWith('CC.') && item.customerType === 'DIRECT');
+
+      if (typeChanged) {
+        await prisma.customer.delete({ where: { id: existing.id } });
+        console.log(`  dihapus (tipe berubah)  ${existing.customerCode}  ${item.company}`);
+        // Lanjut ke pembuatan baru
+      } else {
+        await prisma.customer.update({
+          where: { id: existing.id },
+          data: {
+            ...shared,
+            customerType: item.customerType,
+            consultantId: item.customerType === "CONSULTANT" ? consultant.id : null,
+          },
+        });
+        console.log(`  diperbarui  ${existing.customerCode ?? "(tanpa kode)"}  ${item.company}`);
+        continue;
+      }
     }
 
     // Kode pelanggan dibuat lewat generator resmi agar format DC/CC yang
