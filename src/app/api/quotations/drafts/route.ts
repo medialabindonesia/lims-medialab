@@ -23,11 +23,15 @@ const MAX_PAYLOAD_BYTES = 512 * 1024;
  * Penanda form yang sedang diisi: "new" untuk quotation baru, atau id
  * quotation yang sedang direvisi. Dibatasi agar tidak dipakai menyimpan
  * sembarang data.
+ *
+ * Update: Sekarang mendukung format "new-UUID" untuk menghindari
+ * tab-tab bertabrak saat membuat quotation baru.
  */
 function normalizeScope(raw: string | null) {
   const value = (raw || "").trim();
   if (!value) return null;
-  if (value === "new") return "new";
+  // Terima "new" lama dan "new-UUID" yang baru
+  if (value === "new" || value.startsWith("new-")) return value;
   return /^[A-Za-z0-9_-]{1,64}$/.test(value) ? value : null;
 }
 
@@ -67,9 +71,23 @@ export async function PUT(request: Request) {
   const permission = await requireAnyApiPermission(quotationChecks("canView"));
   if (!permission.allowed) return permission.response;
 
-  const body = (await request.json().catch(() => null)) as
-    | { scope?: string; payload?: unknown }
-    | null;
+  // Parse body dengan error handling yang jelas
+  let body: { scope?: string; payload?: unknown } | null;
+  try {
+    body = await request.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { message: "Format JSON tidak valid" },
+        { status: 400 },
+      );
+    }
+    // Error lain (request body terlalu besar, dll)
+    return NextResponse.json(
+      { message: "Gagal membuka request" },
+      { status: 400 },
+    );
+  }
 
   const scope = normalizeScope(body?.scope ?? null);
   if (!scope) {

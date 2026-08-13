@@ -805,7 +805,13 @@ export default function QuotationFlowClient({
   //
   // Draft bersifat pribadi milik pembuatnya dan tidak memakai nomor dokumen;
   // nomor quotation resmi baru terbit saat tombol Simpan ditekan.
-  const draftScope = form.id ?? "new";
+  //
+  // Untuk quotation baru, gunakan UUID unik per tab agar tidak bertabrakan
+  // antar tab yang sama-sama membuka form baru.
+  const [uniqueDraftKey] = useState(() =>
+    form.id ?? `new-${crypto.randomUUID()}`
+  );
+  const draftScope = uniqueDraftKey;
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [draftRestored, setDraftRestored] = useState(false);
   const [draftLoaded, setDraftLoaded] = useState(false);

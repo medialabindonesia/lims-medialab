@@ -5,7 +5,8 @@ import Link from "next/link";
 import { formatShortDate, quotationStatusMeta } from "@/lib/customer-labels";
 import StatusBadge from "@/components/ui/StatusBadge";
 import PageHeader from "@/components/layout/PageHeader";
-import { Search, FilePlus, FileCheck, FilePenLine, BadgeCheck, LayoutDashboard } from "lucide-react";
+import { Search, FilePlus, FileCheck, FilePenLine, BadgeCheck, LayoutDashboard, Mail } from "lucide-react";
+import QuotationEmailHistory from "./QuotationEmailHistory";
 
 type Quotation = {
   id: string;
@@ -147,6 +148,8 @@ export default function QuotationHomeClient({ initialQuotations, viewerRole }: P
                     className="shrink-0 rounded-xl bg-slate-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
                   >
                     {q.status === "REQUESTED" ? "Verify" : q.status === "VERIFIED" ? "Approve" : "Lihat"}
+                  </Link>
+                  <QuotationEmailHistory quotationId={q.id} />
                   </Link>
                 </div>
               </div>

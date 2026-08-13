@@ -194,7 +194,8 @@ function formatPriceInput(raw: string) {
 
 function parsePriceInput(formatted: string): number | null {
   const digits = formatted.replace(/\D/g, "");
-  if (!digits) return null;
+  if (!digits) return null;           // Kosong = belum diisi
+  if (/^0+$/.test(digits)) return 0;  // "0" atau "000" = gratis (harga 0)
   return Number(digits);
 }
 
