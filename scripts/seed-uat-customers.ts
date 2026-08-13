@@ -210,7 +210,15 @@ async function main() {
     };
 
     if (existing) {
-      await prisma.customer.update({ where: { id: existing.id }, data: shared });
+      // Update customerType + consultant juga supaya tidak stuck sebagai DIRECT
+      await prisma.customer.update({
+        where: { id: existing.id },
+        data: {
+          ...shared,
+          customerType: item.customerType,
+          consultantId: item.customerType === "CONSULTANT" ? consultant.id : null,
+        },
+      });
       console.log(`  diperbarui  ${existing.customerCode ?? "(tanpa kode)"}  ${item.company}`);
       continue;
     }
