@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { fadeUpItem, staggerContainer, EASE_OUT } from "@/lib/motion";
 import ExportButtons from "@/components/exports/ExportButtons";
 import Select, { type SelectOption } from "@/components/ui/Select";
@@ -1356,13 +1356,20 @@ export default function QuotationFlowClient({
     setLoading(false);
 
     if (!response.ok) {
+      // Kegagalan juga ditampilkan sebagai pop-up: sebelumnya pesannya hanya
+      // ditulis di dalam form editor yang justru sedang tertutup.
+      setActionFeedback({
+        id: quotationId ?? "",
+        text: data.message || "Aksi tidak dapat diproses.",
+        ok: false,
+      });
       setMessage(data.message || "Action gagal");
       return false;
     }
 
-    // Animasi dissolve: kartu memudang sebelum hilang dari daftar.
+    // Kartu memudar lebih dulu supaya terlihat bahwa ia berpindah tahap,
+    // bukan hilang begitu saja tanpa sebab.
     if (quotationId) {
-      setActionFeedback({ id: quotationId, text: data.message || "Berhasil", ok: true });
       setDissolvingIds((prev) => new Set([...prev, quotationId]));
       await new Promise((resolve) => setTimeout(resolve, 600));
       setDissolvingIds((prev) => {
@@ -1370,8 +1377,15 @@ export default function QuotationFlowClient({
         next.delete(quotationId);
         return next;
       });
-      setActionFeedback(null);
     }
+
+    // Pop-up sengaja tidak menutup sendiri; user yang menutupnya, sehingga
+    // tidak ada quotation yang terproses tanpa disadari.
+    setActionFeedback({
+      id: quotationId ?? "",
+      text: data.message || "Quotation berhasil diproses.",
+      ok: true,
+    });
 
     setMessage(data.message || "Action berhasil");
     await refreshData();
@@ -1419,9 +1433,12 @@ export default function QuotationFlowClient({
 
     if (!values) return;
 
-    await runAction(`/api/quotations/${quotation.id}/revision`, "PATCH", {
-      note: values.note.trim(),
-    });
+    await runAction(
+      `/api/quotations/${quotation.id}/revision`,
+      "PATCH",
+      { note: values.note.trim() },
+      quotation.id,
+    );
   }
 
   async function rejectQuotation(quotation: Quotation) {
@@ -1441,9 +1458,12 @@ export default function QuotationFlowClient({
       ],
     });
     if (!values) return;
-    await runAction(`/api/quotations/${quotation.id}/reject`, "PATCH", {
-      reason: values.reason.trim(),
-    });
+    await runAction(
+      `/api/quotations/${quotation.id}/reject`,
+      "PATCH",
+      { reason: values.reason.trim() },
+      quotation.id,
+    );
   }
 
   /**
@@ -1631,7 +1651,12 @@ export default function QuotationFlowClient({
 
                 <button
                   onClick={() =>
-                    runAction(`/api/quotations/${quotation.id}/confirm`, "PATCH")
+                    runAction(
+                      `/api/quotations/${quotation.id}/confirm`,
+                      "PATCH",
+                      undefined,
+                      quotation.id,
+                    )
                   }
                   className="rounded-2xl bg-emerald-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-600"
                 >
@@ -2031,15 +2056,6 @@ export default function QuotationFlowClient({
               >
                 Batalkan &amp; mulai dari awal
               </button>
-            </div>
-          )}
-
-          {/* Toast yang muncul saat aksi diproses (verify/approve). */}
-          {actionFeedback && (
-            <div className="pointer-events-none fixed inset-x-0 top-20 z-50 flex justify-center">
-              <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-700 shadow-lg">
-                <CheckCircle2 size={18} /> {actionFeedback.text}
-              </div>
             </div>
           )}
 
@@ -2675,6 +2691,78 @@ export default function QuotationFlowClient({
     </div>
   );
 
+  /**
+   * Pop-up hasil aksi verify/approve.
+   *
+   * Dipasang di akar komponen, bukan di dalam form editor, karena aksi ini
+   * dijalankan dari daftar quotation saat form tertutup — versi sebelumnya
+   * dirender di dalam editor sehingga tidak pernah terlihat sama sekali.
+   *
+   * Ditutup sendiri oleh user, tidak menghilang otomatis, supaya tidak ada
+   * quotation yang terproses tanpa disadari.
+   */
+  const actionResultDialog = (
+    <AnimatePresence>
+      {actionFeedback && (
+        <motion.div
+          initial={reduce ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reduce ? undefined : { opacity: 0 }}
+          onMouseDown={(event) => {
+            if (event.currentTarget === event.target) setActionFeedback(null);
+          }}
+          className="fixed inset-0 z-[100003] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm"
+        >
+          <motion.div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="quotation-action-result"
+            initial={reduce ? false : { opacity: 0, y: 18, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reduce ? undefined : { opacity: 0, y: 12, scale: 0.97 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
+            className="w-full max-w-sm overflow-hidden rounded-3xl bg-white p-7 text-center shadow-[0_28px_80px_rgba(15,42,73,0.28)]"
+          >
+            <div
+              className={`mx-auto flex h-16 w-16 items-center justify-center rounded-full ${
+                actionFeedback.ok ? "bg-emerald-50" : "bg-red-50"
+              }`}
+            >
+              {actionFeedback.ok ? (
+                <CheckCircle2 size={34} className="text-emerald-500" />
+              ) : (
+                <AlertCircle size={34} className="text-red-500" />
+              )}
+            </div>
+
+            <h2
+              id="quotation-action-result"
+              className="mt-4 text-lg font-black text-slate-900"
+            >
+              {actionFeedback.ok ? "Berhasil diproses" : "Gagal diproses"}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              {actionFeedback.text}
+            </p>
+
+            <button
+              type="button"
+              autoFocus
+              onClick={() => setActionFeedback(null)}
+              className={`mt-6 w-full rounded-2xl px-5 py-3 text-sm font-bold text-white transition-colors ${
+                actionFeedback.ok
+                  ? "bg-emerald-500 hover:bg-emerald-600"
+                  : "bg-red-500 hover:bg-red-600"
+              }`}
+            >
+              Mengerti
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   const emailModal = emailQuotation ? (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-md">
       <motion.div initial={reduce ? false : { opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-2xl">
@@ -3301,6 +3389,7 @@ export default function QuotationFlowClient({
       {mounted && openForm ? createPortal(quotationEditor, document.body) : null}
       {mounted && emailQuotation ? createPortal(emailModal, document.body) : null}
       {mounted && documentQuotation ? createPortal(ltrModal, document.body) : null}
+      {mounted ? createPortal(actionResultDialog, document.body) : null}
       {actionDialog}
     </motion.div>
   );
