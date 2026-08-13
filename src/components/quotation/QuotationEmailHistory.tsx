@@ -95,23 +95,30 @@ export default function QuotationEmailHistory({
   useEffect(() => {
     if (!isOpen) return;
 
+    let cancelled = false;
+
+    async function fetchEmails() {
+      try {
+        const res = await fetch(`/api/quotations/${quotationId}/emails`);
+        if (!res.ok) throw new Error("Gagal memuat riwayat email");
+        const data = await res.json();
+        if (!cancelled) {
+          setEmails(data.emails || []);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Gagal memuat");
+          setIsLoading(false);
+        }
+      }
+    }
+
     setIsLoading(true);
     setError(null);
+    fetchEmails();
 
-    fetch(`/api/quotations/${quotationId}/emails`)
-      .then((res) => {
-        if (!res.ok) throw new Error("Gagal memuat riwayat email");
-        return res.json();
-      })
-      .then((data) => {
-        setEmails(data.emails || []);
-      })
-      .catch((err) => {
-        setError(err.message);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    return () => { cancelled = true; };
   }, [isOpen, quotationId]);
 
   return (

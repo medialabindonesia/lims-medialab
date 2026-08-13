@@ -150,7 +150,6 @@ export default function QuotationHomeClient({ initialQuotations, viewerRole }: P
                     {q.status === "REQUESTED" ? "Verify" : q.status === "VERIFIED" ? "Approve" : "Lihat"}
                   </Link>
                   <QuotationEmailHistory quotationId={q.id} />
-                  </Link>
                 </div>
               </div>
             );
