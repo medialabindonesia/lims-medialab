@@ -211,31 +211,47 @@ async function main() {
 
     if (existing) {
       // Cek apakah customerType berubah dari DIRECT ke CONSULTANT atau sebaliknya.
-      // Jika ya, kode pelanggan yang lama tidak valid lagi dan harus dibuat ulang.
+      // Jika ya, kode pelanggan yang lama tidak valid lagi.
       const typeChanged = existing.customerCode !== null &&
         (existing.customerCode.startsWith('DC.') && item.customerType === 'CONSULTANT' ||
          existing.customerCode.startsWith('CC.') && item.customerType === 'DIRECT');
 
       if (typeChanged) {
-        await prisma.customer.delete({ where: { id: existing.id } });
-        console.log(`  dihapus (tipe berubah)  ${existing.customerCode}  ${item.company}`);
-        // Lanjut ke pembuatan baru
-      } else {
+        // Generate kode baru yang sesuai dengan tipe yang berubah
+        const newCode = await nextCustomerCode(prisma, {
+          customerType: item.customerType,
+          centerCode: "001",
+          consultantCode: item.customerType === "CONSULTANT" ? consultant.code : null,
+        });
+
         await prisma.customer.update({
           where: { id: existing.id },
           data: {
             ...shared,
             customerType: item.customerType,
             consultantId: item.customerType === "CONSULTANT" ? consultant.id : null,
+            customerCode: newCode.customerCode,
+            joinYear: newCode.joinYear,
+            sequenceNo: newCode.sequenceNo,
           },
         });
-        console.log(`  diperbarui  ${existing.customerCode ?? "(tanpa kode)"}  ${item.company}`);
+        console.log(`  diubah tipe  ${existing.customerCode} → ${newCode.customerCode}  ${item.company}`);
         continue;
       }
+
+      await prisma.customer.update({
+        where: { id: existing.id },
+        data: {
+          ...shared,
+          customerType: item.customerType,
+          consultantId: item.customerType === "CONSULTANT" ? consultant.id : null,
+        },
+      });
+      console.log(`  diperbarui  ${existing.customerCode ?? "(tanpa kode)"}  ${item.company}`);
+      continue;
     }
 
-    // Kode pelanggan dibuat lewat generator resmi agar format DC/CC yang
-    // tercetak pada dokumen benar-benar sama dengan alur aplikasi.
+    // Pelanggan baru — kode dibuat lewat generator resmi agar format DC/CC benar
     const code = await nextCustomerCode(prisma, {
       customerType: item.customerType,
       centerCode: "001",
