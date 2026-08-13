@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { EASE_OUT } from "@/lib/motion";
@@ -68,12 +68,12 @@ export default function QuotationEmailHistory({
   const [emails, setEmails] = useState<EmailHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
 
   // Fetch email history when dialog opens
   useEffect(() => {
@@ -168,7 +168,6 @@ export default function QuotationEmailHistory({
               {!isLoading && !error && emails.length > 0 &&
                 emails.map((email) => {
                   const statusInfo = formatStatus(email.status);
-                  const StatusIcon = statusInfo.icon;
 
                   return (
                     <SurfaceCard key={email.id}>
