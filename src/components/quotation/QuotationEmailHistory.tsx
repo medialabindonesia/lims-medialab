@@ -1,12 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,7 +17,6 @@ import {
   Clock,
   AlertCircle,
   User,
-  Calendar,
 } from "lucide-react";
 
 interface EmailHistoryItem {
@@ -98,6 +91,7 @@ export default function QuotationEmailHistory({
     let cancelled = false;
 
     async function fetchEmails() {
+      if (cancelled) return;
       try {
         const res = await fetch(`/api/quotations/${quotationId}/emails`);
         if (!res.ok) throw new Error("Gagal memuat riwayat email");
@@ -114,8 +108,6 @@ export default function QuotationEmailHistory({
       }
     }
 
-    setIsLoading(true);
-    setError(null);
     fetchEmails();
 
     return () => { cancelled = true; };

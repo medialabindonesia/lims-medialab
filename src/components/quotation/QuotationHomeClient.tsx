@@ -5,7 +5,7 @@ import Link from "next/link";
 import { formatShortDate, quotationStatusMeta } from "@/lib/customer-labels";
 import StatusBadge from "@/components/ui/StatusBadge";
 import PageHeader from "@/components/layout/PageHeader";
-import { Search, FilePlus, FileCheck, FilePenLine, BadgeCheck, LayoutDashboard, Mail } from "lucide-react";
+import { Search, FilePlus, FileCheck, FilePenLine, BadgeCheck, LayoutDashboard } from "lucide-react";
 import QuotationEmailHistory from "./QuotationEmailHistory";
 
 type Quotation = {
