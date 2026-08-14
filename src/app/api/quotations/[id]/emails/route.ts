@@ -11,16 +11,19 @@ import { quotationChecks } from "@/lib/quotation-access";
  */
 export const runtime = "nodejs";
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
+export async function GET(_request: Request, context: RouteContext) {
   const permission = await requireAnyApiPermission(quotationChecks("canView"));
   if (!permission.allowed) return permission.response;
 
+  const { id } = await context.params;
+
   // Validasi quotation ada
   const quotation = await prisma.quotation.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true },
   });
 
@@ -33,7 +36,7 @@ export async function GET(
 
   // Ambil riwayat email
   const emails = await prisma.quotationEmail.findMany({
-    where: { quotationId: params.id },
+    where: { quotationId: id },
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
@@ -55,13 +58,13 @@ export async function GET(
   });
 
   return NextResponse.json({
-    quotationId: params.id,
+    quotationId: id,
     total: emails.length,
     emails: emails.map((email) => ({
       id: email.id,
       status: email.status,
       toEmail: email.toEmail,
-      ccEmails: email.ccEmails,
+      ccEmails: Array.isArray(email.ccEmails) ? email.ccEmails : [],
       subject: email.subject,
       sentAt: email.sentAt,
       lastError: email.lastError,

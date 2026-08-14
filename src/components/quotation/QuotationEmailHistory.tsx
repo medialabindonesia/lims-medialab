@@ -44,7 +44,7 @@ function formatStatus(status: EmailHistoryItem["status"]) {
     case "SENT":
       return { label: "Terkirim", tone: "success" as const, icon: CheckCircle };
     case "FAILED":
-      return { label: "Gagal", tone: "error" as const, icon: XCircle };
+      return { label: "Gagal", tone: "danger" as const, icon: XCircle };
   }
 }
 
